@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Floorline Multi-Account Tracker — cover</title>
+<!-- Render: cover.html (1280x720) and cover.html#thumb (600x600) via tracker/cover/render.sh. System/mono fonts only. -->
+<style>
+:root{--bg:#0b0c0d;--panel:#121416;--line:#262a2f;--line2:#343940;--ink:#eceae4;--mut:#8d939b;--dim:#5d636b;--brand:#ff5b1f;--g:#35d07f;--a:#ffb224;--r:#ff4a4a;
+--mono:ui-monospace,"SF Mono",Menlo,Consolas,"DejaVu Sans Mono","Liberation Mono",monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+*{box-sizing:border-box;margin:0}
+html,body{background:var(--bg);color:var(--ink);overflow:hidden}
+.c{position:relative;width:1280px;height:720px;padding:64px 72px;display:grid;grid-template-columns:500px 1fr;gap:56px;align-items:center}
+.c::before{content:"";position:absolute;inset:0;background:linear-gradient(var(--line) 1px,transparent 1px) 0 0/100% 48px;opacity:.35}
+.c>*{position:relative}
+.brand{display:flex;align-items:center;gap:14px}
+.mark{position:relative;width:34px;height:34px;border:2px solid var(--ink)}
+.mark i{position:absolute;left:-8px;right:-8px;bottom:8px;height:5px;background:var(--brand)}
+.mark::before{content:"";position:absolute;left:14px;top:5px;width:3px;height:12px;background:var(--ink)}
+.word{font:700 26px/1 var(--mono);letter-spacing:.22em}
+.word b{color:var(--bg);background:var(--ink);padding:3px 4px 3px 7px;margin-left:4px}
+h1{font:700 64px/1.02 var(--sans);letter-spacing:-.03em;margin:44px 0 22px}
+h1 span{color:var(--brand)}
+.sub{font:500 19px/1.45 var(--sans);color:var(--mut);max-width:440px}
+.tags{display:flex;gap:8px;margin-top:34px;flex-wrap:wrap}
+.tags span{font:600 12.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--line2);padding:8px 10px;color:var(--ink)}
+/* visual */
+.v{border:1px solid var(--line2);background:var(--panel)}
+.vh,.row{display:grid;grid-template-columns:96px 112px 1fr 92px;gap:14px;align-items:center;padding:0 18px}
+.vh{height:38px;border-bottom:1px solid var(--brand);font:600 11px/1 var(--mono);letter-spacing:.14em;color:var(--mut);text-transform:uppercase}
+.vh .fl{color:var(--brand)}
+.row{height:56px;border-bottom:1px solid var(--line);font:500 16px/1 var(--mono);font-variant-numeric:tabular-nums}
+.row:last-child{border-bottom:0}
+.id{color:var(--ink);font-weight:700;letter-spacing:.04em}
+.fv{text-align:right;color:var(--ink)}
+.bar{position:relative;height:12px;background:#1b1f23;border:1px solid var(--line)}
+.bar .d{position:absolute;left:0;top:0;bottom:0;background:repeating-linear-gradient(-45deg,rgba(255,74,74,.35) 0 2px,transparent 2px 6px)}
+.bar .f{position:absolute;top:-6px;bottom:-6px;width:3px;background:var(--r)}
+.bar .x{position:absolute;top:0;bottom:0}
+.bar .n{position:absolute;top:-6px;bottom:-6px;width:2px;background:var(--ink)}
+.rm{text-align:right;font-weight:700}
+.g{color:var(--g)}.a{color:var(--a)}.r{color:var(--r)}
+.row.br{background:#3a0b0b}
+.row.br .rm{font:700 12px/1 var(--mono);letter-spacing:.1em}
+.foot{display:flex;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--line2);font:600 11px/1 var(--mono);letter-spacing:.12em;color:var(--dim);text-transform:uppercase}
+/* thumbnail */
+body.thumb .c{width:600px;height:600px;padding:44px 40px;grid-template-columns:1fr;gap:28px;align-content:center}
+body.thumb h1{font-size:44px;margin:30px 0 0}
+body.thumb .sub,body.thumb .tags,body.thumb .foot,body.thumb .vh>:nth-child(2),body.thumb .row>:nth-child(2){display:none}
+body.thumb .vh,body.thumb .row{grid-template-columns:86px 1fr 92px}
+body.thumb .row{height:48px}
+body.thumb .row:nth-child(n+5){display:none}
+body.thumb .word{font-size:22px}
+</style></head>
+<body><script>if(location.hash==="#thumb")document.body.className="thumb"</script>
+<div class="c">
+  <div>
+    <div class="brand"><span class="mark"><i></i></span><span class="word">FLOOR<b>LINE</b></span></div>
+    <h1>Multi-Account<br>Tracker<span>.</span></h1>
+    <p class="sub">Every prop account's drawdown floor, remaining room and max contracts in one spreadsheet.</p>
+    <div class="tags"><span>Excel 2019+</span><span>10 accounts</span><span>Daily log</span><span>No macros</span></div>
+  </div>
+  <div class="v" aria-hidden="true">
+    <div class="vh"><span>Account</span><span class="fl">Floor</span><span>Equity vs floor</span><span style="text-align:right">Room</span></div>
+    <div class="row"><span class="id">ACCT-01</span><span class="fv">49,550.50</span><div class="bar"><div class="d" style="width:18%"></div><div class="x" style="left:18%;width:52%;background:var(--g)"></div><div class="f" style="left:18%"></div><div class="n" style="left:70%"></div></div><span class="rm g">1,690</span></div>
+    <div class="row"><span class="id">ACCT-02</span><span class="fv">48,980.00</span><div class="bar"><div class="d" style="width:30%"></div><div class="x" style="left:30%;width:28%;background:var(--a)"></div><div class="f" style="left:30%"></div><div class="n" style="left:58%"></div></div><span class="rm a">690</span></div>
+    <div class="row"><span class="id">ACCT-03</span><span class="fv">24,120.00</span><div class="bar"><div class="d" style="width:12%"></div><div class="x" style="left:12%;width:62%;background:var(--g)"></div><div class="f" style="left:12%"></div><div class="n" style="left:74%"></div></div><span class="rm g">1,000</span></div>
+    <div class="row"><span class="id">ACCT-04</span><span class="fv">97,000.00</span><div class="bar"><div class="d" style="width:44%"></div><div class="x" style="left:40%;width:4%;background:var(--r)"></div><div class="f" style="left:44%"></div><div class="n" style="left:40%"></div></div><span class="rm r">212</span></div>
+    <div class="row"><span class="id">ACCT-05</span><span class="fv">24,000.00</span><div class="bar"><div class="d" style="width:22%"></div><div class="x" style="left:22%;width:38%;background:var(--g)"></div><div class="f" style="left:22%"></div><div class="n" style="left:60%"></div></div><span class="rm g">300</span></div>
+    <div class="foot"><span>Floor · Room · Contracts</span><span>Educational tool</span></div>
+  </div>
+</div></body></html>
