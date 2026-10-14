@@ -1,18 +1,20 @@
-# prop-dd-calc — MATH spec v0.1.0 (QUANT, 2026-10-14)
+# prop-dd-calc — MATH spec v0.2.0 (fix loop for SPECTER-REVIEW @ 9a0a2de) (QUANT, 2026-10-14)
 
 All arithmetic is defined by `golden/oracle.py` (stdlib, `decimal.Decimal`, prec 50). Golden vectors: `golden/cases.json`,
-verify with `python3 golden/oracle.py --check`. Units: account currency (USD) unless noted. Money outputs are rounded
-ROUND_HALF_UP to cents **only at output**; intermediate values are unrounded. Contract counts use ROUND_FLOOR.
+verify with `python3 golden/oracle.py --check`. Units: account currency (USD) unless noted. Intermediate values are unrounded; rounding happens **only at output**, always in the conservative direction (M-7):
+`floor` → ROUND_CEILING to cents; `drawdown_room`, `daily_room`, `binding_room`, `effective_risk`, `actual_risk`, `equity` → ROUND_DOWN to cents;
+`peak` → HALF_UP (informational only). Contract counts and crypto qty use ROUND_FLOOR. Numbers are decimal strings or ints; floats/bools rejected.
 
 ## 1. Common inputs
 | name | unit | constraint |
 |---|---|---|
 | start_balance `S` | USD | > 0 |
 | drawdown_amount `DD` | USD | > 0 |
-| lock_offset `X` | USD or null | null = never locks; 0 = lock at start; X = lock at S+X. Require S+X >= S-DD |
-| breach_on_touch | bool | default true (equity == floor is a breach). Firms where only "below" breaches (e.g. Vest) set false |
+| lock_offset `X` | USD or null | null = never locks; 0 = lock at start; X (may be negative) = lock at S+X. Require S+X > S-DD |
+| breach_on_touch | JSON boolean (strings rejected, L-2) | default true (equity == floor is a breach). Firms where only "below" breaches (e.g. Vest) set false |
 | events | ordered list | `mark{equity}` = intraday equity incl. unrealized P&L; `eod{balance}` = session-close balance |
 
+All events are validated before processing (L-3); a malformed event anywhere fails the whole call.
 State: `floor F`, `peak P`, `locked`, `breached`, last `equity E`. Initial: `F = S-DD`, `P = S`, unlocked, not breached.
 Lock level `L = S + X`.
 
@@ -35,38 +37,56 @@ Example (DD-07): F=49,000 after close 51,000; mark 48,999.99 → breached, later
 ## 4. Intraday trailing (open-equity peak)
 On `mark{E}`: **peak update first** — if `E > P`: `P = E`, `trail(P)` — then breach check `E vs F`.
 (Ordering is safe: when E sets a new peak, E = P > P-DD >= F, so it can never breach on the same mark.)
-`eod` events: breach check only (no trail beyond what marks already did).
+`eod{B}` (H-1): B is also a peak candidate — if `B > P`: `P = B`, `trail(P)` — then breach check. (DD-16: eod 53,000 → F 51,000.)
 Example (DD-08): S=50,000, DD=2,000, mark 50,750.50 → P=50,750.50, F=48,750.50; mark 49,100 → room 349.50.
 
 ## 5. Breach is terminal
 Once breached, subsequent events are ignored; `drawdown_room = 0`. (DD-11.)
 
+## 5a. Within-bar ordering (L-4)
+The oracle consumes an ordered stream of marks only and never infers intrabar order. A caller expanding OHLC bars must emit the
+conservative order: for trailing types, the adverse extreme is evaluated against the floor **before** the favorable extreme
+raises the peak (long: O, L, H, C; i.e. assume the low came first). Ambiguity resolution is the caller's job and must be documented.
+
 ## 6. Remaining room and binding constraint
 - `drawdown_room = max(0, E - F)` (0 when breached).
+- `day_pnl` (M-6) = current equity incl. unrealized P&L − the firm's daily reference value at the last reset (preset `daily_loss.basis`/`reset`).
+  Transfers/withdrawals that move the reference (Vest) must be folded into the reference by the caller.
 - `day_loss = max(0, -day_pnl)`; `daily_room = max(0, DLL - day_loss)` when a $ DLL exists, else null.
 - `binding_room = min(drawdown_room, daily_room)`; `binding = "daily_loss"` iff `daily_room < drawdown_room`, ties → "drawdown".
 - Percentage DLLs (Breakout, Vest, MyFundedPerps) must be converted to $ at the firm's reset instant
   (DLL_$ = rate × reset basis) before calling; reset basis/time is firm-specific (see presets notes).
-Examples: RR-12 → 350.00 daily binds; RR-13 → 400.00 drawdown binds.
+- `daily_loss.enforcement` in presets: `hard` = breach/fail; `soft` = forced flat for the session, not a violation (Topstep).
+  Either way the sizing room is the same; status reporting differs.
+- Missing `day_pnl` when a DLL is given → INVALID_INPUT.
+Examples: RR-18 daily binds 350.00; RR-19 drawdown binds; RR-20 no DLL; RR-21 tie → "drawdown".
 
 ## 7. Futures sizing
 `risk_per_contract = stop_ticks × tick_value`; `contracts = floor(risk / risk_per_contract)`; result < 1 → 0;
-`contracts = min(contracts, max_contracts)` if given (`capped=true`). Callers should pass `risk <= binding_room`.
-Inputs: risk >= 0, stop_ticks > 0, tick_value > 0 (else `INVALID_INPUT`). Tick values: `data/contracts.json`.
-Mini/micro equivalence is per-firm (no generic 10:1 assumed). Examples: FS-14 MES 300/(16×1.25)=15; FS-15 ES → 0; FS-16 MNQ 50→cap 30.
+`contracts = min(contracts, max_contracts)` if given (`capped=true`).
+H-2: `binding_room` is a **required** input; `effective_risk = min(risk, binding_room)` is what is sized (`risk_limited_by_room` flags clamping). Fail closed.
+Inputs: risk >= 0, binding_room >= 0, stop_ticks integer > 0, tick_value > 0, max_contracts integer >= 0 (L-1; else `INVALID_INPUT`). Tick values: `data/contracts.json`.
+Mini/micro equivalence is per-firm (no generic 10:1 assumed). Examples: FS-22 MES 15; FS-23 ES → 0; FS-24 MNQ cap 30; FS-25 clamp to room 350; FS-26 max 0; FS-27 risk 0; FS-28 actual_risk 0.99 ≤ 0.996.
 
 ## 8. Crypto perp sizing
-`qty = risk / |entry - stop|`; entry == stop → `INVALID_INPUT`; entry, stop > 0. If `step_size` given,
-`qty = floor(qty/step) × step` (never round up risk). `actual_risk = qty × |entry-stop|` (cents).
-Fees/slippage/leverage/margin not modeled in v0.1. Examples: CS-17 100/650=0.15384…→0.153 (risk 99.45); CS-18 → 1.25.
+`qty = effective_risk / |entry - stop|`; entry == stop → `INVALID_INPUT`; entry, stop > 0. `step_size` is **required** (M-2);
+`qty = floor(qty/step) × step`, printed fixed-point with the step's decimals (never scientific). Side = long if stop < entry else short.
+Results exceeding 50 significant digits → INVALID_INPUT (IV-45). `actual_risk = qty × |entry-stop|` (cents).
+Fees/slippage/leverage/margin not modeled in v0.1. Examples: CS-29 0.153 (risk 99.45); CS-30 short 1.25; CS-31 sub-step → 0.000; CS-32/33 tiny/huge prices; CS-34 clamp.
 
 ## 9. Failure conditions
 | code | when |
 |---|---|
-| INVALID_INPUT | non-decimal / non-finite, S<=0, DD<=0, stop_ticks<=0, tick_value<=0, risk<0, entry==stop, unknown event |
-| INVALID_RULE_CONFIGURATION | unknown drawdown type, lock on static, lock level below initial floor |
+| INVALID_INPUT | any missing key or wrong shape (M-1: no exception escapes), non-decimal/non-finite, S<=0, DD<=0, non-integer or <=0 stop_ticks, tick_value<=0, risk<0, missing binding_room/step_size/day_pnl, entry==stop, unknown event, non-boolean breach_on_touch, precision overflow |
+| INVALID_RULE_CONFIGURATION | unknown drawdown type, lock on static, lock level <= initial floor; any preset failing `data/presets.schema.json` / `golden/validate_presets.py` (never silently defaulted, M-5) |
 A config error must produce 0 contracts upstream (fail closed).
 
 ## 10. Not modeled (flag)
 Payout-triggered floor resets (Topstep XFA, Lucid, MFP withdrawal lock), consistency rules, scaling plans,
 session/DST boundaries (EOD event timing is the caller's responsibility), commissions.
+
+## 11. Presets contract (M-3, M-5)
+`data/presets.json` follows `data/presets.schema.json` (no unknown keys; all numbers as decimal strings). Each row carries explicit
+`breach_on_touch` (and `breach_on_touch_after_lock` for MFP), `lock.kind` ∈ none|offset|payout_lock_to_start|unstated,
+`daily_loss.kind` ∈ none|fixed_usd|pct|pct_of_start|pct_choice|unstated with `enforcement` hard|soft. `custom_only` rows carry no numbers.
+`verified` rows may not have any `unstated` kind or null `breach_on_touch`. `python3 golden/oracle.py --check` validates presets too.

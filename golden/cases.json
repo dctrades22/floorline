@@ -30,7 +30,7 @@
       "kind": "drawdown"
     },
     {
-      "description": "static: touch floor exactly = breach",
+      "description": "static: touch floor exactly = breach (default)",
       "expected": {
         "breached": true,
         "drawdown_room": "0.00",
@@ -63,7 +63,7 @@
       "kind": "drawdown"
     },
     {
-      "description": "eod trailing, no lock; intraday high ignored, floor trails EOD peak only",
+      "description": "eod trailing no lock; intraday high ignored",
       "expected": {
         "breached": false,
         "drawdown_room": "400.00",
@@ -94,14 +94,13 @@
             "kind": "mark"
           }
         ],
-        "lock_offset": null,
         "start_balance": "50000",
         "type": "eod_trailing"
       },
       "kind": "drawdown"
     },
     {
-      "description": "eod trailing, lock at start (offset 0)",
+      "description": "eod trailing, lock at start (X=0)",
       "expected": {
         "breached": false,
         "drawdown_room": "1000.00",
@@ -173,7 +172,7 @@
       "kind": "drawdown"
     },
     {
-      "description": "eod trailing, lock exactly hit (peak-dd == lock level)",
+      "description": "eod trailing, lock exactly hit",
       "expected": {
         "breached": false,
         "drawdown_room": "900.00",
@@ -203,7 +202,7 @@
       "kind": "drawdown"
     },
     {
-      "description": "eod trailing: intraday equity breaches floor between closes",
+      "description": "eod trailing: intraday breach between closes, later close ignored",
       "expected": {
         "breached": true,
         "drawdown_room": "0.00",
@@ -241,7 +240,7 @@
       "kind": "drawdown"
     },
     {
-      "description": "intraday trailing from open-equity peak incl. unrealized",
+      "description": "intraday trailing from open-equity peak",
       "expected": {
         "breached": false,
         "drawdown_room": "349.50",
@@ -268,7 +267,6 @@
             "kind": "mark"
           }
         ],
-        "lock_offset": null,
         "start_balance": "50000",
         "type": "intraday_trailing"
       },
@@ -339,7 +337,7 @@
       "kind": "drawdown"
     },
     {
-      "description": "intraday trailing breach after peak; later events ignored",
+      "description": "intraday trailing breach; later events ignored",
       "expected": {
         "breached": true,
         "drawdown_room": "0.00",
@@ -366,7 +364,168 @@
             "kind": "mark"
           }
         ],
-        "lock_offset": null,
+        "start_balance": "50000",
+        "type": "intraday_trailing"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "touch=false: equity == floor is not a breach, room 0",
+      "expected": {
+        "breached": false,
+        "drawdown_room": "0.00",
+        "equity": "24000.00",
+        "floor": "24000.00",
+        "locked": false,
+        "ok": true,
+        "peak": "25000.00"
+      },
+      "id": "DD-12",
+      "input": {
+        "breach_on_touch": false,
+        "drawdown_amount": "1000",
+        "events": [
+          {
+            "equity": "24000",
+            "kind": "mark"
+          }
+        ],
+        "start_balance": "25000",
+        "type": "static"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "touch=false: one cent below floor breaches",
+      "expected": {
+        "breached": true,
+        "drawdown_room": "0.00",
+        "equity": "23999.99",
+        "floor": "24000.00",
+        "locked": false,
+        "ok": true,
+        "peak": "25000.00"
+      },
+      "id": "DD-13",
+      "input": {
+        "breach_on_touch": false,
+        "drawdown_amount": "1000",
+        "events": [
+          {
+            "equity": "23999.99",
+            "kind": "mark"
+          }
+        ],
+        "start_balance": "25000",
+        "type": "static"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "lock one cent short stays unlocked",
+      "expected": {
+        "breached": false,
+        "drawdown_room": "2000.00",
+        "equity": "52099.99",
+        "floor": "50099.99",
+        "locked": false,
+        "ok": true,
+        "peak": "52099.99"
+      },
+      "id": "DD-14",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [
+          {
+            "balance": "52099.99",
+            "kind": "eod"
+          }
+        ],
+        "lock_offset": "100",
+        "start_balance": "50000",
+        "type": "eod_trailing"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "negative lock_offset (lock at start-500)",
+      "expected": {
+        "breached": false,
+        "drawdown_room": "2500.00",
+        "equity": "52000.00",
+        "floor": "49500.00",
+        "locked": true,
+        "ok": true,
+        "peak": "52000.00"
+      },
+      "id": "DD-15",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [
+          {
+            "balance": "51000",
+            "kind": "eod"
+          },
+          {
+            "balance": "52000",
+            "kind": "eod"
+          }
+        ],
+        "lock_offset": "-500",
+        "start_balance": "50000",
+        "type": "eod_trailing"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "H-1: intraday trailing, eod above peak trails",
+      "expected": {
+        "breached": false,
+        "drawdown_room": "2000.00",
+        "equity": "53000.00",
+        "floor": "51000.00",
+        "locked": false,
+        "ok": true,
+        "peak": "53000.00"
+      },
+      "id": "DD-16",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [
+          {
+            "balance": "53000",
+            "kind": "eod"
+          }
+        ],
+        "start_balance": "50000",
+        "type": "intraday_trailing"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "M-7: sub-cent room rounds toward zero; floor rounds up",
+      "expected": {
+        "breached": false,
+        "drawdown_room": "0.00",
+        "equity": "48000.00",
+        "floor": "48000.01",
+        "locked": false,
+        "ok": true,
+        "peak": "50000.00"
+      },
+      "id": "DD-17",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [
+          {
+            "equity": "50000.004",
+            "kind": "mark"
+          },
+          {
+            "equity": "48000.009",
+            "kind": "mark"
+          }
+        ],
         "start_balance": "50000",
         "type": "intraday_trailing"
       },
@@ -381,7 +540,7 @@
         "drawdown_room": "1800.00",
         "ok": true
       },
-      "id": "RR-12",
+      "id": "RR-18",
       "input": {
         "daily_loss_limit": "1000",
         "day_pnl": "-650",
@@ -390,7 +549,7 @@
       "kind": "risk_room"
     },
     {
-      "description": "drawdown room binds; positive day pnl gives full daily room",
+      "description": "drawdown room binds; positive day pnl",
       "expected": {
         "binding": "drawdown",
         "binding_room": "400.00",
@@ -398,7 +557,7 @@
         "drawdown_room": "400.00",
         "ok": true
       },
-      "id": "RR-13",
+      "id": "RR-19",
       "input": {
         "daily_loss_limit": "1000",
         "day_pnl": "250",
@@ -407,16 +566,51 @@
       "kind": "risk_room"
     },
     {
-      "description": "futures MES basic: floor(300/(16*1.25))",
+      "description": "no DLL: drawdown binds",
+      "expected": {
+        "binding": "drawdown",
+        "binding_room": "1234.56",
+        "daily_room": null,
+        "drawdown_room": "1234.56",
+        "ok": true
+      },
+      "id": "RR-20",
+      "input": {
+        "drawdown_room": "1234.56"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "tie daily == drawdown -> binding drawdown",
+      "expected": {
+        "binding": "drawdown",
+        "binding_room": "500.00",
+        "daily_room": "500.00",
+        "drawdown_room": "500.00",
+        "ok": true
+      },
+      "id": "RR-21",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-500",
+        "drawdown_room": "500"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "futures MES basic",
       "expected": {
         "actual_risk": "300.00",
         "capped": false,
         "contracts": 15,
+        "effective_risk": "300.00",
         "ok": true,
+        "risk_limited_by_room": false,
         "risk_per_contract": "20.00"
       },
-      "id": "FS-14",
+      "id": "FS-22",
       "input": {
+        "binding_room": "1000",
         "max_contracts": "50",
         "risk": "300",
         "stop_ticks": "16",
@@ -425,16 +619,19 @@
       "kind": "futures"
     },
     {
-      "description": "futures ES: risk below one contract -> 0",
+      "description": "futures ES: below one contract -> 0",
       "expected": {
         "actual_risk": "0.00",
         "capped": false,
         "contracts": 0,
+        "effective_risk": "200.00",
         "ok": true,
+        "risk_limited_by_room": false,
         "risk_per_contract": "250.00"
       },
-      "id": "FS-15",
+      "id": "FS-23",
       "input": {
+        "binding_room": "1000",
         "max_contracts": "5",
         "risk": "200",
         "stop_ticks": "20",
@@ -448,11 +645,14 @@
         "actual_risk": "600.00",
         "capped": true,
         "contracts": 30,
+        "effective_risk": "1000.00",
         "ok": true,
+        "risk_limited_by_room": false,
         "risk_per_contract": "20.00"
       },
-      "id": "FS-16",
+      "id": "FS-24",
       "input": {
+        "binding_room": "2000",
         "max_contracts": "30",
         "risk": "1000",
         "stop_ticks": "40",
@@ -461,14 +661,99 @@
       "kind": "futures"
     },
     {
-      "description": "crypto perp qty with step size floor",
+      "description": "H-2: risk above binding room is clamped",
+      "expected": {
+        "actual_risk": "350.00",
+        "capped": false,
+        "contracts": 350,
+        "effective_risk": "350.00",
+        "ok": true,
+        "risk_limited_by_room": true,
+        "risk_per_contract": "1"
+      },
+      "id": "FS-25",
+      "input": {
+        "binding_room": "350",
+        "risk": "999999",
+        "stop_ticks": "1",
+        "tick_value": "1"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "max_contracts 0 -> 0",
+      "expected": {
+        "actual_risk": "0.00",
+        "capped": true,
+        "contracts": 0,
+        "effective_risk": "500.00",
+        "ok": true,
+        "risk_limited_by_room": false,
+        "risk_per_contract": "5.00"
+      },
+      "id": "FS-26",
+      "input": {
+        "binding_room": "500",
+        "max_contracts": "0",
+        "risk": "500",
+        "stop_ticks": "4",
+        "tick_value": "1.25"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "risk 0 -> 0",
+      "expected": {
+        "actual_risk": "0.00",
+        "capped": false,
+        "contracts": 0,
+        "effective_risk": "0.00",
+        "ok": true,
+        "risk_limited_by_room": false,
+        "risk_per_contract": "5.00"
+      },
+      "id": "FS-27",
+      "input": {
+        "binding_room": "500",
+        "risk": "0",
+        "stop_ticks": "4",
+        "tick_value": "1.25"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "M-7: actual_risk never above risk",
+      "expected": {
+        "actual_risk": "0.99",
+        "capped": false,
+        "contracts": 1,
+        "effective_risk": "0.99",
+        "ok": true,
+        "risk_limited_by_room": false,
+        "risk_per_contract": "0.995"
+      },
+      "id": "FS-28",
+      "input": {
+        "binding_room": "10",
+        "risk": "0.996",
+        "stop_ticks": "1",
+        "tick_value": "0.995"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "crypto long with step",
       "expected": {
         "actual_risk": "99.45",
+        "effective_risk": "100.00",
         "ok": true,
-        "qty": "0.153"
+        "qty": "0.153",
+        "risk_limited_by_room": false,
+        "side": "long"
       },
-      "id": "CS-17",
+      "id": "CS-29",
       "input": {
+        "binding_room": "1000",
         "entry": "65000",
         "risk": "100",
         "step_size": "0.001",
@@ -477,17 +762,102 @@
       "kind": "crypto"
     },
     {
-      "description": "crypto perp short, no step",
+      "description": "crypto short with step",
       "expected": {
         "actual_risk": "50.00",
+        "effective_risk": "50.00",
         "ok": true,
-        "qty": "1.25"
+        "qty": "1.25",
+        "risk_limited_by_room": false,
+        "side": "short"
       },
-      "id": "CS-18",
+      "id": "CS-30",
       "input": {
+        "binding_room": "1000",
         "entry": "3200",
         "risk": "50",
+        "step_size": "0.01",
         "stop": "3240"
+      },
+      "kind": "crypto"
+    },
+    {
+      "description": "crypto sub-step result -> 0",
+      "expected": {
+        "actual_risk": "0.00",
+        "effective_risk": "1.00",
+        "ok": true,
+        "qty": "0.000",
+        "risk_limited_by_room": false,
+        "side": "long"
+      },
+      "id": "CS-31",
+      "input": {
+        "binding_room": "1000",
+        "entry": "65000",
+        "risk": "1",
+        "step_size": "0.001",
+        "stop": "60000"
+      },
+      "kind": "crypto"
+    },
+    {
+      "description": "crypto tiny price, integer step",
+      "expected": {
+        "actual_risk": "29.99",
+        "effective_risk": "30.00",
+        "ok": true,
+        "qty": "88235294",
+        "risk_limited_by_room": false,
+        "side": "long"
+      },
+      "id": "CS-32",
+      "input": {
+        "binding_room": "1000",
+        "entry": "0.00001234",
+        "risk": "30",
+        "step_size": "1",
+        "stop": "0.00001200"
+      },
+      "kind": "crypto"
+    },
+    {
+      "description": "crypto huge price",
+      "expected": {
+        "actual_risk": "250.00",
+        "effective_risk": "250.00",
+        "ok": true,
+        "qty": "0.0200",
+        "risk_limited_by_room": false,
+        "side": "long"
+      },
+      "id": "CS-33",
+      "input": {
+        "binding_room": "1000",
+        "entry": "1250000",
+        "risk": "250",
+        "step_size": "0.0001",
+        "stop": "1237500"
+      },
+      "kind": "crypto"
+    },
+    {
+      "description": "crypto risk clamped by room",
+      "expected": {
+        "actual_risk": "120.00",
+        "effective_risk": "120.00",
+        "ok": true,
+        "qty": "60.0",
+        "risk_limited_by_room": true,
+        "side": "long"
+      },
+      "id": "CS-34",
+      "input": {
+        "binding_room": "120",
+        "entry": "100",
+        "risk": "500",
+        "step_size": "0.1",
+        "stop": "98"
       },
       "kind": "crypto"
     },
@@ -498,10 +868,12 @@
         "message": "entry == stop",
         "ok": false
       },
-      "id": "IV-19",
+      "id": "IV-35",
       "input": {
+        "binding_room": "1000",
         "entry": "100",
         "risk": "100",
+        "step_size": "0.01",
         "stop": "100"
       },
       "kind": "crypto"
@@ -513,16 +885,238 @@
         "message": "stop_ticks must be > 0",
         "ok": false
       },
-      "id": "IV-20",
+      "id": "IV-36",
       "input": {
+        "binding_room": "1000",
         "risk": "100",
         "stop_ticks": "0",
         "tick_value": "1.25"
       },
       "kind": "futures"
+    },
+    {
+      "description": "invalid: crypto without step_size (M-2)",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "missing step_size",
+        "ok": false
+      },
+      "id": "IV-37",
+      "input": {
+        "binding_room": "1000",
+        "entry": "100",
+        "risk": "100",
+        "stop": "97"
+      },
+      "kind": "crypto"
+    },
+    {
+      "description": "invalid: sizing without binding_room (H-2)",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "missing binding_room",
+        "ok": false
+      },
+      "id": "IV-38",
+      "input": {
+        "risk": "100",
+        "stop_ticks": "4",
+        "tick_value": "1.25"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "config: lock level below initial floor",
+      "expected": {
+        "error": "INVALID_RULE_CONFIGURATION",
+        "message": "lock level must be above initial floor",
+        "ok": false
+      },
+      "id": "IV-39",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [],
+        "lock_offset": "-2500",
+        "start_balance": "50000",
+        "type": "eod_trailing"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "config: static with lock",
+      "expected": {
+        "error": "INVALID_RULE_CONFIGURATION",
+        "message": "static drawdown has no lock",
+        "ok": false
+      },
+      "id": "IV-40",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [],
+        "lock_offset": "0",
+        "start_balance": "50000",
+        "type": "static"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "config: unknown drawdown type",
+      "expected": {
+        "error": "INVALID_RULE_CONFIGURATION",
+        "message": "unknown drawdown type",
+        "ok": false
+      },
+      "id": "IV-41",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [],
+        "start_balance": "50000",
+        "type": "hybrid"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "M-1: event without kind",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "missing kind",
+        "ok": false
+      },
+      "id": "IV-42",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [
+          {
+            "equity": "49000"
+          }
+        ],
+        "start_balance": "50000",
+        "type": "static"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "M-1: DLL without day_pnl",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "missing day_pnl",
+        "ok": false
+      },
+      "id": "IV-43",
+      "input": {
+        "daily_loss_limit": "1000",
+        "drawdown_room": "500"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "M-1: missing type",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "missing type",
+        "ok": false
+      },
+      "id": "IV-44",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [],
+        "start_balance": "50000"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "M-1: crypto huge risk / tiny step overflows precision",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "malformed input: InvalidOperation",
+        "ok": false
+      },
+      "id": "IV-45",
+      "input": {
+        "binding_room": "1E+40",
+        "entry": "2",
+        "risk": "1E+40",
+        "step_size": "1E-20",
+        "stop": "1"
+      },
+      "kind": "crypto"
+    },
+    {
+      "description": "L-1: fractional max_contracts",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "max_contracts must be an integer",
+        "ok": false
+      },
+      "id": "IV-46",
+      "input": {
+        "binding_room": "100",
+        "max_contracts": "2.9",
+        "risk": "100",
+        "stop_ticks": "4",
+        "tick_value": "1.25"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "L-1: fractional stop_ticks",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "stop_ticks must be an integer",
+        "ok": false
+      },
+      "id": "IV-47",
+      "input": {
+        "binding_room": "100",
+        "risk": "100",
+        "stop_ticks": "0.5",
+        "tick_value": "1.25"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "L-2: breach_on_touch as string",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "breach_on_touch must be boolean",
+        "ok": false
+      },
+      "id": "IV-48",
+      "input": {
+        "breach_on_touch": "false",
+        "drawdown_amount": "2000",
+        "events": [],
+        "start_balance": "50000",
+        "type": "static"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "L-3: invalid event after breach still rejected",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "unknown event kind",
+        "ok": false
+      },
+      "id": "IV-49",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [
+          {
+            "equity": "47000",
+            "kind": "mark"
+          },
+          {
+            "kind": "bogus"
+          }
+        ],
+        "start_balance": "50000",
+        "type": "static"
+      },
+      "kind": "drawdown"
     }
   ],
   "generated_by": "golden/oracle.py",
   "label": "TEST fixtures only",
-  "spec_version": "0.1.0"
+  "spec_version": "0.2.0"
 }
