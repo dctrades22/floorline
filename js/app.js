@@ -27,6 +27,44 @@
   opt($("firm"), firms.map(function (f) { return [f, f]; }).concat([[CUSTOM, "Custom rule"]]));
   opt($("inst"), C.map(function (c) { return [c.symbol, c.symbol + " · " + c.name]; }).concat([["CRYPTO", "Crypto perp (qty)"]]));
 
+  // ---------- firm logos (assets/logos/SOURCES.md); null = neutral text wordmark ----------
+  var LOGOS = { "Topstep": "topstep.png", "Tradeify": "tradeify.svg", "Take Profit Trader": "takeprofittrader.svg",
+    "Breakout": "breakout.svg", "Vest (Vest Capital)": "vest.svg", "MyFundedFutures": "myfundedfutures.png",
+    "Apex Trader Funding": null, "Lucid Trading": null, "MyFundedPerps": null };
+  var SHORT = { "Apex Trader Funding": "Apex", "Lucid Trading": "Lucid", "Vest (Vest Capital)": "Vest", "Take Profit Trader": "TPT", "MyFundedFutures": "MFFU", "MyFundedPerps": "MFPerps" };
+  function mark(f, cls) {
+    var file = LOGOS[f];
+    // icon-only official marks get the short name beside them so the firm stays identifiable
+    if (file) return '<span class="mk2"><img class="' + cls + '" src="assets/logos/' + file + '" alt="" loading="lazy" decoding="async">' +
+      (f === "MyFundedFutures" ? '<span class="wm ' + cls + '">MFFU</span>' : "") + "</span>";
+    return '<span class="wm ' + cls + '">' + esc(SHORT[f] || f) + "</span>";
+  }
+  function chips() {
+    var all = firms.concat([CUSTOM]), cur = v("firm");
+    $("firmChips").innerHTML = all.map(function (f) {
+      var on = f === cur, label = f === CUSTOM ? "Custom rule" : f;
+      return '<button type="button" role="radio" class="chip' + (on ? " on" : "") + '" aria-checked="' + on + '" tabindex="' + (on ? 0 : -1) +
+        '" data-firm="' + esc(f) + '" title="' + esc(label) + '">' + (f === CUSTOM ? '<span class="wm lg">CUSTOM</span>' : mark(f, "lg")) +
+        '<span class="sr">' + esc(label) + "</span></button>";
+    }).join("");
+  }
+  function pickFirm(f, focus) {
+    $("firm").value = f; fillPlans(); chips();
+    if (focus) { var b = document.querySelector('.chip[data-firm="' + f.replace(/"/g, '\\"') + '"]'); if (b) b.focus(); }
+  }
+  $("firmChips").addEventListener("click", function (e) { var b = e.target.closest(".chip"); if (b) pickFirm(b.getAttribute("data-firm")); });
+  $("firmChips").addEventListener("keydown", function (e) {
+    var keys = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+    if (!keys[e.key] && e.key !== "Home" && e.key !== "End") return;
+    e.preventDefault();
+    var all = firms.concat([CUSTOM]), i = all.indexOf(v("firm"));
+    i = e.key === "Home" ? 0 : e.key === "End" ? all.length - 1 : (i + keys[e.key] + all.length) % all.length;
+    pickFirm(all[i], true);
+  });
+  $("logoStrip").innerHTML = firms.map(function (f) { return '<span class="si" title="' + esc(f) + '">' + mark(f, "sm") + '<span class="sr">' + esc(f) + "</span></span>"; }).join("");
+  var CFG = window.FLOORLINE_CONFIG || {};
+  if (CFG.TRACKER_URL) { $("trackerLink").href = CFG.TRACKER_URL; $("trackerCta").hidden = false; }
+
   function fillPlans() {
     var f = v("firm"), plans = [];
     P.forEach(function (p) { if (p.firm === f && plans.indexOf(p.plan) < 0) plans.push(p.plan); });
@@ -145,7 +183,7 @@
   }
 
   function toCustom() {
-    $("firm").value = CUSTOM; var keep = { t: v("ddType"), a: v("ddAmt"), l: v("lockOff"), d: dllAmount(), c: v("cap"), touch: $("touch").checked };
+    $("firm").value = CUSTOM; chips(); var keep = { t: v("ddType"), a: v("ddAmt"), l: v("lockOff"), d: dllAmount(), c: v("cap"), touch: $("touch").checked };
     fillPlans(); $("ddType").value = keep.t; $("ddAmt").value = keep.a; $("lockOff").value = keep.l;
     $("dll").value = keep.d === "?" ? "" : keep.d; $("cap").value = keep.c; $("touch").checked = keep.touch; run();
   }
@@ -294,7 +332,7 @@
   }
 
   // ---------- wire ----------
-  $("firm").addEventListener("change", fillPlans);
+  $("firm").addEventListener("change", function () { fillPlans(); chips(); });
   $("plan").addEventListener("change", fillSizes);
   $("size").addEventListener("change", applyPreset);
   $("toCustom").addEventListener("click", toCustom);
@@ -310,5 +348,6 @@
   if (hp) { $("firm").value = hp.firm; fillPlans(); $("plan").value = hp.plan; fillSizes(); $("size").value = hp.id; applyPreset(); }
   else if (location.hash === "#custom") { $("firm").value = CUSTOM; fillPlans(); }
   else fillPlans();
+  chips();
   ready = true;
 })();
