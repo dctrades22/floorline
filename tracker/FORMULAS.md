@@ -25,6 +25,8 @@ Spreadsheets use IEEE doubles; the oracle uses Decimal. Rules that keep results 
 - Contracts: `INT(ROUND(eff_risk / (ticks*tv), 9))` — the inner ROUND guards exact multiples (300/(16*1.25) = 15 exactly).
 - Comparisons use **raw** (unrounded) floor helper columns; displayed values are rounded. Same as oracle.
 
+`PV(col)`, `HIT`, `CENT_UP`, `CENT_DOWN` are notation: BUILDER expands them inline (no named LAMBDAs).
+
 ## 2. Tabs
 `Accounts`, `Daily Log`, `Presets` (generated, locked), `Contracts` (reference, from `data/contracts.json`), `Checklist`, `Disclaimer`.
 
@@ -181,7 +183,7 @@ Breach is terminal: once any row is BREACHED, `Accounts!AA` stays TRUE; later ro
   missing, incl. partial-preset nulls), `BREACHED` (rooms, sizing), `NONE` (no DLL / no cap), or `""` (unused row). Never a number when not OK.
 - Propagation: every dependent formula begins with the upstream status test (`$W2`, `AK2`, `AA2`, `I2`); `IFERROR(…,"INVALID")` wraps
   each Accounts formula as a final guard (e.g. text in a numeric field).
-- Data validation (reject input, both apps): money ≤2 dp (`=ROUND(x*100,0)=x*100` custom rule), stop ticks whole number ≥1,
+- Data validation (reject input, both apps): money ≤2 dp (custom rule `=ROUND(x*100,6)=INT(ROUND(x*100,6))`; never `ROUND(x*100,0)=x*100`, which rejects 0.29 in float), stop ticks whole number ≥1,
   max contracts whole number ≥0 or text NONE, lock number or NONE, touch list TRUE/FALSE, type list, preset list, date valid.
   Validation is advisory in Sheets (pasted values bypass it) → formulas re-validate (§3.1).
 - Conditional formatting: `INVALID` red fill; `INCOMPLETE` amber; `BREACHED` dark red/white bold, whole row; Locked TRUE green;
