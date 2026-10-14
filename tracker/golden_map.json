@@ -1,0 +1,539 @@
+{
+  "spec": "tracker v0.1.0 / oracle 0.2.0",
+  "generated_by": "tracker/sheet_logic.py",
+  "counts": {
+    "yes": 25,
+    "partial": 13,
+    "no": 11
+  },
+  "cases": [
+    {
+      "id": "DD-01",
+      "reproducible": "yes",
+      "how": "Accounts static S=50000 DD=2000; Daily Log 1 row EOD 49100 high 50800 low 49100; current equity 49100",
+      "reason": null,
+      "checked_fields": [
+        "floor",
+        "peak",
+        "locked",
+        "breached",
+        "equity",
+        "drawdown_room"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DD-02",
+      "reproducible": "yes",
+      "how": "static; Daily Log EOD 49500 low 48000 -> touch breach; current equity 48000",
+      "reason": "oracle equity is the breaching mark; user enters the breaching equity 48000 as current equity",
+      "checked_fields": [
+        "floor",
+        "peak",
+        "locked",
+        "breached",
+        "equity",
+        "drawdown_room"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DD-03",
+      "reproducible": "yes",
+      "how": "eod_trailing no lock (NONE); day1 high 51500 EOD 50600; day2 EOD 50300; current equity 49000",
+      "reason": null,
+      "checked_fields": [
+        "floor",
+        "peak",
+        "locked",
+        "breached",
+        "equity",
+        "drawdown_room"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DD-04",
+      "reproducible": "yes",
+      "how": "eod_trailing lock 0; EOD 51000/52500/54000; equity 51000",
+      "reason": null,
+      "checked_fields": [
+        "floor",
+        "peak",
+        "locked",
+        "breached",
+        "equity",
+        "drawdown_room"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DD-05",
+      "reproducible": "yes",
+      "how": "eod_trailing lock 100; EOD 51000/53000; equity 50150.25",
+      "reason": null,
+      "checked_fields": [
+        "floor",
+        "peak",
+        "locked",
+        "breached",
+        "equity",
+        "drawdown_room"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DD-06",
+      "reproducible": "yes",
+      "how": "eod_trailing lock 100; EOD 52100/51000; equity 51000 (lock exactly hit)",
+      "reason": null,
+      "checked_fields": [
+        "floor",
+        "peak",
+        "locked",
+        "breached",
+        "equity",
+        "drawdown_room"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DD-07",
+      "reproducible": "yes",
+      "how": "eod_trailing lock 0; day1 EOD 51000; day2 low 48999.99 EOD 50500; equity 48999.99",
+      "reason": "oracle stops at the breaching mark; user enters breaching equity as current equity; day2 EOD 50500 does not raise peak above 51000",
+      "checked_fields": [
+        "floor",
+        "peak",
+        "locked",
+        "breached",
+        "equity",
+        "drawdown_room"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DD-08",
+      "reproducible": "yes",
+      "how": "intraday_trailing; 1 row high 50750.50 low 49100 EOD 49100; equity 49100",
+      "reason": "matches because oracle order is high-then-low, which is the sheet's conservative assumption",
+      "checked_fields": [
+        "floor",
+        "peak",
+        "locked",
+        "breached",
+        "equity",
+        "drawdown_room"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DD-09",
+      "reproducible": "yes",
+      "how": "intraday_trailing lock 0; high 26400 low 25300; equity 25300",
+      "reason": null,
+      "checked_fields": [
+        "floor",
+        "peak",
+        "locked",
+        "breached",
+        "equity",
+        "drawdown_room"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DD-10",
+      "reproducible": "yes",
+      "how": "intraday_trailing lock 100; high 52600 low 50200; equity 50200",
+      "reason": null,
+      "checked_fields": [
+        "floor",
+        "peak",
+        "locked",
+        "breached",
+        "equity",
+        "drawdown_room"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DD-11",
+      "reproducible": "partial",
+      "how": "intraday_trailing; high 51500 low 49000",
+      "reason": "event-order dependence: oracle sees 51000 -> 49000 (breach) -> 51500 (ignored); one daily row cannot encode order, so sheet peak 51500/floor 49500 differ from oracle 51000/49000. Breach and room match (conservatively).",
+      "checked_fields": [
+        "breached",
+        "drawdown_room",
+        "locked"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DD-12",
+      "reproducible": "yes",
+      "how": "static touch FALSE; low 24000; equity 24000",
+      "reason": null,
+      "checked_fields": [
+        "floor",
+        "peak",
+        "locked",
+        "breached",
+        "equity",
+        "drawdown_room"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DD-13",
+      "reproducible": "yes",
+      "how": "static touch FALSE; low 23999.99; equity 23999.99",
+      "reason": null,
+      "checked_fields": [
+        "floor",
+        "peak",
+        "locked",
+        "breached",
+        "equity",
+        "drawdown_room"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DD-14",
+      "reproducible": "yes",
+      "how": "eod_trailing lock 100; EOD 52099.99; equity 52099.99",
+      "reason": null,
+      "checked_fields": [
+        "floor",
+        "peak",
+        "locked",
+        "breached",
+        "equity",
+        "drawdown_room"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DD-15",
+      "reproducible": "yes",
+      "how": "eod_trailing lock -500; EOD 51000/52000; equity 52000",
+      "reason": null,
+      "checked_fields": [
+        "floor",
+        "peak",
+        "locked",
+        "breached",
+        "equity",
+        "drawdown_room"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DD-16",
+      "reproducible": "yes",
+      "how": "intraday_trailing; EOD 53000; equity 53000",
+      "reason": null,
+      "checked_fields": [
+        "floor",
+        "peak",
+        "locked",
+        "breached",
+        "equity",
+        "drawdown_room"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DD-17",
+      "reproducible": "partial",
+      "how": "intraday_trailing; high 50000.004 low 48000.009; equity 48000.009",
+      "reason": "sub-cent inputs: matches here via ROUND(...,6) tolerance, but money inputs are validated to 2 dp (sub-cent entry -> INVALID), so the case is not enterable as-is; float cannot guarantee Decimal parity for arbitrary sub-cent values",
+      "checked_fields": [
+        "floor",
+        "peak",
+        "locked",
+        "breached",
+        "equity",
+        "drawdown_room"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "RR-18",
+      "reproducible": "yes",
+      "how": "equivalent inputs: static S=50000 DD=2000 equity 49800 (dd room 1800); DLL 1000; day reference 50450 (day_pnl -650)",
+      "reason": "drawdown_room is not a direct input; constructed account yields the same room",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "RR-19",
+      "reproducible": "yes",
+      "how": "equivalent: static S=50000 DD=2000 equity 48400 (room 400); DLL 1000; day reference 48150 (+250)",
+      "reason": "constructed equivalent inputs",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "RR-20",
+      "reproducible": "yes",
+      "how": "equivalent: static S=50000 DD=2000 equity 49234.56; DLL NONE",
+      "reason": "constructed equivalent inputs",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "RR-21",
+      "reproducible": "yes",
+      "how": "equivalent: static S=50000 DD=2000 equity 48500 (room 500); DLL 1000; day reference 49000 (-500)",
+      "reason": "constructed equivalent inputs",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "FS-22",
+      "reproducible": "yes",
+      "how": "equivalent: static S=50000 DD=2000 equity 49000 (binding room 1000); risk 300, stop ticks 16, tick value 1.25, max contracts 50",
+      "reason": "binding_room supplied via constructed account room",
+      "checked_fields": [
+        "contracts",
+        "capped",
+        "effective_risk",
+        "risk_limited_by_room",
+        "actual_risk"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "FS-23",
+      "reproducible": "yes",
+      "how": "equivalent: static S=50000 DD=2000 equity 49000 (binding room 1000); risk 200, stop ticks 20, tick value 12.5, max contracts 5",
+      "reason": "binding_room supplied via constructed account room",
+      "checked_fields": [
+        "contracts",
+        "capped",
+        "effective_risk",
+        "risk_limited_by_room",
+        "actual_risk"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "FS-24",
+      "reproducible": "yes",
+      "how": "equivalent: static S=50000 DD=2000 equity 50000 (binding room 2000); risk 1000, stop ticks 40, tick value 0.5, max contracts 30",
+      "reason": "binding_room supplied via constructed account room",
+      "checked_fields": [
+        "contracts",
+        "capped",
+        "effective_risk",
+        "risk_limited_by_room",
+        "actual_risk"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "FS-25",
+      "reproducible": "yes",
+      "how": "equivalent: static S=50000 DD=2000 equity 48350 (binding room 350); risk 999999, stop ticks 1, tick value 1, max contracts NONE",
+      "reason": "binding_room supplied via constructed account room",
+      "checked_fields": [
+        "contracts",
+        "capped",
+        "effective_risk",
+        "risk_limited_by_room",
+        "actual_risk"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "FS-26",
+      "reproducible": "yes",
+      "how": "equivalent: static S=50000 DD=2000 equity 48500 (binding room 500); risk 500, stop ticks 4, tick value 1.25, max contracts 0",
+      "reason": "binding_room supplied via constructed account room",
+      "checked_fields": [
+        "contracts",
+        "capped",
+        "effective_risk",
+        "risk_limited_by_room",
+        "actual_risk"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "FS-27",
+      "reproducible": "yes",
+      "how": "equivalent: static S=50000 DD=2000 equity 48500 (binding room 500); risk 0, stop ticks 4, tick value 1.25, max contracts NONE",
+      "reason": "binding_room supplied via constructed account room",
+      "checked_fields": [
+        "contracts",
+        "capped",
+        "effective_risk",
+        "risk_limited_by_room",
+        "actual_risk"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "FS-28",
+      "reproducible": "partial",
+      "how": "equivalent: static S=50000 DD=2000 equity 48010 (binding room 10); risk 0.996, stop ticks 1, tick value 0.995, max contracts NONE",
+      "reason": "risk 0.996 is sub-cent: money validation would reject it; logic matches when allowed. effective_risk shown 0.99",
+      "checked_fields": [
+        "contracts",
+        "capped",
+        "effective_risk",
+        "risk_limited_by_room",
+        "actual_risk"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "CS-29",
+      "reproducible": "no",
+      "how": "n/a",
+      "reason": "crypto perp sizing (qty, step_size rounding, side) is out of tracker scope (futures-only product)"
+    },
+    {
+      "id": "CS-30",
+      "reproducible": "no",
+      "how": "n/a",
+      "reason": "crypto perp sizing (qty, step_size rounding, side) is out of tracker scope (futures-only product)"
+    },
+    {
+      "id": "CS-31",
+      "reproducible": "no",
+      "how": "n/a",
+      "reason": "crypto perp sizing (qty, step_size rounding, side) is out of tracker scope (futures-only product)"
+    },
+    {
+      "id": "CS-32",
+      "reproducible": "no",
+      "how": "n/a",
+      "reason": "crypto perp sizing (qty, step_size rounding, side) is out of tracker scope (futures-only product)"
+    },
+    {
+      "id": "CS-33",
+      "reproducible": "no",
+      "how": "n/a",
+      "reason": "crypto perp sizing (qty, step_size rounding, side) is out of tracker scope (futures-only product)"
+    },
+    {
+      "id": "CS-34",
+      "reproducible": "no",
+      "how": "n/a",
+      "reason": "crypto perp sizing (qty, step_size rounding, side) is out of tracker scope (futures-only product)"
+    },
+    {
+      "id": "IV-35",
+      "reproducible": "no",
+      "how": "n/a",
+      "reason": "crypto perp sizing (qty, step_size rounding, side) is out of tracker scope (futures-only product)"
+    },
+    {
+      "id": "IV-36",
+      "reproducible": "partial",
+      "how": "Stop ticks = 0 -> Accounts AF/AG show 'INVALID' (validation: integer >= 1)",
+      "reason": "sheet shows text status (INVALID/INCOMPLETE), not the oracle's error code/message; equivalence is categorical only (INVALID_INPUT/INVALID_RULE_CONFIGURATION -> INVALID, missing -> INCOMPLETE)"
+    },
+    {
+      "id": "IV-37",
+      "reproducible": "no",
+      "how": "n/a",
+      "reason": "crypto perp sizing (qty, step_size rounding, side) is out of tracker scope (futures-only product)"
+    },
+    {
+      "id": "IV-38",
+      "reproducible": "partial",
+      "how": "binding room is always derived; a missing required input (equity/risk) -> 'INCOMPLETE'",
+      "reason": "sheet shows text status (INVALID/INCOMPLETE), not the oracle's error code/message; equivalence is categorical only (INVALID_INPUT/INVALID_RULE_CONFIGURATION -> INVALID, missing -> INCOMPLETE)"
+    },
+    {
+      "id": "IV-39",
+      "reproducible": "partial",
+      "how": "Lock offset -2500 with DD 2000 -> 'INVALID' (S+lock must be > S-DD)",
+      "reason": "sheet shows text status (INVALID/INCOMPLETE), not the oracle's error code/message; equivalence is categorical only (INVALID_INPUT/INVALID_RULE_CONFIGURATION -> INVALID, missing -> INCOMPLETE)"
+    },
+    {
+      "id": "IV-40",
+      "reproducible": "partial",
+      "how": "static + numeric lock -> 'INVALID' (static requires NONE)",
+      "reason": "sheet shows text status (INVALID/INCOMPLETE), not the oracle's error code/message; equivalence is categorical only (INVALID_INPUT/INVALID_RULE_CONFIGURATION -> INVALID, missing -> INCOMPLETE)"
+    },
+    {
+      "id": "IV-41",
+      "reproducible": "partial",
+      "how": "type restricted by dropdown; any other text -> 'INVALID'",
+      "reason": "sheet shows text status (INVALID/INCOMPLETE), not the oracle's error code/message; equivalence is categorical only (INVALID_INPUT/INVALID_RULE_CONFIGURATION -> INVALID, missing -> INCOMPLETE)"
+    },
+    {
+      "id": "IV-42",
+      "reproducible": "no",
+      "how": "n/a",
+      "reason": "no event stream in the sheet (daily rows have fixed columns); 'event without kind' has no analogue"
+    },
+    {
+      "id": "IV-43",
+      "reproducible": "partial",
+      "how": "DLL set but Day Reference blank -> 'INCOMPLETE'",
+      "reason": "sheet shows text status (INVALID/INCOMPLETE), not the oracle's error code/message; equivalence is categorical only (INVALID_INPUT/INVALID_RULE_CONFIGURATION -> INVALID, missing -> INCOMPLETE)"
+    },
+    {
+      "id": "IV-44",
+      "reproducible": "partial",
+      "how": "type blank with Manual preset -> 'INCOMPLETE'",
+      "reason": "sheet shows text status (INVALID/INCOMPLETE), not the oracle's error code/message; equivalence is categorical only (INVALID_INPUT/INVALID_RULE_CONFIGURATION -> INVALID, missing -> INCOMPLETE)"
+    },
+    {
+      "id": "IV-45",
+      "reproducible": "no",
+      "how": "n/a",
+      "reason": "crypto perp sizing (qty, step_size rounding, side) is out of tracker scope (futures-only product)"
+    },
+    {
+      "id": "IV-46",
+      "reproducible": "partial",
+      "how": "max contracts 2.9 -> 'INVALID' (integer >= 0 or NONE)",
+      "reason": "sheet shows text status (INVALID/INCOMPLETE), not the oracle's error code/message; equivalence is categorical only (INVALID_INPUT/INVALID_RULE_CONFIGURATION -> INVALID, missing -> INCOMPLETE)"
+    },
+    {
+      "id": "IV-47",
+      "reproducible": "partial",
+      "how": "stop ticks 0.5 -> 'INVALID' (integer >= 1)",
+      "reason": "sheet shows text status (INVALID/INCOMPLETE), not the oracle's error code/message; equivalence is categorical only (INVALID_INPUT/INVALID_RULE_CONFIGURATION -> INVALID, missing -> INCOMPLETE)"
+    },
+    {
+      "id": "IV-48",
+      "reproducible": "partial",
+      "how": "breach_on_touch dropdown TRUE/FALSE; text 'false' -> 'INVALID'",
+      "reason": "sheet shows text status (INVALID/INCOMPLETE), not the oracle's error code/message; equivalence is categorical only (INVALID_INPUT/INVALID_RULE_CONFIGURATION -> INVALID, missing -> INCOMPLETE)"
+    },
+    {
+      "id": "IV-49",
+      "reproducible": "no",
+      "how": "n/a",
+      "reason": "no event stream; an invalid Daily Log row after a breach shows INVALID on that row but the account BREACHED status is still derived from valid rows (not whole-call rejection)"
+    }
+  ]
+}
