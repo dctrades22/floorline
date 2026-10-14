@@ -34,26 +34,31 @@ def PV(col, r): return f'IFERROR(INDEX(Presets!${col}$2:${col}$200,MATCH($B{r},P
 def HIT(v, f, touch): return f'IF({touch},ROUND({v}-({f}),6)<=0,ROUND({v}-({f}),6)<0)'
 def CENT_UP(x): return f'-INT(ROUND(-({x})*100,6))/100'
 def CENT_DOWN(x): return f'INT(ROUND(({x})*100,6))/100'
+def ISO(s):   # M-4: parse yyyy-mm-dd without locale-dependent VALUE(date text)
+    return f'DATE(VALUE(LEFT({s},4)),VALUE(MID({s},6,2)),VALUE(MID({s},9,2)))'
 def G(f): return f'=IFERROR({f},"INVALID")'   # final guard (FORMULAS §4)
 LOGR = "'Daily Log'!$A$2:$A$1001"; LOGC = "'Daily Log'!$C$2:$C$1001"; LOGD = "'Daily Log'!$D$2:$D$1001"; LOGI = "'Daily Log'!$I$2:$I$1001"
 
 def account_formulas(r):
     pv = lambda c: PV(c, r)
     W = (f'=IF(AND(A{r}="",B{r}=""),"",'
-         f'IF(OR(A{r}="",B{r}="",P{r}="",Q{r}="",R{r}="",S{r}="",T{r}="",U{r}="",K{r}="",AND(U{r}<>"NONE",L{r}="")),"INCOMPLETE",'
+         f'IF(OR(A{r}="",B{r}="",P{r}="",Q{r}="",R{r}="",S{r}="",T{r}="",U{r}="",V{r}="",K{r}="",AND(U{r}<>"NONE",L{r}="")),"INCOMPLETE",'
          f'IF(OR(COUNTIFS($A$2:$A${NA},A{r})>1,'
          f'AND(P{r}<>"static",P{r}<>"eod_trailing",P{r}<>"intraday_trailing"),'
          f'NOT(ISNUMBER(Q{r})),Q{r}<=0,ROUND(Q{r}*100,6)<>INT(ROUND(Q{r}*100,6)),'
          f'NOT(ISNUMBER(R{r})),R{r}<=0,ROUND(R{r}*100,6)<>INT(ROUND(R{r}*100,6)),'
          f'AND(S{r}<>"NONE",NOT(ISNUMBER(S{r}))),'
          f'AND(P{r}="static",S{r}<>"NONE"),'
-         f'IF(ISNUMBER(S{r}),ROUND(Q{r}+S{r}-(Q{r}-R{r}),6)<=0,FALSE),'  # spec AND(...) does not short-circuit -> #VALUE! on NONE
-         
+         f'IF(ISNUMBER(S{r}),ROUND(Q{r}+S{r}-(Q{r}-R{r}),6)<=0,FALSE),'
+         f'IF(ISNUMBER(S{r}),OR(S{r}<-100000000,S{r}>100000000),FALSE),'
          f'AND(T{r}<>TRUE,T{r}<>FALSE),'
          f'AND(U{r}<>"NONE",OR(NOT(ISNUMBER(U{r})),U{r}<=0)),'
-         f'IF(OR(V{r}="",V{r}="NONE"),FALSE,IF(ISNUMBER(V{r}),OR(V{r}<0,V{r}<>INT(V{r})),TRUE)),'
-         f'NOT(ISNUMBER(K{r})),AND(U{r}<>"NONE",NOT(ISNUMBER(L{r})))),"INVALID",'
-         f'IF(COUNTIFS({LOGR},A{r},{LOGI},"INVALID")>0,"INVALID","OK"))))')
+         f'IF(V{r}="NONE",FALSE,IF(ISNUMBER(V{r}),OR(V{r}<0,V{r}<>INT(V{r})),TRUE)),'
+         f'NOT(ISNUMBER(K{r})),AND(U{r}<>"NONE",NOT(ISNUMBER(L{r}))),'
+         f'Q{r}>100000000,R{r}>100000000,K{r}<=0,K{r}>100000000,'
+         f'IF(ISNUMBER(U{r}),U{r}>100000000,FALSE),IF(ISNUMBER(L{r}),OR(L{r}<=0,L{r}>100000000),FALSE)),"INVALID",'
+         f'IF(COUNTIFS({LOGR},A{r},{LOGI},"INVALID")>0,"INVALID",'
+         f'IF(OR(COUNTIFS({LOGR},A{r},{LOGI},"INCOMPLETE")>0,COUNTIFS({LOGI},"UNKNOWN_ACCOUNT")>0),"INCOMPLETE","OK")))))')
     W = "=IFERROR(" + W[1:] + ',"INVALID")'
     ok = f'$W{r}<>"OK",$W{r}'
     return {
@@ -76,18 +81,20 @@ def account_formulas(r):
         "AD": G(f'IF({ok},IF(AA{r},"BREACHED",IF(AC{r}="NONE",AB{r},MIN(AB{r},AC{r}))))'),
         "AE": G(f'IF({ok},IF(AA{r},"BREACHED",IF(AND(AC{r}<>"NONE",AC{r}<AB{r}),"daily_loss","drawdown")))'),
         "AF": G(f'IF(AK{r}<>"OK",AK{r},IF(AA{r},"BREACHED",{CENT_DOWN(f"MIN(M{r},AD{r})")}))'),
-        "AG": G(f'IF(AK{r}<>"OK",AK{r},IF(AA{r},"BREACHED",IF(OR(V{r}="NONE",V{r}=""),AL{r},MIN(AL{r},V{r}))))'),
-        "AH": G(f'IF(AK{r}<>"OK",AK{r},AND(V{r}<>"NONE",V{r}<>"",AL{r}>V{r}))'),
+        "AG": G(f'IF(AK{r}<>"OK",AK{r},IF(AA{r},"BREACHED",IF(V{r}="NONE",AL{r},MIN(AL{r},V{r}))))'),
+        "AH": G(f'IF(AK{r}<>"OK",AK{r},AND(V{r}<>"NONE",AL{r}>V{r}))'),
         "AI": G(f'IF(AK{r}<>"OK",AK{r},M{r}>AD{r})'),
         "AJ": G(f'IF($W{r}<>"OK","",IF(P{r}="static",Q{r}-R{r},IF(S{r}="NONE",X{r}-R{r},MIN(X{r}-R{r},Q{r}+S{r}))))'),
-        "AK": G(f'IF({ok},IF(OR(M{r}="",N{r}="",O{r}=""),"INCOMPLETE",IF(OR(NOT(ISNUMBER(M{r})),M{r}<0,NOT(ISNUMBER(N{r})),N{r}<1,N{r}<>INT(N{r}),NOT(ISNUMBER(O{r})),O{r}<=0),"INVALID","OK")))'),
+        "AK": G(f'IF({ok},IF(OR(M{r}="",N{r}="",O{r}=""),"INCOMPLETE",IF(OR(NOT(ISNUMBER(M{r})),M{r}<0,NOT(ISNUMBER(N{r})),N{r}<1,N{r}<>INT(N{r}),NOT(ISNUMBER(O{r})),O{r}<=0,O{r}>100000,ROUND(O{r}*1000000,3)<>INT(ROUND(O{r}*1000000,3)),M{r}>100000000),"INVALID","OK")))'),
         "AL": G(f'IF(AK{r}<>"OK","",IF(AA{r},0,INT(ROUND(MIN(M{r},AD{r})/(N{r}*O{r}),9))))'),
         "AM": G(f'IF(AK{r}<>"OK",AK{r},IF(AA{r},"BREACHED",{CENT_DOWN(f"AG{r}*N{r}*O{r}")}))'),
         "AN": G(f'IF(AND(A{r}="",B{r}=""),"",_xlfn.TEXTJOIN("; ",TRUE,IF(C{r}="partial","PARTIAL PRESET: verify "&{pv("L")},""),'
                 f'IF(C{r}="manual","MANUAL: all params user-entered",""),'
                 f'IF(OR(AND(D{r}<>"",{pv("C")}<>""),AND(E{r}<>"",{pv("D")}<>""),AND(F{r}<>"",{pv("E")}<>""),AND(G{r}<>"",{pv("G")}<>""),'
                 f'AND(H{r}<>"",{pv("H")}<>""),AND(I{r}<>"",{pv("I")}<>""),AND(J{r}<>"",{pv("J")}<>"")),"OVERRIDES PRESET",""),'
-                f'IF(V{r}="","NO CONTRACT CAP: enter NONE or a number",""),'
+                f'IF(AND(A{r}<>"",V{r}=""),"MAX CONTRACTS MISSING: enter a number or NONE",""),'
+                f'IF(AND({pv("N")}<>"",NOT(ISNUMBER($B$13))),"AS-OF DATE MISSING: enter today in B13 (stale check off)",""),'
+                f'IF(AND({pv("N")}<>"",ISNUMBER($B$13)),IF($B$13-{ISO(pv("N"))}>30,"STALE PRESET: checked "&{pv("N")}&", over 30 days before As of",""),""),'
                 f'IF({pv("M")}<>"","source: "&{pv("M")}&" checked "&{pv("N")},"")))'),
     }
 
@@ -99,13 +106,14 @@ def log_formulas(r):
     Gf = (f'=IFERROR(IF(OR($A{r}="",$F{r}=""),"",IF({t}="static",{S},IF({t}="eod_trailing",MAX({S},{prior}),'
           f'MAX({S},{prior},{highs},$C{r})))),"")')
     Hf = f'=IFERROR(IF(G{r}="","",IF({t}="static",{S}-{DD},IF({X}="NONE",G{r}-{DD},MIN(G{r}-{DD},{S}+{X})))),"")'
-    dp = lambda c: f'AND({c}{r}<>"",OR(NOT(ISNUMBER({c}{r})),ROUND({c}{r}*100,6)<>INT(ROUND({c}{r}*100,6))))'
+    dp = lambda c: f'IF({c}{r}="",FALSE,IF(ISNUMBER({c}{r}),OR({c}{r}<=0,{c}{r}>100000000,ROUND({c}{r}*100,6)<>INT(ROUND({c}{r}*100,6))),TRUE))'
     invalid = (f'OR(NOT(ISNUMBER($B{r})),NOT(ISNUMBER($C{r})),{dp("C")},{dp("D")},{dp("E")},'
                f'AND($D{r}<>"",$D{r}<MAX($C{r},$E{r})),AND($E{r}<>"",$E{r}>MIN($C{r},IF($D{r}="",$C{r},$D{r}))),'
                f'COUNTIFS($A$2:$A${NL},$A{r},$B$2:$B${NL},$B{r})>1)')
     lowv = f'IF($E{r}="",$C{r},MIN($C{r},$E{r}))'
-    If = (f'=IF($A{r}="","",IF(OR($F{r}="",$B{r}="",$C{r}=""),"INCOMPLETE",IFERROR(IF({invalid},"INVALID",'
-          f'IFERROR(IF({HIT(lowv, f"H{r}", touch)},"BREACHED","OK"),"INCOMPLETE")),"INVALID")))')
+    # spec: IF(COUNTA(A:E)=0,"",...); COUNTA is outside the §0 allowed list, so the same test is written with OR(<>"")
+    If = (f'=IF(AND($A{r}="",$B{r}="",$C{r}="",$D{r}="",$E{r}=""),"",IF(OR($A{r}="",$F{r}=""),"UNKNOWN_ACCOUNT",IF(OR($B{r}="",$C{r}=""),"INCOMPLETE",IFERROR(IF({invalid},"INVALID",'
+          f'IFERROR(IF({HIT(lowv, f"H{r}", touch)},"BREACHED","OK"),"INCOMPLETE")),"INVALID"))))')
     return {"F": f'=IFERROR(MATCH($A{r},Accounts!$A$2:$A${NA},0),"")', "G": Gf, "H": Hf, "I": If,
             "J": f'=IF(OR(I{r}="OK",I{r}="BREACHED"),{CENT_UP(f"H{r}")},I{r})'}
 
@@ -179,26 +187,29 @@ def build(path, accounts=(), logs=(), demo_asof=None):
     # ---------------- How to use ----------------
     text_sheet(wb, "How to use", [("h", "How to use"),
         ("s", "REQUIREMENTS"),
-        "Microsoft Excel 2019, Excel 2021 or Microsoft 365 (uses MAXIFS and TEXTJOIN; Excel 2016 and earlier show #NAME? and are NOT supported), or Google Sheets. LibreOffice 7+ also calculates it.",
-        ("s", "GOOGLE SHEETS IMPORT"),
+        "Microsoft Excel 2019, Excel 2021 or Microsoft 365 (uses MAXIFS and TEXTJOIN; Excel 2016 and earlier show #NAME? and are NOT supported).",
+        "Tested: formulas were recalculated and checked in LibreOffice only. Excel and Google Sheets have NOT been tested; treat both as unverified until you confirm the results yourself.",
+        ("s", "GOOGLE SHEETS IMPORT (UNTESTED)"),
         "1. Open drive.google.com, click New > File upload and choose Floorline-Tracker.xlsx.",
         "2. Right-click the uploaded file > Open with > Google Sheets (or set Drive Settings > 'Convert uploads' before uploading).",
         "3. In Sheets: File > Save as Google Sheets if it opened in Office-compatibility mode, then work in the converted copy.",
-        "4. Check the Accounts tab: Check column shows OK for filled rows and no cell shows #NAME? or #ERROR!.",
-        "5. Sheet protection carries over as warnings; dropdowns carry over. Pasting values can bypass dropdowns, but every formula re-checks its inputs (INVALID / INCOMPLETE).",
+        "4. Check the Accounts tab: Check column shows OK for filled rows and no cell shows #NAME? or #ERROR!. Compare a few results with your firm dashboard before relying on it.",
+        "5. Not verified in Sheets: whether sheet protection, dropdowns, data validation and colour rules survive the import. Pasted values can bypass dropdowns and validation; the formulas check many inputs, but not every possible mistake.",
         ("s", "DAILY ROUTINE"),
         "1. Accounts: one row per account (max 10). Enter Account ID and pick a Preset (or Manual). Read the Flags column.",
         "2. Fill any field named in 'PARTIAL PRESET: verify ...' using the override columns D-J (amber flag until resolved).",
         "3. Enter Equity now (incl. open P&L), Day reference balance (the firm's reset reference) and, for sizing, Risk $, Stop ticks, Tick value $ (see Contracts tab).",
         "4. Daily Log: after each session add one row per account: Trading date (firm session date), EOD balance, intraday high and intraday low.",
         "5. Read FLOOR, BINDING ROOM and CONTRACTS on Accounts. Then tick the Checklist. If your firm dashboard disagrees, the firm's number wins.",
-        "6. Enter today's date in Accounts!B13 (As of) so stale presets (checked more than 30 days ago) turn amber. The workbook never uses TODAY().",
+        "6. Enter today's date in Accounts!B13 (As of). Flags shows AS-OF DATE MISSING while it is blank and STALE PRESET when a preset was checked more than 30 days before it. The workbook never uses TODAY().",
+        "7. If Accounts!B14 shows a red Log check message, a Daily Log row has an unknown or blank account ID; every account shows INCOMPLETE until it is fixed.",
         ("s", "STATUS WORDS"),
-        "OK / a number = calculated.  INVALID = a value or rule is wrong.  INCOMPLETE = a required input is missing.  BREACHED = the floor was hit; rooms and size are blocked.  NONE = no daily loss limit / no cap.",
+        "OK / a number = calculated.  INVALID = a value or rule is wrong (money must be 0 < x <= 100,000,000 with at most 2 decimals; tick value at most 6 decimals).  INCOMPLETE = a required input is missing, incl. a blank max contracts (type NONE for no cap), an incomplete log row, or any unknown-account log row.  UNKNOWN_ACCOUNT = log row whose account ID matches no account.  BREACHED = the floor was hit; rooms and size are blocked.  NONE = no daily loss limit / no cap.",
         ("s", "COLOURS"),
         "Green = buffer above 50% of max drawdown or lock reached.  Amber = 25-50% buffer, partial preset, overrides, stale preset.  Red = under 25%, INVALID or BREACHED.  Blue = sizing was capped or clamped to the room.",
         ("s", "LIMITS"),
-        "Intraday trailing: a daily row cannot encode whether the low came before the high; the tracker assumes the high came first (higher, more conservative floor). Percent daily limits and payout/withdrawal floor locks must be entered manually. Futures only. 10 accounts, 1,000 log rows."], tab=BLUE)
+        "Intraday trailing: a daily row cannot encode whether the low came before the high; the tracker assumes the high came first (higher, more conservative floor). Percent daily limits and payout/withdrawal floor locks must be entered manually. Futures only. 10 accounts, 1,000 log rows.",
+        "Matching ignores letter case: account IDs must be unique ignoring case (p16 and P16 are duplicates), log row p16 belongs to account P16, and none / None count as NONE. Spaces are NOT ignored: 'Static ' with a trailing space is INVALID."], tab=BLUE)
 
     # ---------------- Accounts ----------------
     ws = wb.create_sheet("Accounts"); base_sheet(ws, BRAND)
@@ -222,6 +233,11 @@ def build(path, accounts=(), logs=(), demo_asof=None):
     ws["B13"].fill = F_IN; ws["B13"].border = B_IN; ws["B13"].number_format = "yyyy-mm-dd"; ws["B13"].protection = Protection(locked=False)
     ws["B13"].font = Font(name=MONO, size=10, color=INK); ws["B13"].alignment = Alignment(horizontal="left")
     ws["C13"] = "← today's date (enables the 30-day stale-preset check; no TODAY() used)"; ws["C13"].font = Font(name=MONO, size=9, color=DIM)
+    ws["A14"] = "Log check"; ws["A14"].font = Font(name=MONO, size=9, bold=True, color=MUT)
+    ws["B14"] = (f'=IF(COUNTIFS({LOGI},"UNKNOWN_ACCOUNT")>0,COUNTIFS({LOGI},"UNKNOWN_ACCOUNT")&'
+                 '" Daily Log row(s) with unknown account ID - fix before trading","")')
+    ws["B14"].font = Font(name=MONO, size=10, bold=True, color=RED)
+    ws.conditional_formatting.add("B14:C14", FormulaRule(formula=['$B$14<>""'], fill=fill(RED), font=Font(color="000000", bold=True)))
     ws["A15"] = "Inputs: shaded cells A–O.  Calculated: P–AN (locked).  FLOOR / BINDING ROOM / CONTRACTS are the numbers to trade by. Educational only; the firm's dashboard is authoritative."
     ws["A15"].font = Font(name=MONO, size=9, color=DIM)
     for col in ("AJ", "AK", "AL"): ws.column_dimensions[col].hidden = True
@@ -243,20 +259,21 @@ def build(path, accounts=(), logs=(), demo_asof=None):
     cf(f"Y2:Y{NA}", f'{lvl}', font=Font(color=INK, bold=True))
     cf(f"AH2:AI{NA}", 'AH2=TRUE', fill=fill("0E2A40"), font=font(BLUE, True))
     cf(f"AG2:AG{NA}", 'OR($AH2=TRUE,$AI2=TRUE)', font=font(BLUE, True))
-    cf(f"AN2:AN{NA}", 'OR(ISNUMBER(SEARCH("PARTIAL",AN2)),ISNUMBER(SEARCH("OVERRIDES",AN2)),ISNUMBER(SEARCH("NO CONTRACT CAP",AN2)))', font=font(AMBER))
+    cf(f"AN2:AN{NA}", 'OR(ISNUMBER(SEARCH("PARTIAL",AN2)),ISNUMBER(SEARCH("OVERRIDES",AN2)),ISNUMBER(SEARCH("MISSING",AN2)),ISNUMBER(SEARCH("STALE",AN2)))', font=font(AMBER))
     cf(f"C2:C{NA}", 'C2="verified"', font=font(GREEN, True))
     cf(f"C2:C{NA}", 'C2="partial"', font=font(AMBER, True))
-    cf(f"B2:C{NA}", f'AND(ISNUMBER($B$13),{PV("N", 2).replace("$B2", "$B2")}<>"",$B$13-VALUE({PV("N", 2)})>30)', fill=fill("3A2A08"), font=font(AMBER, True))
+    cf(f"B2:C{NA}", f'ISNUMBER(SEARCH("STALE PRESET",$AN2))', fill=fill("3A2A08"), font=font(AMBER, True))
 
     dv = lambda **k: DataValidation(showErrorMessage=True, errorStyle="stop", **k)
     v = dv(type="list", formula1="Presets!$A$2:$A$200", allow_blank=True); v.add(f"B2:B{NA}"); ws.add_data_validation(v)
     v = dv(type="list", formula1='"static,eod_trailing,intraday_trailing"', allow_blank=True); v.add(f"D2:D{NA}"); ws.add_data_validation(v)
     v = dv(type="list", formula1='"TRUE,FALSE"', allow_blank=True); v.add(f"H2:H{NA}"); ws.add_data_validation(v)
     money = lambda ref, extra="TRUE": f'AND(ISNUMBER({ref}),ROUND({ref}*100,6)=INT(ROUND({ref}*100,6)),{extra})'
-    for col, extra in (("E", "E2>0"), ("F", "F2>0"), ("K", "TRUE"), ("L", "TRUE"), ("M", "M2>=0"), ("O", "O2>0")):
-        v = dv(type="custom", formula1=money(f"{col}2", extra), allow_blank=True, error="Number with at most 2 decimals"); v.add(f"{col}2:{col}{NA}"); ws.add_data_validation(v)
-    v = dv(type="custom", formula1=f'OR(G2="NONE",{money("G2")})', allow_blank=True, error="Number (2 dp, may be <=0) or NONE"); v.add(f"G2:G{NA}"); ws.add_data_validation(v)
-    v = dv(type="custom", formula1=f'OR(I2="NONE",{money("I2", "I2>0")})', allow_blank=True, error="Dollar amount > 0 or NONE"); v.add(f"I2:I{NA}"); ws.add_data_validation(v)
+    for col, extra in (("E", "E2>0,E2<=100000000"), ("F", "F2>0,F2<=100000000"), ("K", "K2>0,K2<=100000000"), ("L", "L2>0,L2<=100000000"), ("M", "M2>=0,M2<=100000000")):
+        v = dv(type="custom", formula1=money(f"{col}2", extra), allow_blank=True, error="Number with at most 2 decimals, up to 100,000,000"); v.add(f"{col}2:{col}{NA}"); ws.add_data_validation(v)
+    v = dv(type="custom", formula1='AND(ISNUMBER(O2),O2>0,O2<=100000,ROUND(O2*1000000,3)=INT(ROUND(O2*1000000,3)))', allow_blank=True, error="Tick value: 0 < x <= 100,000, at most 6 decimals"); v.add(f"O2:O{NA}"); ws.add_data_validation(v)
+    v = dv(type="custom", formula1=f'OR(G2="NONE",{money("G2", "G2>=-100000000,G2<=100000000")})', allow_blank=True, error="Number (2 dp, may be <=0) or NONE"); v.add(f"G2:G{NA}"); ws.add_data_validation(v)
+    v = dv(type="custom", formula1=f'OR(I2="NONE",{money("I2", "I2>0,I2<=100000000")})', allow_blank=True, error="Dollar amount > 0 or NONE"); v.add(f"I2:I{NA}"); ws.add_data_validation(v)
     v = dv(type="custom", formula1='OR(J2="NONE",AND(ISNUMBER(J2),J2>=0,J2=INT(J2)))', allow_blank=True, error="Whole number >= 0 or NONE"); v.add(f"J2:J{NA}"); ws.add_data_validation(v)
     v = dv(type="whole", operator="greaterThanOrEqual", formula1="1", allow_blank=True, error="Whole number >= 1"); v.add(f"N2:N{NA}"); ws.add_data_validation(v)
     v = dv(type="date", operator="greaterThan", formula1="1", allow_blank=True); v.add("B13"); ws.add_data_validation(v)
@@ -283,13 +300,14 @@ def build(path, accounts=(), logs=(), demo_asof=None):
     for col in ("F", "H"): ws.column_dimensions[col].hidden = True
     lr = f"$A$2:$J${NL}"
     ws.conditional_formatting.add(lr, FormulaRule(formula=['$I2="BREACHED"'], fill=fill(DRED), font=Font(color="FFFFFF", bold=True)))
+    ws.conditional_formatting.add(f"A2:J{NL}", FormulaRule(formula=['$I2="UNKNOWN_ACCOUNT"'], fill=fill(RED), font=Font(color="000000", bold=True)))
     ws.conditional_formatting.add(f"I2:J{NL}", FormulaRule(formula=['$I2="INVALID"'], fill=fill(RED), font=Font(color="000000", bold=True)))
     ws.conditional_formatting.add(f"I2:J{NL}", FormulaRule(formula=['$I2="INCOMPLETE"'], fill=fill(AMBER), font=Font(color="000000", bold=True)))
     ws.conditional_formatting.add(f"I2:I{NL}", FormulaRule(formula=['$I2="OK"'], font=Font(color=GREEN, bold=True)))
     v = dv(type="list", formula1=f"Accounts!$A$2:$A${NA}", allow_blank=True); v.add(f"A2:A{NL}"); ws.add_data_validation(v)
     v = dv(type="date", operator="greaterThan", formula1="1", allow_blank=True, error="Enter a valid date"); v.add(f"B2:B{NL}"); ws.add_data_validation(v)
     for col in "CDE":
-        v = dv(type="custom", formula1=money(f"{col}2"), allow_blank=True, error="Number with at most 2 decimals"); v.add(f"{col}2:{col}{NL}"); ws.add_data_validation(v)
+        v = dv(type="custom", formula1=money(f"{col}2", f"{col}2>0,{col}2<=100000000"), allow_blank=True, error="Number with at most 2 decimals, up to 100,000,000"); v.add(f"{col}2:{col}{NL}"); ws.add_data_validation(v)
     ws.protection.sheet = True
     for i, row in enumerate(logs, 2):
         for col, val in row.items(): ws[f"{col}{i}"] = val
@@ -374,7 +392,7 @@ DEMO_ACC = [
     {"A": "APEX-50", "B": "Apex Trader Funding | Intraday Trailing Evaluation | 50000 [P006]", "G": "NONE", "K": 50410, "M": 250, "N": 16, "O": 0.5},
     {"A": "LUCID-25", "B": "Lucid Trading | LucidFlex (eval + funded) | 25000 [P018]", "I": "NONE", "J": "NONE", "K": 25120, "M": 100, "N": 8, "O": 1.25},
     {"A": "TS-100K", "B": "Topstep | Trading Combine | 100000 [P002]", "I": "NONE", "K": 97050, "M": 400, "N": 10, "O": 5},
-    {"A": "MANUAL-1", "B": "Manual", "D": "static", "E": 25000, "F": 1000, "G": "NONE", "H": True, "I": "NONE", "K": 24300, "M": 200, "N": 20, "O": 1.25},
+    {"A": "MANUAL-1", "B": "Manual", "D": "static", "E": 25000, "F": 1000, "G": "NONE", "H": True, "I": "NONE", "J": 10, "K": 24300, "M": 200, "N": 20, "O": 1.25},
 ]
 d = datetime.date
 DEMO_LOG = [

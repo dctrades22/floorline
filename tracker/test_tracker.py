@@ -66,20 +66,57 @@ STATUS = [  # (case id, account dict, logs, {column: expected})
  ("X-OK-verified-preset", {"A": "X10", "B": "Topstep | Trading Combine | 50000 [P001]", "I": "NONE", "K": 50500, "M": 300, "N": 16, "O": 1.25}, [],
      {"C": "verified", "W": "OK", "Y": 48000, "AD": 2500, "AG": 5, "AH": True}),
 ]
+D1 = datetime.date(2026, 10, 1)
+STATUS += [
+ # SPECTER repros
+ ("P1 log INCOMPLETE -> account", S("P1", equity=49000), [{"A": "P1", "B": D1, "E": 47000}],
+     {"log:I": "INCOMPLETE", "W": "INCOMPLETE", "AD": "INCOMPLETE", "AG": "INCOMPLETE"}),
+ ("P2 orphan log row", [S("P2", equity=49000), S("P2b", equity=49500)], [{"A": "P2x", "B": D1, "C": 49000, "E": 47000}],
+     {"logid:P2x": "UNKNOWN_ACCOUNT", "W": "INCOMPLETE", "AG": "INCOMPLETE", "acc2:W": "INCOMPLETE", "acc2:AG": "INCOMPLETE",
+      "B14": "contains:unknown account ID"}, {"solo": True}),
+ ("P2 orphan blank-ID row", S("P2c"), [{"B": D1, "C": 49000}], {"logid:None": "UNKNOWN_ACCOUNT", "W": "INCOMPLETE", "B14": "nonempty"}, {"solo": True}),
+ ("P9 blank max contracts", {**S("P9", risk=100000, ticks=1, tv=1), "J": None}, [],
+     {"W": "INCOMPLETE", "AG": "INCOMPLETE", "AN": "contains:MAX CONTRACTS MISSING"}),
+ # spec 8f4ff01 items
+ ("M-1 explicit NONE cap", S("M1", risk=100000, ticks=1, tv=1, equity=49000), [], {"W": "OK", "AG": 1000}),
+ ("L-1 tick 15.625 (ZN)", S("L1a", risk=500, ticks=8, tv=15.625), [], {"W": "OK", "AG": 4, "AM": 500}),
+ ("L-1 tick 7 dp", S("L1b", tv=0.0000001), [], {"AG": "INVALID"}),
+ ("L-2 equity 1e15", S("L2a", equity=1e15), [], {"W": "INVALID", "AG": "INVALID"}),
+ ("L-2 equity 1e8 ok", S("L2b", start=100000000, dd=2000, equity=100000000), [], {"W": "OK"}),
+ ("L-2 log close 1e9", S("L2c"), [{"A": "L2c", "B": D1, "C": 1000000000}], {"log:I": "INVALID", "W": "INVALID"}),
+ ("L-3 none == NONE", S("L3a", type="eod_trailing", lock="none", maxc="None"), [], {"W": "OK", "Z": False}),
+ ("L-3 log id case", S("L3B"), [{"A": "l3b", "B": D1, "C": 49500}], {"logid:l3b": "OK", "W": "OK"}),
+ ("L-3 trailing space type", S("L3c", type="Static "), [], {"W": "INVALID"}),
+ ("M-4 as-of missing", {"A": "M4a", "B": "Topstep | Trading Combine | 50000 [P001]", "I": "NONE", "K": 50500},
+     [], {"AN": "contains:AS-OF DATE MISSING"}),
+ ("M-4 stale preset", {"A": "M4b", "B": "Topstep | Trading Combine | 50000 [P001]", "I": "NONE", "K": 50500},
+     [], {"AN": "contains:STALE PRESET", "W": "OK"}, {"asof": datetime.date(2026, 12, 1)}),
+ ("M-4 fresh preset", {"A": "M4c", "B": "Topstep | Trading Combine | 50000 [P001]", "I": "NONE", "K": 50500},
+     [], {"AN": "lacks:STALE", "W": "OK"}, {"asof": datetime.date(2026, 11, 13)}),
+]
 dup = S("DUP"); STATUS[[s[0] for s in STATUS].index("X-INVALID-dup-id")] = ("X-INVALID-dup-id", [dup, dict(dup)], [], {"W": "INVALID"})
 
 def run_batches(items):
+    """items: (name, account|[accounts], logs, expect[, opts]). opts: solo=True (own workbook, e.g. orphan rows poison
+    every account), asof=date (Accounts!B13). Getter keys: column letter (first account), 'acc2:COL', 'log:I' (last log
+    row of this account), 'logid:<ID>' (log status of rows with that ID), or an absolute cell like 'B14'."""
     tmp = tempfile.mkdtemp(); files = []
-    for b in range(0, len(items), 10):
-        chunk = items[b:b + 10]; accs, logs = [], []
+    plain = [it for it in items if not (it[4] if len(it) > 4 else {})]
+    groups, cur, n = [], [], 0
+    for it in plain:
+        k = len(it[1]) if isinstance(it[1], list) else 1
+        if n + k > 10: groups.append(cur); cur, n = [], 0
+        cur.append(it); n += k
+    if cur: groups.append(cur)
+    groups += [[it] for it in items if (it[4] if len(it) > 4 else {})]
+    for gi, chunk in enumerate(groups):
+        accs, logs = [], []
         for it in chunk:
-            a = it[1]
-            if isinstance(a, list): accs.extend(a)
-            else: accs.append(a)
-            logs.extend(it[2])
+            accs.extend(it[1] if isinstance(it[1], list) else [it[1]]); logs.extend(it[2])
         assert len(accs) <= 10
-        p = os.path.join(tmp, f"b{b // 10:02d}.xlsx")
-        bt.build(p, [{k: v for k, v in a.items() if v is not None} for a in accs], logs)
+        opts = chunk[0][4] if len(chunk) == 1 and len(chunk[0]) > 4 else {}
+        p = os.path.join(tmp, f"b{gi:02d}.xlsx")
+        bt.build(p, [{k: v for k, v in a.items() if v is not None} for a in accs], logs, demo_asof=opts.get("asof"))
         wb = load_workbook(p); ws = wb["Accounts"]          # test-only probe: oracle 'equity' = CENT_DOWN(K)
         for r in range(2, 12): ws[f"AP{r}"] = f"=IF(K{r}=\"\",\"\",INT(ROUND(K{r}*100,6))/100)"
         wb.save(p); files.append((p, chunk))
@@ -93,53 +130,78 @@ def run_batches(items):
         ids = {acc[f"A{r}"].value: r for r in range(11, 1, -1) if acc[f"A{r}"].value is not None}
         logstat = {}
         for r in range(2, 60):
-            if log[f"A{r}"].value: logstat.setdefault(log[f"A{r}"].value, []).append(log[f"I{r}"].value)
+            if log[f"A{r}"].value or log[f"C{r}"].value is not None or log[f"E{r}"].value is not None:
+                logstat.setdefault(log[f"A{r}"].value, []).append(log[f"I{r}"].value)
         for it in chunk:
-            aid = (it[1][0] if isinstance(it[1], list) else it[1])["A"]
-            res[it[0]] = (lambda c, r=ids[aid], aid=aid, acc=acc, logstat=logstat: (logstat.get(aid, [None])[-1] if c == "log:I" else acc[f"{c}{r}"].value))
+            accl = it[1] if isinstance(it[1], list) else [it[1]]
+            def get(c, accl=accl, acc=acc, logstat=logstat, ids=ids):
+                aid = accl[0]["A"]
+                if c == "log:I": return logstat.get(aid, [None])[-1]
+                if c.startswith("logid:"): return logstat.get(None if c[6:] == "None" else c[6:], [None])[-1]
+                if c.startswith("acc2:"): return acc[f"{c[5:]}{ids[accl[1]['A']]}"].value
+                if c[-1].isdigit(): return acc[c].value
+                return acc[f"{c}{ids[aid]}"].value
+            res[it[0]] = get
     shutil.rmtree(tmp) if os.environ.get("KEEP") is None else print("kept", tmp)
     return res
 
 SUBCENT = {"DD-17"}
 
-def fmt(v):
-    if isinstance(v, bool) or v is None: return v
-    if isinstance(v, (int, float)): return f"{v:.2f}"
-    return v
+def num(v): return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+def golden_ok(f, got, e, breached):
+    """M-3: exact. Breached rooms must be the literal 'BREACHED'; money must be exact cents (no tolerance)."""
+    if f == "contracts": return num(got) and got == e
+    if f == "daily_room" and e is None: return got == "NONE"
+    if breached and f == "drawdown_room": return got == "BREACHED"
+    if isinstance(e, bool): return got is e
+    if isinstance(e, str) and e not in ("drawdown", "daily_loss"):
+        return num(got) and round(got, 2) == got and f"{got:.2f}" == e
+    return got == e
+
+def status_ok(got, e):
+    if isinstance(e, str) and e.startswith("contains:"): return isinstance(got, str) and e[9:] in got
+    if isinstance(e, str) and e.startswith("lacks:"): return got is None or (isinstance(got, str) and e[6:] not in got)
+    if e == "nonempty": return isinstance(got, str) and got != ""
+    if isinstance(e, bool): return got is e
+    if num(e): return num(got) and round(got, 2) == got and got == e
+    return got == e
 
 def main():
     items = GOLDEN + STATUS
     res = run_batches(items)
-    passed = failed = 0; notes = []
+    passed = failed = 0; notes = []; counts = {}
     print(f"{'case':30} {'map':8} result")
     for cid, _, _, fields in GOLDEN:
         get = res[cid]; exp = GOLD[cid]["expected"]; bad = {}
         if cid in SUBCENT:   # FORMULAS §1: sub-cent money inputs are rejected -> every output INVALID (golden_map: partial)
             bad = {f: get(COL[f]) for f in fields if f != "equity" and get(COL[f]) != "INVALID"}
             passed += not bad; failed += bool(bad)
+            counts["golden"] = [counts.get("golden", [0, 0])[0] + (not bad), counts.get("golden", [0, 0])[1] + 1]
             print(f"{cid:30} {'partial':8} {'PASS' if not bad else 'FAIL ' + str(bad)}  (sub-cent input -> INVALID as specified, not oracle values)")
             continue
         for f in fields:
             got = get(COL[f]); e = exp[f]
-            if f == "contracts": ok = got == e
-            elif f == "daily_room" and e is None: ok = got == "NONE"
-            elif got == "BREACHED" and f in ("drawdown_room",) and exp.get("breached"): ok = e == "0.00"; notes.append(cid)
-            else: ok = fmt(got) == e
-            if not ok: bad[f] = (got, e)
+            if f == "drawdown_room" and exp.get("breached"): notes.append(cid)
+            if not golden_ok(f, got, e, exp.get("breached") is True): bad[f] = (got, e)
         status = "PASS" if not bad else f"FAIL {bad}"
         passed += not bad; failed += bool(bad)
+        counts["golden"] = [counts.get("golden", [0, 0])[0] + (not bad), counts.get("golden", [0, 0])[1] + 1]
         print(f"{cid:30} {GMAP[cid]['reproducible']:8} {status}  ({len(fields)} fields)")
-    for cid, _, _, want in STATUS:
+    for it in STATUS:
+        cid, want = it[0], it[3]
         get = res[cid]; bad = {}
         for c, e in want.items():
             got = get(c)
-            ok = (fmt(got) == fmt(e)) if not isinstance(e, str) else got == e
-            if not ok: bad[c] = (got, e)
+            if not status_ok(got, e): bad[c] = (got, e)
         passed += not bad; failed += bool(bad)
-        print(f"{cid:30} {'status':8} {'PASS' if not bad else 'FAIL ' + str(bad)}  ({len(want)} cells)")
+        grp = "repro" if cid.startswith(("P1", "P2", "P9")) else "fix" if cid[:3] in ("L-1", "L-2", "L-3", "M-4", "H-1", "H-2", "M-1") else "status"
+        counts[grp] = [counts.get(grp, [0, 0])[0] + (not bad), counts.get(grp, [0, 0])[1] + 1]
+        print(f"{cid:30} {grp:8} {'PASS' if not bad else 'FAIL ' + str(bad)}  ({len(want)} cells)")
     print(f"\nGOLDEN yes/partial: {sum(1 for c in GOLDEN)} cases; STATUS scenarios: {len(STATUS)}")
+    for g, (a, n) in counts.items(): print(f"GROUP {g:7} {a} / {n}")
     print(f"TOTAL PASS {passed} / {passed + failed}")
-    if notes: print("note: drawdown_room shows 'BREACHED' (FORMULAS AB) where the oracle reports 0.00:", ", ".join(notes))
+    if notes: print("note: breached cases require literal 'BREACHED' in drawdown_room (oracle 0.00):", ", ".join(notes))
     sys.exit(1 if failed else 0)
 
 if __name__ == "__main__":
