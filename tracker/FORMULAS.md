@@ -1,4 +1,6 @@
-# Floorline Multi-Account Tracker — workbook spec v0.1.0 (QUANT, 2026-10-14)
+# Floorline Multi-Account Tracker — workbook spec v0.1.1 (QUANT, 2026-10-14)
+
+v0.1.1 = fix loop for docs/SPECTER-TRACKER-REVIEW.md @ 1e8d45e (H-1, H-2, M-1, BUILDER's 3 AND() guards, L-1..L-3).
 
 Maps oracle v0.2.0 (`docs/MATH.md`, `golden/oracle.py`) onto plain cell formulas. Spec only; BUILDER builds the .xlsx / Google Sheet.
 Futures only (crypto perp sizing is out of scope). Reference implementation of every formula below in float:
@@ -15,7 +17,11 @@ Futures only (crypto perp sizing is out of scope). Reference implementation of e
 
 ## 1. Float vs Decimal
 Spreadsheets use IEEE doubles; the oracle uses Decimal. Rules that keep results identical for cent-precision inputs:
-- **Money inputs are validated to ≤ 2 decimals** (§5). Sub-cent inputs → `INVALID`. (Goldens DD-17, FS-28 are therefore "partial".)
+- **Money inputs are validated to ≤ 2 decimals** (§4). **Tick value** (L-1) is a price-per-tick, not a balance: ≤ 6 decimals, 0 < tv ≤ 100,000
+  (accepts 15.625 ZN, 3.125, 0.995). Six decimals × 1e5 keeps every product `ticks × tv` exact to ≤ 1e-9 relative in doubles.
+- **Range bound** (L-2): every money field (start, DD, |lock offset|, DLL, equity, day reference, risk, log close/high/low) must satisfy
+  `0 < x ≤ 100,000,000` (lock offset: `-100,000,000 ≤ x ≤ 100,000,000`; risk: `0 ≤ x`); out of range → `INVALID`. Keeps magnitudes where
+  `ROUND(x*100,6)` is exact (< 2^53/1e6 ≈ 9e9 cents). Sub-cent inputs → `INVALID`. (Goldens DD-17, FS-28 are therefore "partial".)
 - **Comparisons never use raw `<=`.** Touch/breach: `HIT(v,f) := ROUND(v - f, 6) <= 0` (touch TRUE) or `ROUND(v - f, 6) < 0` (touch FALSE).
   Lock: `ROUND(peak - DD - (S + X), 6) >= 0`. 1e-6 tolerance absorbs double error (~1e-11 at 1e6 magnitudes) and is far below one cent.
 - **Rounding at output only, conservative direction:**
@@ -69,12 +75,12 @@ Inputs (white, unlocked) A–O; calculated (grey, locked) P–AN. `$B2` drives l
 | G | Lock offset override | number (≤2 dp, may be ≤0) or `NONE` | optional |
 | H | Breach on touch override | dropdown TRUE/FALSE | optional |
 | I | DLL $ override | number >0 ≤2 dp or `NONE` | optional |
-| J | Max contracts override | integer ≥0 or `NONE` | optional (enter in units of the instrument traded; preset is minis) |
+| J | Max contracts override | integer ≥0 or `NONE` | M-1: effective V **blank → INCOMPLETE**; only the explicit text `NONE` removes the cap (enter in units traded; preset is minis) |
 | K | Current equity incl. unrealized | number ≤2 dp | required |
 | L | Day reference balance | number ≤2 dp | required iff DLL ≠ NONE (firm's reset reference, see Presets basis) |
 | M | Risk $ per trade | number ≥0 ≤2 dp | required for sizing |
 | N | Stop ticks | integer ≥1 | required for sizing |
-| O | Tick value $ | number >0 (see Contracts tab) | required for sizing |
+| O | Tick value $ | number, ≤6 dp, 0 < tv ≤ 100,000 (L-1; see Contracts tab) | required for sizing |
 | P | Type (eff.) | calc | `=IF(D2<>"",D2,PV(C))` |
 | Q | Start (eff.) | calc | `=IF(E2<>"",E2,IF(PV(D)<>"",VALUE(PV(D)),""))` |
 | R | DD (eff.) | calc | `=IF(F2<>"",F2,IF(PV(E)<>"",VALUE(PV(E)),IF(AND(PV(F)<>"",ISNUMBER(Q2)),VALUE(PV(F))/100*Q2,"")))` |
@@ -85,18 +91,18 @@ Inputs (white, unlocked) A–O; calculated (grey, locked) P–AN. `$B2` drives l
 | W | Param check | calc | see §3.1 → `OK` / `INVALID` / `INCOMPLETE` / `""` (empty row) |
 | X | Peak | calc | §3.2 |
 | Y | Floor (display) | calc | `=IF($W2<>"OK",$W2,CENT_UP(AJ2))` |
-| Z | Locked | calc | `=IF($W2<>"OK",$W2,AND(P2<>"static",S2<>"NONE",ROUND(X2-R2-(Q2+S2),6)>=0))` |
+| Z | Locked | calc | `=IF($W2<>"OK",$W2,AND(ISNUMBER(S2),P2<>"static",ROUND(X2-R2-(Q2+IF(ISNUMBER(S2),S2,0)),6)>=0))` (BUILDER guard 3: AND does not short-circuit, so `Q2+S2` with S2="NONE" would raise #VALUE!) |
 | AA | Breached | calc | `=IF($W2<>"OK",$W2,OR(COUNTIFS('Daily Log'!$A$2:$A$1001,A2,'Daily Log'!$I$2:$I$1001,"BREACHED")>0,HIT(K2,AJ2)))` |
 | AB | DD room | calc | `=IF($W2<>"OK",$W2,IF(AA2,"BREACHED",CENT_DOWN(MAX(0,K2-AJ2))))` |
 | AC | Daily room | calc | `=IF($W2<>"OK",$W2,IF(AA2,"BREACHED",IF(U2="NONE","NONE",CENT_DOWN(MAX(0,U2-MAX(0,-(K2-L2)))))))` |
 | AD | Binding room | calc | `=IF($W2<>"OK",$W2,IF(AA2,"BREACHED",IF(AC2="NONE",AB2,MIN(AB2,AC2))))` |
 | AE | Binding | calc | `=IF($W2<>"OK",$W2,IF(AA2,"BREACHED",IF(AND(AC2<>"NONE",AC2<AB2),"daily_loss","drawdown")))` (tie → drawdown) |
 | AF | Effective risk | calc | `=IF(AK2<>"OK",AK2,IF(AA2,"BREACHED",CENT_DOWN(MIN(M2,AD2))))` |
-| AG | Contracts | calc | `=IF(AK2<>"OK",AK2,IF(AA2,"BREACHED",IF(V2="NONE",AL2,MIN(AL2,V2))))` |
+| AG | Contracts | calc | `=IF(AK2<>"OK",AK2,IF(AA2,"BREACHED",IF(V2="NONE",AL2,MIN(AL2,V2))))` (V blank cannot reach here: W = INCOMPLETE) |
 | AH | Capped flag | calc | `=IF(AK2<>"OK",AK2,AND(V2<>"NONE",AL2>V2))` |
 | AI | Room-limited flag | calc | `=IF(AK2<>"OK",AK2,M2>AD2)` |
 | AJ | Floor raw (hidden) | calc | §3.2 |
-| AK | Sizing check (hidden) | calc | `=IF($W2<>"OK",$W2,IF(OR(M2="",N2="",O2=""),"INCOMPLETE",IF(OR(NOT(ISNUMBER(M2)),M2<0,NOT(ISNUMBER(N2)),N2<1,N2<>INT(N2),NOT(ISNUMBER(O2)),O2<=0),"INVALID","OK")))` |
+| AK | Sizing check (hidden) | calc | `=IF($W2<>"OK",$W2,IF(OR(M2="",N2="",O2=""),"INCOMPLETE",IF(OR(NOT(ISNUMBER(M2)),M2<0,NOT(ISNUMBER(N2)),N2<1,N2<>INT(N2),NOT(ISNUMBER(O2)),O2<=0,O2>100000,ROUND(O2*1000000,3)<>INT(ROUND(O2*1000000,3)),M2>100000000),"INVALID","OK")))` |
 | AL | Contracts raw (hidden) | calc | `=IF(AK2<>"OK","",INT(ROUND(MIN(M2,AD2)/(N2*O2),9)))` |
 | AM | Actual risk | calc | `=IF(AK2<>"OK",AK2,IF(AA2,"BREACHED",CENT_DOWN(AG2*N2*O2)))` |
 | AN | Flags | calc | `=TEXTJOIN("; ",TRUE,IF(C2="partial","PARTIAL PRESET: verify "&PV(L),""),IF(C2="manual","MANUAL: all params user-entered",""),IF(OR(AND(D2<>"",PV(C)<>""),AND(E2<>"",PV(D)<>""),AND(F2<>"",PV(E)<>""),AND(G2<>"",PV(G)<>""),AND(H2<>"",PV(H)<>""),AND(I2<>"",PV(I)<>""),AND(J2<>"",PV(J)<>"")),"OVERRIDES PRESET",""),"source: "&PV(M)&" checked "&PV(N))` |
@@ -132,22 +138,39 @@ Validation: `D2>=MAX(C2,E2)` and `E2<=MIN(C2,D2)` when present, else row INVALID
 ### 3.1 Param check `W2` (precedence: empty → INCOMPLETE → INVALID → OK)
 ```
 =IF(AND(A2="",B2=""),"",
- IF(OR(A2="",B2="",P2="",Q2="",R2="",S2="",T2="",U2="",K2="",AND(U2<>"NONE",L2="")),"INCOMPLETE",
+ IF(OR(A2="",B2="",P2="",Q2="",R2="",S2="",T2="",U2="",V2="",K2="",AND(U2<>"NONE",L2="")),"INCOMPLETE",
  IF(OR(COUNTIFS($A$2:$A$11,A2)>1,
        AND(P2<>"static",P2<>"eod_trailing",P2<>"intraday_trailing"),
        NOT(ISNUMBER(Q2)),Q2<=0,ROUND(Q2*100,6)<>INT(ROUND(Q2*100,6)),
        NOT(ISNUMBER(R2)),R2<=0,ROUND(R2*100,6)<>INT(ROUND(R2*100,6)),
        AND(S2<>"NONE",NOT(ISNUMBER(S2))),
        AND(P2="static",S2<>"NONE"),
-       AND(ISNUMBER(S2),ROUND(Q2+S2-(Q2-R2),6)<=0),
+       IF(ISNUMBER(S2),ROUND(Q2+S2-(Q2-R2),6)<=0,FALSE),
+       IF(ISNUMBER(S2),OR(S2<-100000000,S2>100000000),FALSE),
        AND(T2<>TRUE,T2<>FALSE),
        AND(U2<>"NONE",OR(NOT(ISNUMBER(U2)),U2<=0)),
-       AND(V2<>"",V2<>"NONE",OR(NOT(ISNUMBER(V2)),V2<0,V2<>INT(V2))),
-       NOT(ISNUMBER(K2)),AND(U2<>"NONE",NOT(ISNUMBER(L2)))),"INVALID",
- IF(COUNTIFS('Daily Log'!$A$2:$A$1001,A2,'Daily Log'!$I$2:$I$1001,"INVALID")>0,"INVALID","OK"))))
+       IF(V2="NONE",FALSE,IF(ISNUMBER(V2),OR(V2<0,V2<>INT(V2)),TRUE)),
+       NOT(ISNUMBER(K2)),AND(U2<>"NONE",NOT(ISNUMBER(L2))),
+       Q2>100000000,R2>100000000,K2<=0,K2>100000000,
+       IF(ISNUMBER(U2),U2>100000000,FALSE),IF(ISNUMBER(L2),OR(L2<=0,L2>100000000),FALSE)),"INVALID",
+ IF(COUNTIFS('Daily Log'!$A$2:$A$1001,A2,'Daily Log'!$I$2:$I$1001,"INVALID")>0,"INVALID",
+ IF(OR(COUNTIFS('Daily Log'!$A$2:$A$1001,A2,'Daily Log'!$I$2:$I$1001,"INCOMPLETE")>0,
+       COUNTIFS('Daily Log'!$I$2:$I$1001,"UNKNOWN_ACCOUNT")>0),"INCOMPLETE","OK")))))
 ```
-(Blank V = no cap; enter `NONE` explicitly to silence the flag. `T2<>TRUE` on text "false" is TRUE → INVALID, matching L-2.)
-Any invalid Daily Log row for the account makes the account INVALID (fail closed).
+Order of precedence (fail closed): own field missing → INCOMPLETE; own field invalid → INVALID; any of the account's log rows INVALID →
+INVALID; any of the account's log rows INCOMPLETE (H-1) **or any orphan log row anywhere (H-2)** → INCOMPLETE; else OK.
+`T2<>TRUE` on text "false" is TRUE → INVALID.
+
+BUILDER's three AND() guards are adopted verbatim (Excel/Sheets/LibreOffice `AND`/`OR` evaluate every argument, so a guard inside
+the same AND does not protect the arithmetic):
+1. lock below floor: `IF(ISNUMBER(S2),ROUND(Q2+S2-(Q2-R2),6)<=0,FALSE)` (was `AND(ISNUMBER(S2),…)`, which errors on NONE);
+2. max contracts: `IF(V2="NONE",FALSE,IF(ISNUMBER(V2),OR(V2<0,V2<>INT(V2)),TRUE))` (was `AND(V2<>"",V2<>"NONE",OR(…))`); blank V is caught earlier as INCOMPLETE (M-1);
+3. Locked `Z2` (see table).
+
+**L-3 case-insensitivity.** `MATCH`, `COUNTIFS`, `MAXIFS` and `=` text comparison are case-insensitive in both Excel and Google Sheets.
+Consequences, all intended and documented on the How-to tab: account IDs must be unique **ignoring case** (`COUNTIFS($A$2:$A$11,A2)>1`
+already counts `p16` and `P16` as duplicates → INVALID); a log row `p16` matches account `P16`; tokens `none`/`None` equal `NONE`;
+type `STATIC` equals `static`. Leading/trailing spaces are **not** ignored (`"Static "` → INVALID; no TRIM, by design).
 
 ### 3.2 Accounts peak `X2` and floor raw `AJ2`
 ```
@@ -170,23 +193,28 @@ G2 = static: S
      intraday:     MAX(S, MAXIFS($C$2:$C$1001,$A$2:$A$1001,A2,$B$2:$B$1001,"<"&B2),
                           MAXIFS($D$2:$D$1001,$A$2:$A$1001,A2,$B$2:$B$1001,"<="&B2), C2)          (incl. today's high)
 H2 = IF(t="static",S-DD,IF(X="NONE",G2-DD,MIN(G2-DD,S+X)))
-I2 = IF(A2="","",IF(OR(F2="",B2="",C2=""),"INCOMPLETE",IF(<validation fails or COUNTIFS($A$2:$A$1001,A2,$B$2:$B$1001,B2)>1>,"INVALID",
+I2 = IF(COUNTA(A2:E2)=0,"",IF(OR(A2="",F2=""),"UNKNOWN_ACCOUNT",IF(OR(B2="",C2=""),"INCOMPLETE",IF(<validation fails or COUNTIFS($A$2:$A$1001,A2,$B$2:$B$1001,B2)>1>,"INVALID",
      IF(HIT(IF(E2="",C2,MIN(C2,E2)),H2),"BREACHED","OK"))))
 ```
 EOD type: today's low/close are checked against the floor set by **prior** closes (oracle: breach check before trail).
 Intraday type: today's low is checked against the floor raised by **today's high** — i.e. the sheet assumes the high came first.
 This is the conservative choice (higher floor) but differs from the oracle when the low actually came first (golden DD-11).
+**H-2 orphan rows.** A row with any of A–E filled whose account ID is blank or matches no Accounts row (typo, paste bypassing the dropdown)
+shows `UNKNOWN_ACCOUNT` (red). Because the row's owner is unknowable, **every** account becomes INCOMPLETE while any orphan exists, and
+`Accounts!B14` shows the banner `=IF(COUNTIFS('Daily Log'!$I$2:$I$1001,"UNKNOWN_ACCOUNT")>0,COUNTIFS('Daily Log'!$I$2:$I$1001,"UNKNOWN_ACCOUNT")&" Daily Log row(s) with unknown account ID - fix before trading","")`.
+**H-1.** An INCOMPLETE row (e.g. low entered, close blank) makes its account INCOMPLETE; no room or contracts are shown.
+Log money fields obey the same L-2 range (`0 < x ≤ 1e8`, ≤2 dp) → else row INVALID.
 Breach is terminal: once any row is BREACHED, `Accounts!AA` stays TRUE; later rows are still shown but do not clear it.
 
 ## 4. Invalid-input convention
 - Calculated cells show exactly one of: number/boolean (OK), `INVALID` (bad value or rule configuration), `INCOMPLETE` (required input
-  missing, incl. partial-preset nulls), `BREACHED` (rooms, sizing), `NONE` (no DLL / no cap), or `""` (unused row). Never a number when not OK.
+  missing, incl. partial-preset nulls and blank max contracts, an INCOMPLETE log row, or any orphan log row), `UNKNOWN_ACCOUNT` (log row only), `BREACHED` (rooms, sizing), `NONE` (no DLL / no cap), or `""` (unused row). Never a number when not OK.
 - Propagation: every dependent formula begins with the upstream status test (`$W2`, `AK2`, `AA2`, `I2`); `IFERROR(…,"INVALID")` wraps
   each Accounts formula as a final guard (e.g. text in a numeric field).
-- Data validation (reject input, both apps): money ≤2 dp (custom rule `=ROUND(x*100,6)=INT(ROUND(x*100,6))`; never `ROUND(x*100,0)=x*100`, which rejects 0.29 in float), stop ticks whole number ≥1,
+- Data validation (reject input, both apps): money ≤2 dp and `0 < x ≤ 100000000` (custom rule `=ROUND(x*100,6)=INT(ROUND(x*100,6))`; never `ROUND(x*100,0)=x*100`, which rejects 0.29 in float), stop ticks whole number ≥1, tick value decimal `0 < x ≤ 100000` with ≤6 dp (`=ROUND(x*1000000,3)=INT(ROUND(x*1000000,3))`),
   max contracts whole number ≥0 or text NONE, lock number or NONE, touch list TRUE/FALSE, type list, preset list, date valid.
   Validation is advisory in Sheets (pasted values bypass it) → formulas re-validate (§3.1).
-- Conditional formatting: `INVALID` red fill; `INCOMPLETE` amber; `BREACHED` dark red/white bold, whole row; Locked TRUE green;
+- Conditional formatting: `INVALID` and `UNKNOWN_ACCOUNT` red fill; `Accounts!B14` banner red bold when non-empty; `INCOMPLETE` amber; `BREACHED` dark red/white bold, whole row; Locked TRUE green;
   AN containing `PARTIAL` or `OVERRIDES` amber text; DD room < 25% of DD → orange; AH TRUE (capped) or AI TRUE (room-limited) blue;
   preset `checked_date` > 30 days old (compare to a user-entered "As of" date in `Accounts!B13`; no TODAY()) → amber.
 
@@ -198,4 +226,4 @@ Breach is terminal: once any row is BREACHED, `Accounts!AA` stays TRUE; later ro
 See README section of the QUANT report; summarized: intraday order not encodable (DD-11); sub-cent inputs rejected (DD-17, FS-28);
 crypto out of scope (9 cases); error codes collapse to INVALID/INCOMPLETE (10 partial); no event stream (IV-42, IV-49);
 % DLLs and payout/withdrawal locks are manual; MFP post-lock strict touch not modeled; Excel 2016 unsupported (MAXIFS/TEXTJOIN);
-1,000 log rows / 10 accounts; Sheets data validation can be bypassed by paste (formulas re-check).
+1,000 log rows / 10 accounts; money range 0 < x ≤ 1e8, tick value ≤ 6 dp; IDs/tokens case-insensitive, spaces significant; Sheets data validation can be bypassed by paste (formulas re-check).

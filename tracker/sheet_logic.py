@@ -137,10 +137,107 @@ def build():
     return {"spec": "tracker v0.1.0 / oracle 0.2.0", "generated_by": "tracker/sheet_logic.py",
             "counts": {k: sum(c["reproducible"] == k for c in cases) for k in (Y, P, N)}, "cases": cases}, errs
 
+# --- status model (FORMULAS.md v0.1.1 §3.1, §3.3) and scenario checks for SPECTER-TRACKER-REVIEW fixes ---
+MAXM = 100000000
+def num(x): return isinstance(x, (int, float)) and not isinstance(x, bool)
+def cents_ok(x): return ROUND(x * 100, 6) == INT(ROUND(x * 100, 6))
+def money_ok(x): return num(x) and 0 < x <= MAXM and cents_ok(x)
+def eq_ci(a, b): return isinstance(a, str) and isinstance(b, str) and a.lower() == b.lower()   # Excel/Sheets "=" and MATCH
+
+def log_row_status(r, ids):
+    vals = [r.get(k, "") for k in ("acct", "date", "eod", "high", "low")]
+    if all(v == "" for v in vals): return ""
+    if r.get("acct", "") == "" or not any(eq_ci(r["acct"], i) for i in ids): return "UNKNOWN_ACCOUNT"
+    if r.get("date", "") == "" or r.get("eod", "") == "": return "INCOMPLETE"
+    for k in ("eod", "high", "low"):
+        if r.get(k, "") != "" and not money_ok(r[k]): return "INVALID"
+    return "OK"   # (breach evaluation is account()'s job; BREACHED is a sub-state of a valid row)
+
+def tick_ok(tv): return num(tv) and 0 < tv <= 100000 and ROUND(tv * 1e6, 3) == INT(ROUND(tv * 1e6, 3))
+
+def w_status(a, accts, log):
+    """a: dict with effective fields P..V, K, L (strings for tokens)."""
+    if a.get("id", "") == "" and a.get("preset", "") == "": return ""
+    req = [a.get(k, "") for k in ("id", "preset", "type", "start", "dd", "lock", "touch", "dll", "maxc", "equity")]
+    if any(v == "" for v in req) or (not eq_ci(a["dll"], "NONE") and a.get("day_ref", "") == ""): return "INCOMPLETE"
+    lock_none = eq_ci(a["lock"], "NONE"); maxc_none = eq_ci(a["maxc"], "NONE"); dll_none = eq_ci(a["dll"], "NONE")
+    inval = (sum(eq_ci(a["id"], b["id"]) for b in accts) > 1
+             or not any(eq_ci(a["type"], t) for t in ("static", "eod_trailing", "intraday_trailing"))
+             or not money_ok(a["start"]) or not money_ok(a["dd"])
+             or (not lock_none and not num(a["lock"]))
+             or (eq_ci(a["type"], "static") and not lock_none)
+             or (num(a["lock"]) and ROUND(a["start"] + a["lock"] - (a["start"] - a["dd"]), 6) <= 0)     # guard 1
+             or (num(a["lock"]) and abs(a["lock"]) > MAXM)
+             or a["touch"] not in (True, False)
+             or (not dll_none and not money_ok(a["dll"]))
+             or (False if maxc_none else (a["maxc"] < 0 or a["maxc"] != INT(a["maxc"]) if num(a["maxc"]) else True))  # guard 2
+             or not money_ok(a["equity"])
+             or (not dll_none and not money_ok(a["day_ref"])))
+    if inval: return "INVALID"
+    ids = [b["id"] for b in accts]
+    st = [log_row_status(r, ids) for r in log]
+    mine = [x for r, x in zip(log, st) if r.get("acct", "") != "" and eq_ci(r["acct"], a["id"])]
+    if "INVALID" in mine: return "INVALID"
+    if "INCOMPLETE" in mine or "UNKNOWN_ACCOUNT" in st: return "INCOMPLETE"
+    return "OK"
+
+def locked_z(a, peak):   # guard 3: no arithmetic on NONE
+    return num(a["lock"]) and not eq_ci(a["type"], "static") and ROUND(peak - a["dd"] - (a["start"] + (a["lock"] if num(a["lock"]) else 0)), 6) >= 0
+
+def scenarios():
+    base = dict(id="P1", preset="Manual", type="static", start=50000, dd=2000, lock="NONE", touch=True, dll="NONE", maxc="NONE", equity=49000, day_ref="")
+    A = lambda **k: {**base, **k}
+    other = A(id="P2")
+    T = []
+    def t(name, got, exp): T.append((name, got, exp))
+    # H-1: incomplete log row (low entered, close blank) -> account INCOMPLETE
+    t("H-1 log INCOMPLETE propagates", w_status(A(), [A()], [{"acct": "P1", "date": "2026-10-13", "low": 47000}]), "INCOMPLETE")
+    # H-2: orphan row -> UNKNOWN_ACCOUNT on row, every account INCOMPLETE; blank-ID row with data also orphan
+    log2 = [{"acct": "P2x", "date": "2026-10-13", "eod": 49000, "low": 47000}]
+    t("H-2 orphan row status", log_row_status(log2[0], ["P1", "P2"]), "UNKNOWN_ACCOUNT")
+    t("H-2 orphan -> P1 INCOMPLETE", w_status(A(), [A(), other], log2), "INCOMPLETE")
+    t("H-2 orphan -> P2 INCOMPLETE", w_status(other, [A(), other], log2), "INCOMPLETE")
+    t("H-2 blank ID with data", log_row_status({"acct": "", "eod": 49000}, ["P1"]), "UNKNOWN_ACCOUNT")
+    t("H-2 empty row ignored", log_row_status({}, ["P1"]), "")
+    # M-1: blank cap -> INCOMPLETE; explicit NONE -> OK; numeric cap OK
+    t("M-1 blank cap", w_status(A(maxc=""), [A()], []), "INCOMPLETE")
+    t("M-1 NONE cap", w_status(A(maxc="NONE"), [A()], []), "OK")
+    t("M-1 numeric cap", w_status(A(maxc=5), [A()], []), "OK")
+    t("M-1 fractional cap", w_status(A(maxc=2.5), [A()], []), "INVALID")
+    # BUILDER guards: NONE lock does not error; lock below floor INVALID; Locked FALSE on NONE
+    t("guard1 NONE lock eod ok", w_status(A(type="eod_trailing"), [A()], []), "OK")
+    t("guard1 lock below floor", w_status(A(type="eod_trailing", lock=-2500), [A()], []), "INVALID")
+    t("guard2 text cap", w_status(A(maxc="five"), [A()], []), "INVALID")
+    t("guard3 Locked on NONE", locked_z(A(type="eod_trailing"), 60000), False)
+    t("guard3 Locked numeric", locked_z(A(type="eod_trailing", lock=0), 52000), True)
+    # L-1: fractional tick values
+    t("L-1 tick 15.625", tick_ok(15.625), True)
+    t("L-1 tick 3.125", tick_ok(3.125), True)
+    t("L-1 tick 0.995", tick_ok(0.995), True)
+    t("L-1 tick 7 dp", tick_ok(0.0000001), False)
+    t("L-1 sizing ZN", size({"risk": 500, "ticks": 8, "tv": 15.625, "maxc": "NONE"}, 1000)["contracts"], 4)
+    # L-2: equity bound
+    t("L-2 equity 1e15", w_status(A(equity=1e15), [A()], []), "INVALID")
+    t("L-2 equity 0", w_status(A(equity=0), [A()], []), "INVALID")
+    t("L-2 equity 1e8", w_status(A(equity=100000000), [A()], []), "OK")
+    t("L-2 log close 1e9", w_status(A(), [A()], [{"acct": "P1", "date": "d", "eod": 1e9}]), "INVALID")
+    # L-3: case-insensitive
+    t("L-3 dup IDs ignoring case", w_status(A(id="p16"), [A(id="p16"), A(id="P16")], []), "INVALID")
+    t("L-3 log p16 matches P16", log_row_status({"acct": "p16", "date": "d", "eod": 49000}, ["P16"]), "OK")
+    t("L-3 none == NONE", w_status(A(lock="none", maxc="None"), [A()], []), "OK")
+    t("L-3 trailing space invalid", w_status(A(type="Static "), [A()], []), "INVALID")
+    return T
+
+def run_scenarios():
+    bad = [(n, g, e) for n, g, e in scenarios() if g != e]
+    for b in bad: print("SCENARIO FAIL", b)
+    print("SCENARIOS", "FAIL" if bad else "PASS", len(scenarios()))
+    return not bad
+
 if __name__ == "__main__":
     doc, errs = build()
     t = json.dumps(doc, indent=2) + "\n"
     for e in errs: print("MISMATCH", e)
     if "--check" in sys.argv:
-        ok = open(OUT).read() == t and not errs; print("GOLDEN_MAP", "PASS" if ok else "FAIL", doc["counts"]); sys.exit(0 if ok else 1)
-    open(OUT, "w").write(t); print("wrote", OUT, doc["counts"]); sys.exit(1 if errs else 0)
+        ok = open(OUT).read() == t and not errs and run_scenarios(); print("GOLDEN_MAP", "PASS" if ok else "FAIL", doc["counts"]); sys.exit(0 if ok else 1)
+    open(OUT, "w").write(t); print("wrote", OUT, doc["counts"]); sys.exit(1 if errs or not run_scenarios() else 0)
