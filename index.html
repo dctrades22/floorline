@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Floorline: prop firm drawdown floor, remaining room and position size calculator. Runs entirely in your browser.">
+<title>Floorline · prop drawdown floor &amp; size calculator</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230b0c0d'/%3E%3Crect x='2' y='10' width='12' height='2' fill='%23ff5b1f'/%3E%3Crect x='7' y='3' width='2' height='6' fill='%23eceae4'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#" aria-label="Floorline home">
+    <span class="mark" aria-hidden="true"><i></i></span>
+    <span class="word">FLOOR<b>LINE</b></span>
+  </a>
+  <p class="tag">Know your floor before you size the trade.</p>
+</header>
+
+<main class="grid">
+  <section class="panel rule" aria-labelledby="h-rule">
+    <h2 id="h-rule"><span class="num">01</span>Rule</h2>
+    <div class="row3">
+      <label>Firm<select id="firm"></select></label>
+      <label>Plan<select id="plan"></select></label>
+      <label>Size<select id="size"></select></label>
+    </div>
+    <div id="presetMeta" class="meta"></div>
+    <div id="ruleNote" class="note" hidden></div>
+    <details id="srcNote" class="src" hidden><summary>Source notes</summary><p></p></details>
+    <fieldset id="ruleFields" class="fields">
+      <legend class="sr">Rule fields</legend>
+      <label data-f="type">Drawdown type
+        <select id="ddType">
+          <option value="eod_trailing">EOD trailing</option>
+          <option value="intraday_trailing">Intraday trailing</option>
+          <option value="static">Static</option>
+        </select></label>
+      <label data-f="dd">Max drawdown $<input id="ddAmt" inputmode="decimal" autocomplete="off"></label>
+      <label data-f="lock">Lock offset $ <small>blank = never locks · 0 = at start</small><input id="lockOff" inputmode="decimal" autocomplete="off"></label>
+      <label data-f="dll">Daily loss limit $ <small>blank = none</small><input id="dll" inputmode="decimal" autocomplete="off"></label>
+      <label data-f="dllpct" hidden>DLL rate<select id="dllPct"></select></label>
+      <label data-f="dllbasis" hidden>Balance at last DLL reset $<input id="dllBasis" inputmode="decimal" autocomplete="off"></label>
+      <label data-f="cap">Max contracts, this instrument <small>blank = no cap</small><input id="cap" inputmode="numeric" autocomplete="off"></label>
+      <label data-f="touch" class="check"><input type="checkbox" id="touch" checked> Touching the floor is a breach</label>
+    </fieldset>
+    <div class="ruleActions"><button id="toCustom" type="button" class="ghost">Edit as custom</button></div>
+  </section>
+
+  <section class="panel acct" aria-labelledby="h-acct">
+    <h2 id="h-acct"><span class="num">02</span>Account</h2>
+    <div class="row2">
+      <label>Start balance $<input id="start" inputmode="decimal" autocomplete="off"></label>
+      <label>Balance now $ <small>incl. open P&amp;L</small><input id="bal" inputmode="decimal" autocomplete="off"></label>
+      <label><span id="peakLbl">Highest EOD close $</span><input id="peak" inputmode="decimal" autocomplete="off"></label>
+      <label>Day P&amp;L $ <small>since reset</small><input id="pnl" inputmode="decimal" autocomplete="off"></label>
+    </div>
+    <h2 class="sub"><span class="num">03</span>Trade</h2>
+    <div class="row2">
+      <label>Instrument<select id="inst"></select></label>
+      <label>Risk $<input id="risk" inputmode="decimal" autocomplete="off"></label>
+      <label data-fut>Stop, ticks<input id="ticks" inputmode="numeric" autocomplete="off"></label>
+      <label data-cry hidden>Entry<input id="entry" inputmode="decimal" autocomplete="off"></label>
+      <label data-cry hidden>Stop price<input id="stopPx" inputmode="decimal" autocomplete="off"></label>
+      <label data-cry hidden>Qty step<input id="step" inputmode="decimal" autocomplete="off"></label>
+    </div>
+    <p id="instNote" class="fine"></p>
+  </section>
+
+  <section class="panel out" aria-labelledby="h-out" aria-live="polite">
+    <h2 id="h-out" class="sr">Result</h2>
+    <div id="err" class="err" hidden></div>
+    <div class="hero">
+      <div class="lbl">Floor <span id="lockBadge" class="pill"></span></div>
+      <div id="floor" class="big">—</div>
+    </div>
+    <div id="gauge" class="gauge" aria-hidden="true">
+      <div class="rail"><div class="danger"></div><div id="gFill" class="fill"></div>
+        <div id="gDll" class="mk dllmk"><span>DLL</span></div>
+        <div id="gLock" class="mk lockmk"><span>LOCK</span></div>
+        <div id="gStart" class="mk startmk"><span>START</span></div>
+        <div id="gPeak" class="mk peakmk"><span>PEAK</span></div>
+        <div id="gFloor" class="mk floormk"></div>
+        <div id="gEq" class="mk eqmk"><span>NOW</span></div>
+      </div>
+    </div>
+    <dl class="stats">
+      <div><dt>Drawdown room</dt><dd id="ddRoom">—</dd></div>
+      <div><dt>Daily room</dt><dd id="dRoom">—</dd></div>
+      <div class="bind"><dt>Binding room <span id="bindBy" class="by"></span></dt><dd id="bRoom">—</dd></div>
+    </dl>
+    <div class="size">
+      <div class="lbl" id="sizeLbl">Max contracts</div>
+      <div class="sizeRow"><div id="contracts" class="big2">—</div><div id="sizeDetail" class="detail"></div></div>
+      <div id="flags" class="flags"></div>
+    </div>
+    <table class="quick" id="quick"><caption id="quickCap">Contracts by stop</caption><thead><tr><th>Stop</th><th>$ / contract</th><th>Contracts</th><th>Risk used</th></tr></thead><tbody></tbody></table>
+  </section>
+</main>
+
+<footer class="foot">
+  <p><strong>Educational tool only.</strong> Not affiliated with, endorsed by, or connected to any prop firm. Firm rules change without notice; presets are dated and may be out of date. Always confirm your floor, limits and contract caps in your firm's dashboard. Not financial advice.</p>
+  <p class="fine">Not modeled: payout floor resets, consistency rules, scaling plans, session/DST timing, commissions and slippage. Math is a port of the reference oracle (spec v0.2.0, Decimal-exact, safety values rounded conservatively). Runs locally; no tracking, no network.</p>
+</footer>
+
+<script src="js/decimal.js"></script>
+<script src="js/oracle.js"></script>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

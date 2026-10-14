@@ -1,0 +1,135 @@
+/* Faithful JS port of golden/oracle.py (spec v0.2.0). Same inputs, same outputs, same error codes/messages. */
+(function (root) {
+  "use strict";
+  var Dec = (typeof module !== "undefined" && module.exports) ? require("./decimal.js") : root.Dec;
+  function SpecError(code, msg) { var e = new Error(msg); e.specCode = code; return e; }
+  function bad(m) { throw SpecError("INVALID_INPUT", m); }
+  function badcfg(m) { throw SpecError("INVALID_RULE_CONFIGURATION", m); }
+  function isDict(v) { return v !== null && typeof v === "object" && !Array.isArray(v); }
+  function has(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+  function get(o, k) { return has(o, k) ? o[k] : null; }           // dict.get(k) -> None
+  function need(inp, key) { if (!isDict(inp) || !has(inp, key)) bad("missing " + key); return inp[key]; }
+
+  var CENT = -2;
+  function rFloorLevel(x) { return Dec.toFixed(Dec.quantize(x, CENT, "CEILING")); }
+  function rDown(x) { return Dec.toFixed(Dec.quantize(x, CENT, "DOWN")); }
+  function rNear(x) { return Dec.toFixed(Dec.quantize(x, CENT, "HALF_UP")); }
+
+  function dec(v, name, o) {
+    o = o || {};
+    var s;
+    if (typeof v === "string") s = v;
+    else if (typeof v === "number" && Number.isInteger(v)) s = String(BigInt(v));  // Python int
+    else bad(name + " must be a decimal string or int");
+    var d;
+    try { d = Dec.parse(s); } catch (e) { bad(name + " not a decimal"); }
+    if (d.special) bad(name + " not finite");
+    if (o.positive && Dec.cmp(d, Dec.ZERO) <= 0) bad(name + " must be > 0");
+    if (o.nonneg && Dec.cmp(d, Dec.ZERO) < 0) bad(name + " must be >= 0");
+    if (o.integer && !Dec.isInteger(d)) bad(name + " must be an integer");
+    return d;
+  }
+
+  function drawdown(inp) {
+    var t = need(inp, "type");
+    if (["static", "eod_trailing", "intraday_trailing"].indexOf(t) < 0) badcfg("unknown drawdown type");
+    var start = dec(need(inp, "start_balance"), "start_balance", { positive: true });
+    var dd = dec(need(inp, "drawdown_amount"), "drawdown_amount", { positive: true });
+    var touch = has(inp, "breach_on_touch") ? inp.breach_on_touch : true;
+    if (typeof touch !== "boolean") bad("breach_on_touch must be boolean");
+    var lo = get(inp, "lock_offset"), lockLevel = null;
+    if (lo !== null) {
+      if (t === "static") badcfg("static drawdown has no lock");
+      lockLevel = Dec.add(start, dec(lo, "lock_offset"));
+      if (Dec.cmp(lockLevel, Dec.sub(start, dd)) <= 0) badcfg("lock level must be above initial floor");
+    }
+    var events = need(inp, "events");
+    if (!Array.isArray(events)) bad("events must be a list");
+    var parsed = events.map(function (e) {
+      var k = need(e, "kind");
+      if (k === "mark") return ["mark", dec(need(e, "equity"), "equity")];
+      if (k === "eod") return ["eod", dec(need(e, "balance"), "balance")];
+      bad("unknown event kind");
+    });
+    var hit = touch ? function (e, f) { return Dec.cmp(e, f) <= 0; } : function (e, f) { return Dec.cmp(e, f) < 0; };
+    var floor = Dec.sub(start, dd), peak = start, locked = false, breached = false, equity = start;
+    function trail(p) {
+      if (t === "static" || locked) return;
+      var c = Dec.sub(p, dd);
+      if (lockLevel !== null && Dec.cmp(c, lockLevel) >= 0) { c = lockLevel; locked = true; }
+      if (Dec.cmp(c, floor) > 0) floor = c;
+    }
+    for (var i = 0; i < parsed.length; i++) {
+      if (breached) break;
+      var k = parsed[i][0], v = parsed[i][1];
+      equity = v;
+      if (t === "intraday_trailing" && Dec.cmp(v, peak) > 0) { peak = v; trail(peak); }
+      if (hit(v, floor)) { breached = true; continue; }
+      if (t === "eod_trailing" && k === "eod" && Dec.cmp(v, peak) > 0) { peak = v; trail(peak); }
+    }
+    var room = breached ? Dec.ZERO : Dec.max(Dec.ZERO, Dec.sub(equity, floor));
+    return { floor: rFloorLevel(floor), peak: rNear(peak), locked: locked, breached: breached,
+      equity: rDown(equity), drawdown_room: rDown(room) };
+  }
+
+  function riskRoom(inp) {
+    var ddRoom = dec(need(inp, "drawdown_room"), "drawdown_room", { nonneg: true });
+    var dl = get(inp, "daily_loss_limit");
+    if (dl === null) return { drawdown_room: rDown(ddRoom), daily_room: null, binding_room: rDown(ddRoom), binding: "drawdown" };
+    dl = dec(dl, "daily_loss_limit", { positive: true });
+    var dayPnl = dec(need(inp, "day_pnl"), "day_pnl");
+    var dRoom = Dec.max(Dec.ZERO, Dec.sub(dl, Dec.max(Dec.ZERO, Dec.neg(dayPnl))));
+    return { drawdown_room: rDown(ddRoom), daily_room: rDown(dRoom), binding_room: rDown(Dec.min(ddRoom, dRoom)),
+      binding: Dec.cmp(dRoom, ddRoom) < 0 ? "daily_loss" : "drawdown" };
+  }
+
+  function effRisk(inp) {
+    var risk = dec(need(inp, "risk"), "risk", { nonneg: true });
+    var room = dec(need(inp, "binding_room"), "binding_room", { nonneg: true });
+    return [Dec.min(risk, room), Dec.cmp(risk, room) > 0];
+  }
+
+  function sizeFutures(inp) {
+    var r = effRisk(inp), risk = r[0];
+    var ticks = dec(need(inp, "stop_ticks"), "stop_ticks", { positive: true, integer: true });
+    var tv = dec(need(inp, "tick_value"), "tick_value", { positive: true });
+    var mc = get(inp, "max_contracts");
+    if (mc !== null) mc = Dec.toNumber(Dec.toIntegral(dec(mc, "max_contracts", { nonneg: true, integer: true }), "DOWN"));
+    var per = Dec.mul(ticks, tv);
+    var n = Dec.toNumber(Dec.toIntegral(Dec.div(risk, per), "FLOOR"));
+    var capped = mc !== null && n > mc;
+    if (capped) n = mc;
+    return { effective_risk: rDown(risk), risk_limited_by_room: r[1], risk_per_contract: Dec.toFixed(per),
+      contracts: n, capped: capped, actual_risk: rDown(Dec.mul(per, Dec.fromInt(n))) };
+  }
+
+  function sizeCrypto(inp) {
+    var r = effRisk(inp), risk = r[0];
+    var e = dec(need(inp, "entry"), "entry", { positive: true });
+    var s = dec(need(inp, "stop"), "stop", { positive: true });
+    var step = dec(need(inp, "step_size"), "step_size", { positive: true });
+    if (Dec.cmp(e, s) === 0) bad("entry == stop");
+    var dist = Dec.abs(Dec.sub(e, s));
+    var q = Dec.mul(Dec.toIntegral(Dec.div(Dec.div(risk, dist), step), "FLOOR"), step);
+    q = Dec.quantize(q, step.e, "FLOOR");
+    return { effective_risk: rDown(risk), risk_limited_by_room: r[1], side: Dec.cmp(s, e) < 0 ? "long" : "short",
+      qty: Dec.toFixed(q), actual_risk: rDown(Dec.mul(q, dist)) };
+  }
+
+  var FUNCS = { drawdown: drawdown, risk_room: riskRoom, futures: sizeFutures, crypto: sizeCrypto };
+
+  function evaluate(kind, inp) {
+    try {
+      if (!has(FUNCS, kind)) bad("unknown kind");
+      var out = FUNCS[kind](inp), res = { ok: true };
+      Object.keys(out).forEach(function (k) { res[k] = out[k]; });
+      return res;
+    } catch (e) {
+      if (e && e.specCode) return { ok: false, error: e.specCode, message: e.message };
+      if (e && e.decimalInvalidOperation) return { ok: false, error: "INVALID_INPUT", message: "malformed input: InvalidOperation" };
+      return { ok: false, error: "INVALID_INPUT", message: "malformed input: " + ((e && e.name) || "Error") };
+    }
+  }
+  var api = { evaluate: evaluate, SPEC_VERSION: "0.2.0" };
+  if (typeof module !== "undefined" && module.exports) module.exports = api; else root.Oracle = api;
+})(this);
