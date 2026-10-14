@@ -1,0 +1,116 @@
+{
+  "schema_version": "0.1.0",
+  "checked_date": "2026-10-14",
+  "contracts": [
+    {
+      "symbol": "MES",
+      "name": "Micro E-mini S&P 500",
+      "exchange": "CME Group",
+      "tick_size": "0.25",
+      "tick_value_usd": "1.25",
+      "source_url": "https://www.cmegroup.com/articles/faqs/micro-e-mini-equity-index-futures-frequently-asked-questions.html",
+      "checked_date": "2026-10-14",
+      "status": "verified_indirect",
+      "note": "Direct fetch of the cmegroup.com page returned HTTP 403/500 (bot-blocked); values read from the search-index copy of the cited CME Group page. Re-verify in a browser before release. CME FAQ table: 0.25 index points = $1.25; contract page: $5 x index, 0.25 tick."
+    },
+    {
+      "symbol": "MNQ",
+      "name": "Micro E-mini Nasdaq-100",
+      "exchange": "CME Group",
+      "tick_size": "0.25",
+      "tick_value_usd": "0.50",
+      "source_url": "https://www.cmegroup.com/articles/faqs/micro-e-mini-equity-index-futures-frequently-asked-questions.html",
+      "checked_date": "2026-10-14",
+      "status": "verified_indirect",
+      "note": "Direct fetch of the cmegroup.com page returned HTTP 403/500 (bot-blocked); values read from the search-index copy of the cited CME Group page. Re-verify in a browser before release. CME FAQ table: 0.25 index points = $0.50."
+    },
+    {
+      "symbol": "ES",
+      "name": "E-mini S&P 500",
+      "exchange": "CME Group",
+      "tick_size": "0.25",
+      "tick_value_usd": "12.50",
+      "source_url": "https://www.cmegroup.com/markets/equities/sp/e-mini-sandp500.contractSpecs.html",
+      "checked_date": "2026-10-14",
+      "status": "flagged",
+      "note": "Direct fetch of the cmegroup.com page returned HTTP 403/500 (bot-blocked); values read from the search-index copy of the cited CME Group page. Re-verify in a browser before release. CME excerpt seen did not show the tick/multiplier text; 0.25 x $50 = $12.50 confirmed only by third-party (barchart). FLAG: needs direct check of CME page."
+    },
+    {
+      "symbol": "NQ",
+      "name": "E-mini Nasdaq-100",
+      "exchange": "CME Group",
+      "tick_size": "0.25",
+      "tick_value_usd": "5.00",
+      "source_url": "https://www.cmegroup.com/trading/equity-index/files/emini-nasdaq-100-futures-options.pdf",
+      "checked_date": "2026-10-14",
+      "status": "verified_indirect",
+      "note": "Direct fetch of the cmegroup.com page returned HTTP 403/500 (bot-blocked); values read from the search-index copy of the cited CME Group page. Re-verify in a browser before release. CME fact sheet: outrights 0.25 index points = $5.00; contract page: $20 x index."
+    },
+    {
+      "symbol": "GC",
+      "name": "Gold (COMEX)",
+      "exchange": "CME Group",
+      "tick_size": "0.10",
+      "tick_value_usd": "10.00",
+      "source_url": "https://www.cmegroup.com/market-regulation/files/gold-futures-and-options-fact-card.pdf",
+      "checked_date": "2026-10-14",
+      "status": "verified_indirect",
+      "note": "Direct fetch of the cmegroup.com page returned HTTP 403/500 (bot-blocked); values read from the search-index copy of the cited CME Group page. Re-verify in a browser before release. CME fact card: 100 troy oz, $0.10/oz; tick value derived 100 x 0.10 = $10.00 (CME education page states $10.00 tick)."
+    },
+    {
+      "symbol": "MGC",
+      "name": "Micro Gold (COMEX)",
+      "exchange": "CME Group",
+      "tick_size": "0.10",
+      "tick_value_usd": "1.00",
+      "source_url": "https://www.cmegroup.com/rulebook/COMEX/1a/120.pdf",
+      "checked_date": "2026-10-14",
+      "status": "verified_indirect",
+      "note": "Direct fetch of the cmegroup.com page returned HTTP 403/500 (bot-blocked); values read from the search-index copy of the cited CME Group page. Re-verify in a browser before release. Rulebook ch.120: 10 troy oz, $0.10/oz; derived 10 x 0.10 = $1.00 (CME education page states $1.00)."
+    },
+    {
+      "symbol": "CL",
+      "name": "Light Sweet Crude Oil (NYMEX)",
+      "exchange": "CME Group",
+      "tick_size": "0.01",
+      "tick_value_usd": "10.00",
+      "source_url": "https://www.cmegroup.com/rulebook/NYMEX/2/200.pdf",
+      "checked_date": "2026-10-14",
+      "status": "verified_indirect",
+      "note": "Direct fetch of the cmegroup.com page returned HTTP 403/500 (bot-blocked); values read from the search-index copy of the cited CME Group page. Re-verify in a browser before release. Rulebook ch.200: 1,000 bbl, $0.01/bbl; derived 1000 x 0.01 = $10.00."
+    },
+    {
+      "symbol": "MCL",
+      "name": "Micro WTI Crude Oil (NYMEX)",
+      "exchange": "CME Group",
+      "tick_size": "0.01",
+      "tick_value_usd": "1.00",
+      "source_url": "https://www.cmegroup.com/markets/energy/files/getting-started-with-micro-wti-crude-oil-options.pdf",
+      "checked_date": "2026-10-14",
+      "status": "flagged",
+      "note": "Direct fetch of the cmegroup.com page returned HTTP 403/500 (bot-blocked); values read from the search-index copy of the cited CME Group page. Re-verify in a browser before release. CME doc shows 100 bbl and $0.01/bbl but is the OPTIONS guide; futures contract-spec page not read. Derived 100 x 0.01 = $1.00. FLAG."
+    },
+    {
+      "symbol": "6E",
+      "name": "Euro FX",
+      "exchange": "CME Group",
+      "tick_size": "0.00005",
+      "tick_value_usd": "6.25",
+      "source_url": "https://www.cmegroup.com/markets/fx/fx-product-guide.html",
+      "checked_date": "2026-10-14",
+      "status": "verified_indirect",
+      "note": "Direct fetch of the cmegroup.com page returned HTTP 403/500 (bot-blocked); values read from the search-index copy of the cited CME Group page. Re-verify in a browser before release. CME FX product guide: 125,000 EUR, outright tick 0.00005; derived 125000 x 0.00005 = $6.25."
+    },
+    {
+      "symbol": "M6E",
+      "name": "Micro EUR/USD",
+      "exchange": "CME Group",
+      "tick_size": "0.0001",
+      "tick_value_usd": "1.25",
+      "source_url": "https://www.cmegroup.com/markets/microsuite/fx.html",
+      "checked_date": "2026-10-14",
+      "status": "verified_indirect",
+      "note": "Direct fetch of the cmegroup.com page returned HTTP 403/500 (bot-blocked); values read from the search-index copy of the cited CME Group page. Re-verify in a browser before release. CME Micro FX page: 12,500 EUR, 0.0001, value of one tick $1.25."
+    }
+  ]
+}

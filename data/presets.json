@@ -1,0 +1,1063 @@
+{
+  "schema_version": "0.1.0",
+  "checked_date": "2026-10-14",
+  "disclaimer": "Firm rules change; every entry is dated and must be re-verified before use. None assumed permanent.",
+  "status_values": {
+    "verified": "all non-null fields read on the firm's own page",
+    "partial": "some fields null because not stated on the cited page",
+    "custom_only": "not verified; user must enter values"
+  },
+  "presets": [
+    {
+      "firm": "Topstep",
+      "plan": "Trading Combine",
+      "account_size": 50000,
+      "drawdown_type": "eod_trailing",
+      "drawdown_amount": 2000,
+      "lock_rule": {
+        "lock_offset": 0,
+        "text": "locks permanently once MLL reaches starting balance"
+      },
+      "daily_loss_limit": {
+        "amount": 1000,
+        "optional": true
+      },
+      "max_contracts": {
+        "minis": 5,
+        "micros": 50
+      },
+      "source_url": "https://help.topstep.com/en/articles/8284204-what-is-the-maximum-loss-limit",
+      "checked_date": "2026-10-14",
+      "source_page_date": null,
+      "status": "verified",
+      "note": "MLL from https://help.topstep.com/en/articles/8284204-what-is-the-maximum-loss-limit; max contracts from https://help.topstep.com/en/articles/8284197-trading-combine-parameters (micros 10:1); DLL is OPTIONAL, chosen at checkout (https://help.topstep.com/en/articles/10490293-daily-loss-limit-in-the-trading-combine-and-express-funded-account, dated 2026-06-30) so daily_loss_limit = value only if selected. Breach on balance incl. unrealized touching MLL."
+    },
+    {
+      "firm": "Topstep",
+      "plan": "Trading Combine",
+      "account_size": 100000,
+      "drawdown_type": "eod_trailing",
+      "drawdown_amount": 3000,
+      "lock_rule": {
+        "lock_offset": 0,
+        "text": "locks permanently once MLL reaches starting balance"
+      },
+      "daily_loss_limit": {
+        "amount": 2000,
+        "optional": true
+      },
+      "max_contracts": {
+        "minis": 10,
+        "micros": 100
+      },
+      "source_url": "https://help.topstep.com/en/articles/8284204-what-is-the-maximum-loss-limit",
+      "checked_date": "2026-10-14",
+      "source_page_date": null,
+      "status": "verified",
+      "note": "MLL from https://help.topstep.com/en/articles/8284204-what-is-the-maximum-loss-limit; max contracts from https://help.topstep.com/en/articles/8284197-trading-combine-parameters (micros 10:1); DLL is OPTIONAL, chosen at checkout (https://help.topstep.com/en/articles/10490293-daily-loss-limit-in-the-trading-combine-and-express-funded-account, dated 2026-06-30) so daily_loss_limit = value only if selected. Breach on balance incl. unrealized touching MLL."
+    },
+    {
+      "firm": "Topstep",
+      "plan": "Trading Combine",
+      "account_size": 150000,
+      "drawdown_type": "eod_trailing",
+      "drawdown_amount": 4500,
+      "lock_rule": {
+        "lock_offset": 0,
+        "text": "locks permanently once MLL reaches starting balance"
+      },
+      "daily_loss_limit": {
+        "amount": 3000,
+        "optional": true
+      },
+      "max_contracts": {
+        "minis": 15,
+        "micros": 150
+      },
+      "source_url": "https://help.topstep.com/en/articles/8284204-what-is-the-maximum-loss-limit",
+      "checked_date": "2026-10-14",
+      "source_page_date": null,
+      "status": "verified",
+      "note": "MLL from https://help.topstep.com/en/articles/8284204-what-is-the-maximum-loss-limit; max contracts from https://help.topstep.com/en/articles/8284197-trading-combine-parameters (micros 10:1); DLL is OPTIONAL, chosen at checkout (https://help.topstep.com/en/articles/10490293-daily-loss-limit-in-the-trading-combine-and-express-funded-account, dated 2026-06-30) so daily_loss_limit = value only if selected. Breach on balance incl. unrealized touching MLL."
+    },
+    {
+      "firm": "Topstep",
+      "plan": "Express Funded Account",
+      "account_size": null,
+      "drawdown_type": null,
+      "drawdown_amount": null,
+      "lock_rule": null,
+      "daily_loss_limit": null,
+      "max_contracts": null,
+      "source_url": "https://help.topstep.com/en/articles/8284204-what-is-the-maximum-loss-limit",
+      "checked_date": "2026-10-14",
+      "source_page_date": null,
+      "status": "custom_only",
+      "note": "XFA starts at $0 balance, locks at $0, and resets MLL to $0 after first payout; model differs from start-balance model and payout-reset is out of scope for v0.1."
+    },
+    {
+      "firm": "Apex Trader Funding",
+      "plan": "Intraday Trailing Evaluation",
+      "account_size": 25000,
+      "drawdown_type": "intraday_trailing",
+      "drawdown_amount": 1000,
+      "lock_rule": null,
+      "daily_loss_limit": null,
+      "max_contracts": {
+        "contracts": 4,
+        "micro_ratio": null
+      },
+      "source_url": "https://apextraderfunding.com/help-center/intraday-trailing-drawdown-accounts/intraday-trailing-drawdown-evaluations/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-04-28",
+      "status": "partial",
+      "note": "Page (modified 2026-04-28) states intraday trailing from peak incl. unrealized, no DLL, max contracts. Lock/stop-trailing level NOT stated on this page -> lock_rule null (third-party sites claim start+100; not accepted). Micro equivalence not stated."
+    },
+    {
+      "firm": "Apex Trader Funding",
+      "plan": "Intraday Trailing Evaluation",
+      "account_size": 50000,
+      "drawdown_type": "intraday_trailing",
+      "drawdown_amount": 2000,
+      "lock_rule": null,
+      "daily_loss_limit": null,
+      "max_contracts": {
+        "contracts": 6,
+        "micro_ratio": null
+      },
+      "source_url": "https://apextraderfunding.com/help-center/intraday-trailing-drawdown-accounts/intraday-trailing-drawdown-evaluations/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-04-28",
+      "status": "partial",
+      "note": "Page (modified 2026-04-28) states intraday trailing from peak incl. unrealized, no DLL, max contracts. Lock/stop-trailing level NOT stated on this page -> lock_rule null (third-party sites claim start+100; not accepted). Micro equivalence not stated."
+    },
+    {
+      "firm": "Apex Trader Funding",
+      "plan": "Intraday Trailing Evaluation",
+      "account_size": 100000,
+      "drawdown_type": "intraday_trailing",
+      "drawdown_amount": 3000,
+      "lock_rule": null,
+      "daily_loss_limit": null,
+      "max_contracts": {
+        "contracts": 8,
+        "micro_ratio": null
+      },
+      "source_url": "https://apextraderfunding.com/help-center/intraday-trailing-drawdown-accounts/intraday-trailing-drawdown-evaluations/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-04-28",
+      "status": "partial",
+      "note": "Page (modified 2026-04-28) states intraday trailing from peak incl. unrealized, no DLL, max contracts. Lock/stop-trailing level NOT stated on this page -> lock_rule null (third-party sites claim start+100; not accepted). Micro equivalence not stated."
+    },
+    {
+      "firm": "Apex Trader Funding",
+      "plan": "Intraday Trailing Evaluation",
+      "account_size": 150000,
+      "drawdown_type": "intraday_trailing",
+      "drawdown_amount": 4000,
+      "lock_rule": null,
+      "daily_loss_limit": null,
+      "max_contracts": {
+        "contracts": 12,
+        "micro_ratio": null
+      },
+      "source_url": "https://apextraderfunding.com/help-center/intraday-trailing-drawdown-accounts/intraday-trailing-drawdown-evaluations/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-04-28",
+      "status": "partial",
+      "note": "Page (modified 2026-04-28) states intraday trailing from peak incl. unrealized, no DLL, max contracts. Lock/stop-trailing level NOT stated on this page -> lock_rule null (third-party sites claim start+100; not accepted). Micro equivalence not stated."
+    },
+    {
+      "firm": "Apex Trader Funding",
+      "plan": "EOD Trailing Evaluation / Performance Accounts",
+      "account_size": null,
+      "drawdown_type": null,
+      "drawdown_amount": null,
+      "lock_rule": null,
+      "daily_loss_limit": null,
+      "max_contracts": null,
+      "source_url": "https://apextraderfunding.com/help-center/",
+      "checked_date": "2026-10-14",
+      "source_page_date": null,
+      "status": "custom_only",
+      "note": "EOD-evaluation and PA article pages not read in this pass (main domain blocks curl; support.apextraderfunding.com 403)."
+    },
+    {
+      "firm": "Tradeify",
+      "plan": "Select Evaluation",
+      "account_size": 25000,
+      "drawdown_type": "eod_trailing",
+      "drawdown_amount": 1000,
+      "lock_rule": {
+        "lock_offset": 100,
+        "text": "floor locks at start+$100"
+      },
+      "daily_loss_limit": null,
+      "max_contracts": {
+        "minis": 1,
+        "micros": 10
+      },
+      "source_url": "https://help.tradeify.co/en/articles/12853921-select-evaluation-accounts",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-09-10",
+      "status": "verified",
+      "note": "Page dated 2026-09-10. No DLL in evaluation. AMBIGUITY: lock sentence sits under funded 'Important Considerations' ('When your EOD balance exceeds your drawdown amount by $100'); applicability to the evaluation phase is not explicit -> flag."
+    },
+    {
+      "firm": "Tradeify",
+      "plan": "Select Evaluation",
+      "account_size": 50000,
+      "drawdown_type": "eod_trailing",
+      "drawdown_amount": 2000,
+      "lock_rule": {
+        "lock_offset": 100,
+        "text": "floor locks at start+$100"
+      },
+      "daily_loss_limit": null,
+      "max_contracts": {
+        "minis": 4,
+        "micros": 40
+      },
+      "source_url": "https://help.tradeify.co/en/articles/12853921-select-evaluation-accounts",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-09-10",
+      "status": "verified",
+      "note": "Page dated 2026-09-10. No DLL in evaluation. AMBIGUITY: lock sentence sits under funded 'Important Considerations' ('When your EOD balance exceeds your drawdown amount by $100'); applicability to the evaluation phase is not explicit -> flag."
+    },
+    {
+      "firm": "Tradeify",
+      "plan": "Select Evaluation",
+      "account_size": 100000,
+      "drawdown_type": "eod_trailing",
+      "drawdown_amount": 3000,
+      "lock_rule": {
+        "lock_offset": 100,
+        "text": "floor locks at start+$100"
+      },
+      "daily_loss_limit": null,
+      "max_contracts": {
+        "minis": 8,
+        "micros": 80
+      },
+      "source_url": "https://help.tradeify.co/en/articles/12853921-select-evaluation-accounts",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-09-10",
+      "status": "verified",
+      "note": "Page dated 2026-09-10. No DLL in evaluation. AMBIGUITY: lock sentence sits under funded 'Important Considerations' ('When your EOD balance exceeds your drawdown amount by $100'); applicability to the evaluation phase is not explicit -> flag."
+    },
+    {
+      "firm": "Tradeify",
+      "plan": "Select Evaluation",
+      "account_size": 150000,
+      "drawdown_type": "eod_trailing",
+      "drawdown_amount": 4500,
+      "lock_rule": {
+        "lock_offset": 100,
+        "text": "floor locks at start+$100"
+      },
+      "daily_loss_limit": null,
+      "max_contracts": {
+        "minis": 12,
+        "micros": 120
+      },
+      "source_url": "https://help.tradeify.co/en/articles/12853921-select-evaluation-accounts",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-09-10",
+      "status": "verified",
+      "note": "Page dated 2026-09-10. No DLL in evaluation. AMBIGUITY: lock sentence sits under funded 'Important Considerations' ('When your EOD balance exceeds your drawdown amount by $100'); applicability to the evaluation phase is not explicit -> flag."
+    },
+    {
+      "firm": "Tradeify",
+      "plan": "Growth Evaluation / Select funded (Flex, Daily)",
+      "account_size": null,
+      "drawdown_type": null,
+      "drawdown_amount": null,
+      "lock_rule": null,
+      "daily_loss_limit": null,
+      "max_contracts": null,
+      "source_url": "https://help.tradeify.co/en/articles/10495915-growth-evaluation-accounts",
+      "checked_date": "2026-10-14",
+      "source_page_date": null,
+      "status": "custom_only",
+      "note": "Growth article not fetched in this pass (only search snippet); funded DLL values seen on Select page but funded drawdown/contract limits not tabulated there."
+    },
+    {
+      "firm": "MyFundedFutures",
+      "plan": "Rapid EOD (evaluation)",
+      "account_size": 50000,
+      "drawdown_type": "eod_trailing",
+      "drawdown_amount": 2000,
+      "lock_rule": null,
+      "daily_loss_limit": null,
+      "max_contracts": {
+        "minis": 3,
+        "micros": 30
+      },
+      "source_url": "https://help.myfundedfutures.com/en/articles/16158363-rapid-eod-50k-a-comprehensive-look",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-08-24",
+      "status": "partial",
+      "note": "Page dated 2026-08-24. Eval MLL $2,000 EOD, DLL none, 3/30. Eval lock rule not stated (lock at $100 is described for the Sim Funded stage only)."
+    },
+    {
+      "firm": "MyFundedFutures",
+      "plan": "Rapid EOD (sim funded)",
+      "account_size": 50000,
+      "drawdown_type": "eod_trailing",
+      "drawdown_amount": 2000,
+      "lock_rule": {
+        "lock_level_absolute": 100,
+        "start_balance": 0,
+        "text": "initial balance $0; MLL locks at $100"
+      },
+      "daily_loss_limit": null,
+      "max_contracts": {
+        "minis": 3,
+        "micros": 30
+      },
+      "source_url": "https://help.myfundedfutures.com/en/articles/16158363-rapid-eod-50k-a-comprehensive-look",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-08-24",
+      "status": "verified",
+      "note": "Start balance $0 => lock_offset = +100 relative to start."
+    },
+    {
+      "firm": "MyFundedFutures",
+      "plan": "Other plans/sizes (Rapid, Builder, Flex, Core)",
+      "account_size": null,
+      "drawdown_type": null,
+      "drawdown_amount": null,
+      "lock_rule": null,
+      "daily_loss_limit": null,
+      "max_contracts": null,
+      "source_url": "https://help.myfundedfutures.com/",
+      "checked_date": "2026-10-14",
+      "source_page_date": null,
+      "status": "custom_only",
+      "note": "Not fetched in this pass."
+    },
+    {
+      "firm": "Lucid Trading",
+      "plan": "LucidFlex (eval + funded)",
+      "account_size": 25000,
+      "drawdown_type": "eod_trailing",
+      "drawdown_amount": 1000,
+      "lock_rule": {
+        "lock_offset": 100,
+        "trail_balance": 26100,
+        "text": "MLL locks at start+$100 once balance exceeds Initial Trail Balance; payout moves MLL to locked level"
+      },
+      "daily_loss_limit": null,
+      "max_contracts": null,
+      "source_url": "https://support.lucidtrading.com/en/articles/12945815-lucidflex-drawdown",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-08-26",
+      "status": "partial",
+      "note": "Page dated 2026-08-26. DLL and max contracts not stated on this page -> null. AMBIGUITY: lock trigger wording 'exceeds the Initial Trail Balance' (strict >) vs table; implement as configurable."
+    },
+    {
+      "firm": "Lucid Trading",
+      "plan": "LucidFlex (eval + funded)",
+      "account_size": 50000,
+      "drawdown_type": "eod_trailing",
+      "drawdown_amount": 2000,
+      "lock_rule": {
+        "lock_offset": 100,
+        "trail_balance": 52100,
+        "text": "MLL locks at start+$100 once balance exceeds Initial Trail Balance; payout moves MLL to locked level"
+      },
+      "daily_loss_limit": null,
+      "max_contracts": null,
+      "source_url": "https://support.lucidtrading.com/en/articles/12945815-lucidflex-drawdown",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-08-26",
+      "status": "partial",
+      "note": "Page dated 2026-08-26. DLL and max contracts not stated on this page -> null. AMBIGUITY: lock trigger wording 'exceeds the Initial Trail Balance' (strict >) vs table; implement as configurable."
+    },
+    {
+      "firm": "Lucid Trading",
+      "plan": "LucidFlex (eval + funded)",
+      "account_size": 100000,
+      "drawdown_type": "eod_trailing",
+      "drawdown_amount": 3000,
+      "lock_rule": {
+        "lock_offset": 100,
+        "trail_balance": 103100,
+        "text": "MLL locks at start+$100 once balance exceeds Initial Trail Balance; payout moves MLL to locked level"
+      },
+      "daily_loss_limit": null,
+      "max_contracts": null,
+      "source_url": "https://support.lucidtrading.com/en/articles/12945815-lucidflex-drawdown",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-08-26",
+      "status": "partial",
+      "note": "Page dated 2026-08-26. DLL and max contracts not stated on this page -> null. AMBIGUITY: lock trigger wording 'exceeds the Initial Trail Balance' (strict >) vs table; implement as configurable."
+    },
+    {
+      "firm": "Lucid Trading",
+      "plan": "LucidFlex (eval + funded)",
+      "account_size": 150000,
+      "drawdown_type": "eod_trailing",
+      "drawdown_amount": 4500,
+      "lock_rule": {
+        "lock_offset": 100,
+        "trail_balance": 154600,
+        "text": "MLL locks at start+$100 once balance exceeds Initial Trail Balance; payout moves MLL to locked level"
+      },
+      "daily_loss_limit": null,
+      "max_contracts": null,
+      "source_url": "https://support.lucidtrading.com/en/articles/12945815-lucidflex-drawdown",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-08-26",
+      "status": "partial",
+      "note": "Page dated 2026-08-26. DLL and max contracts not stated on this page -> null. AMBIGUITY: lock trigger wording 'exceeds the Initial Trail Balance' (strict >) vs table; implement as configurable."
+    },
+    {
+      "firm": "Take Profit Trader",
+      "plan": "Test account (futures)",
+      "account_size": 25000,
+      "drawdown_type": "eod_trailing",
+      "drawdown_amount": 1500,
+      "lock_rule": {
+        "lock_offset": 0,
+        "text": "stops trailing at original starting balance"
+      },
+      "daily_loss_limit": null,
+      "max_contracts": {
+        "contracts": 3,
+        "micro_ratio": null
+      },
+      "source_url": "https://takeprofittraderhelp.zendesk.com/hc/en-us/articles/15170265979165-Rule-3-Do-Not-Hit-End-Of-Day-EOD-Maximum-Trailing-Drawdown",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2025-11-13",
+      "status": "partial",
+      "note": "Help article updated 2025-11-13 (TPT zendesk help center; treat as official, flag domain). DLL not stated on this page -> null, NOT asserted absent. Micro counting not stated."
+    },
+    {
+      "firm": "Take Profit Trader",
+      "plan": "Test account (futures)",
+      "account_size": 50000,
+      "drawdown_type": "eod_trailing",
+      "drawdown_amount": 2000,
+      "lock_rule": {
+        "lock_offset": 0,
+        "text": "stops trailing at original starting balance"
+      },
+      "daily_loss_limit": null,
+      "max_contracts": {
+        "contracts": 6,
+        "micro_ratio": null
+      },
+      "source_url": "https://takeprofittraderhelp.zendesk.com/hc/en-us/articles/15170265979165-Rule-3-Do-Not-Hit-End-Of-Day-EOD-Maximum-Trailing-Drawdown",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2025-11-13",
+      "status": "partial",
+      "note": "Help article updated 2025-11-13 (TPT zendesk help center; treat as official, flag domain). DLL not stated on this page -> null, NOT asserted absent. Micro counting not stated."
+    },
+    {
+      "firm": "Take Profit Trader",
+      "plan": "Test account (futures)",
+      "account_size": 75000,
+      "drawdown_type": "eod_trailing",
+      "drawdown_amount": 2500,
+      "lock_rule": {
+        "lock_offset": 0,
+        "text": "stops trailing at original starting balance"
+      },
+      "daily_loss_limit": null,
+      "max_contracts": {
+        "contracts": 9,
+        "micro_ratio": null
+      },
+      "source_url": "https://takeprofittraderhelp.zendesk.com/hc/en-us/articles/15170265979165-Rule-3-Do-Not-Hit-End-Of-Day-EOD-Maximum-Trailing-Drawdown",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2025-11-13",
+      "status": "partial",
+      "note": "Help article updated 2025-11-13 (TPT zendesk help center; treat as official, flag domain). DLL not stated on this page -> null, NOT asserted absent. Micro counting not stated."
+    },
+    {
+      "firm": "Take Profit Trader",
+      "plan": "Test account (futures)",
+      "account_size": 100000,
+      "drawdown_type": "eod_trailing",
+      "drawdown_amount": 3000,
+      "lock_rule": {
+        "lock_offset": 0,
+        "text": "stops trailing at original starting balance"
+      },
+      "daily_loss_limit": null,
+      "max_contracts": {
+        "contracts": 12,
+        "micro_ratio": null
+      },
+      "source_url": "https://takeprofittraderhelp.zendesk.com/hc/en-us/articles/15170265979165-Rule-3-Do-Not-Hit-End-Of-Day-EOD-Maximum-Trailing-Drawdown",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2025-11-13",
+      "status": "partial",
+      "note": "Help article updated 2025-11-13 (TPT zendesk help center; treat as official, flag domain). DLL not stated on this page -> null, NOT asserted absent. Micro counting not stated."
+    },
+    {
+      "firm": "Take Profit Trader",
+      "plan": "Test account (futures)",
+      "account_size": 150000,
+      "drawdown_type": "eod_trailing",
+      "drawdown_amount": 4500,
+      "lock_rule": {
+        "lock_offset": 0,
+        "text": "stops trailing at original starting balance"
+      },
+      "daily_loss_limit": null,
+      "max_contracts": {
+        "contracts": 15,
+        "micro_ratio": null
+      },
+      "source_url": "https://takeprofittraderhelp.zendesk.com/hc/en-us/articles/15170265979165-Rule-3-Do-Not-Hit-End-Of-Day-EOD-Maximum-Trailing-Drawdown",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2025-11-13",
+      "status": "partial",
+      "note": "Help article updated 2025-11-13 (TPT zendesk help center; treat as official, flag domain). DLL not stated on this page -> null, NOT asserted absent. Micro counting not stated."
+    },
+    {
+      "firm": "Vest (Vest Capital)",
+      "plan": "Instant",
+      "account_size": 500,
+      "drawdown_type": "static",
+      "drawdown_amount": 10,
+      "lock_rule": null,
+      "daily_loss_limit": null,
+      "max_contracts": null,
+      "source_url": "https://docs.vestmarkets.com/vest-capital/loss-limits",
+      "checked_date": "2026-10-14",
+      "source_page_date": null,
+      "status": "verified",
+      "note": "Fixed floor; no DLL ever on Instant. Breach when equity falls BELOW floor (equality does not breach) -> set breach_on_touch=false. Max position is not a contract count (crypto/perps) -> null."
+    },
+    {
+      "firm": "Vest (Vest Capital)",
+      "plan": "Instant",
+      "account_size": 5000,
+      "drawdown_type": "static",
+      "drawdown_amount": 200,
+      "lock_rule": null,
+      "daily_loss_limit": null,
+      "max_contracts": null,
+      "source_url": "https://docs.vestmarkets.com/vest-capital/loss-limits",
+      "checked_date": "2026-10-14",
+      "source_page_date": null,
+      "status": "verified",
+      "note": "Fixed floor; no DLL ever on Instant. Breach when equity falls BELOW floor (equality does not breach) -> set breach_on_touch=false. Max position is not a contract count (crypto/perps) -> null."
+    },
+    {
+      "firm": "Vest (Vest Capital)",
+      "plan": "Instant",
+      "account_size": 10000,
+      "drawdown_type": "static",
+      "drawdown_amount": 400,
+      "lock_rule": null,
+      "daily_loss_limit": null,
+      "max_contracts": null,
+      "source_url": "https://docs.vestmarkets.com/vest-capital/loss-limits",
+      "checked_date": "2026-10-14",
+      "source_page_date": null,
+      "status": "verified",
+      "note": "Fixed floor; no DLL ever on Instant. Breach when equity falls BELOW floor (equality does not breach) -> set breach_on_touch=false. Max position is not a contract count (crypto/perps) -> null."
+    },
+    {
+      "firm": "Vest (Vest Capital)",
+      "plan": "Instant",
+      "account_size": 25000,
+      "drawdown_type": "static",
+      "drawdown_amount": 1000,
+      "lock_rule": null,
+      "daily_loss_limit": null,
+      "max_contracts": null,
+      "source_url": "https://docs.vestmarkets.com/vest-capital/loss-limits",
+      "checked_date": "2026-10-14",
+      "source_page_date": null,
+      "status": "verified",
+      "note": "Fixed floor; no DLL ever on Instant. Breach when equity falls BELOW floor (equality does not breach) -> set breach_on_touch=false. Max position is not a contract count (crypto/perps) -> null."
+    },
+    {
+      "firm": "Vest (Vest Capital)",
+      "plan": "Evaluation",
+      "account_size": 5000,
+      "drawdown_type": "static",
+      "drawdown_amount": 300,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct_of_reset_balance": [
+          "3",
+          "4",
+          null
+        ],
+        "reset": "20:00 America/New_York",
+        "text": "3%, 4% or none chosen at purchase; floor = reset_balance*(1-rate)+net transfers"
+      },
+      "max_contracts": null,
+      "source_url": "https://docs.vestmarkets.com/vest-capital/loss-limits",
+      "checked_date": "2026-10-14",
+      "source_page_date": null,
+      "status": "verified",
+      "note": "6% static. DLL is percentage-of-reset-balance, not a fixed $ amount; oracle v0.1 models fixed $ DLL only -> pct DLL requires conversion at reset. Breach below floor (not on touch)."
+    },
+    {
+      "firm": "Vest (Vest Capital)",
+      "plan": "Evaluation",
+      "account_size": 10000,
+      "drawdown_type": "static",
+      "drawdown_amount": 600,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct_of_reset_balance": [
+          "3",
+          "4",
+          null
+        ],
+        "reset": "20:00 America/New_York",
+        "text": "3%, 4% or none chosen at purchase; floor = reset_balance*(1-rate)+net transfers"
+      },
+      "max_contracts": null,
+      "source_url": "https://docs.vestmarkets.com/vest-capital/loss-limits",
+      "checked_date": "2026-10-14",
+      "source_page_date": null,
+      "status": "verified",
+      "note": "6% static. DLL is percentage-of-reset-balance, not a fixed $ amount; oracle v0.1 models fixed $ DLL only -> pct DLL requires conversion at reset. Breach below floor (not on touch)."
+    },
+    {
+      "firm": "Vest (Vest Capital)",
+      "plan": "Evaluation",
+      "account_size": 25000,
+      "drawdown_type": "static",
+      "drawdown_amount": 1500,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct_of_reset_balance": [
+          "3",
+          "4",
+          null
+        ],
+        "reset": "20:00 America/New_York",
+        "text": "3%, 4% or none chosen at purchase; floor = reset_balance*(1-rate)+net transfers"
+      },
+      "max_contracts": null,
+      "source_url": "https://docs.vestmarkets.com/vest-capital/loss-limits",
+      "checked_date": "2026-10-14",
+      "source_page_date": null,
+      "status": "verified",
+      "note": "6% static. DLL is percentage-of-reset-balance, not a fixed $ amount; oracle v0.1 models fixed $ DLL only -> pct DLL requires conversion at reset. Breach below floor (not on touch)."
+    },
+    {
+      "firm": "Breakout",
+      "plan": "Evaluation 1-Step Classic",
+      "account_size": 5000,
+      "drawdown_type": "static",
+      "drawdown_amount": 300,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct": "3",
+        "basis": "balance excl. open positions at 00:30 UTC"
+      },
+      "max_contracts": null,
+      "source_url": "https://www.breakoutprop.com/program-rules/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-07-29",
+      "status": "verified",
+      "note": "Page 'Updated as of July 29, 2026'. Breach when equity reaches or exceeds limit (touch = breach). Position limits are per-instrument (Symbols page) -> null. Breakout funded-account rules not covered."
+    },
+    {
+      "firm": "Breakout",
+      "plan": "Evaluation 1-Step Classic",
+      "account_size": 10000,
+      "drawdown_type": "static",
+      "drawdown_amount": 600,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct": "3",
+        "basis": "balance excl. open positions at 00:30 UTC"
+      },
+      "max_contracts": null,
+      "source_url": "https://www.breakoutprop.com/program-rules/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-07-29",
+      "status": "verified",
+      "note": "Page 'Updated as of July 29, 2026'. Breach when equity reaches or exceeds limit (touch = breach). Position limits are per-instrument (Symbols page) -> null. Breakout funded-account rules not covered."
+    },
+    {
+      "firm": "Breakout",
+      "plan": "Evaluation 1-Step Classic",
+      "account_size": 25000,
+      "drawdown_type": "static",
+      "drawdown_amount": 1500,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct": "3",
+        "basis": "balance excl. open positions at 00:30 UTC"
+      },
+      "max_contracts": null,
+      "source_url": "https://www.breakoutprop.com/program-rules/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-07-29",
+      "status": "verified",
+      "note": "Page 'Updated as of July 29, 2026'. Breach when equity reaches or exceeds limit (touch = breach). Position limits are per-instrument (Symbols page) -> null. Breakout funded-account rules not covered."
+    },
+    {
+      "firm": "Breakout",
+      "plan": "Evaluation 1-Step Classic",
+      "account_size": 50000,
+      "drawdown_type": "static",
+      "drawdown_amount": 3000,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct": "3",
+        "basis": "balance excl. open positions at 00:30 UTC"
+      },
+      "max_contracts": null,
+      "source_url": "https://www.breakoutprop.com/program-rules/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-07-29",
+      "status": "verified",
+      "note": "Page 'Updated as of July 29, 2026'. Breach when equity reaches or exceeds limit (touch = breach). Position limits are per-instrument (Symbols page) -> null. Breakout funded-account rules not covered."
+    },
+    {
+      "firm": "Breakout",
+      "plan": "Evaluation 1-Step Classic",
+      "account_size": 100000,
+      "drawdown_type": "static",
+      "drawdown_amount": 6000,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct": "3",
+        "basis": "balance excl. open positions at 00:30 UTC"
+      },
+      "max_contracts": null,
+      "source_url": "https://www.breakoutprop.com/program-rules/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-07-29",
+      "status": "verified",
+      "note": "Page 'Updated as of July 29, 2026'. Breach when equity reaches or exceeds limit (touch = breach). Position limits are per-instrument (Symbols page) -> null. Breakout funded-account rules not covered."
+    },
+    {
+      "firm": "Breakout",
+      "plan": "Evaluation 1-Step Pro",
+      "account_size": 5000,
+      "drawdown_type": "static",
+      "drawdown_amount": 250,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct": "3",
+        "basis": "balance excl. open positions at 00:30 UTC"
+      },
+      "max_contracts": null,
+      "source_url": "https://www.breakoutprop.com/program-rules/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-07-29",
+      "status": "verified",
+      "note": "Page 'Updated as of July 29, 2026'. Breach when equity reaches or exceeds limit (touch = breach). Position limits are per-instrument (Symbols page) -> null. Breakout funded-account rules not covered."
+    },
+    {
+      "firm": "Breakout",
+      "plan": "Evaluation 1-Step Pro",
+      "account_size": 10000,
+      "drawdown_type": "static",
+      "drawdown_amount": 500,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct": "3",
+        "basis": "balance excl. open positions at 00:30 UTC"
+      },
+      "max_contracts": null,
+      "source_url": "https://www.breakoutprop.com/program-rules/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-07-29",
+      "status": "verified",
+      "note": "Page 'Updated as of July 29, 2026'. Breach when equity reaches or exceeds limit (touch = breach). Position limits are per-instrument (Symbols page) -> null. Breakout funded-account rules not covered."
+    },
+    {
+      "firm": "Breakout",
+      "plan": "Evaluation 1-Step Pro",
+      "account_size": 25000,
+      "drawdown_type": "static",
+      "drawdown_amount": 1250,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct": "3",
+        "basis": "balance excl. open positions at 00:30 UTC"
+      },
+      "max_contracts": null,
+      "source_url": "https://www.breakoutprop.com/program-rules/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-07-29",
+      "status": "verified",
+      "note": "Page 'Updated as of July 29, 2026'. Breach when equity reaches or exceeds limit (touch = breach). Position limits are per-instrument (Symbols page) -> null. Breakout funded-account rules not covered."
+    },
+    {
+      "firm": "Breakout",
+      "plan": "Evaluation 1-Step Pro",
+      "account_size": 50000,
+      "drawdown_type": "static",
+      "drawdown_amount": 2500,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct": "3",
+        "basis": "balance excl. open positions at 00:30 UTC"
+      },
+      "max_contracts": null,
+      "source_url": "https://www.breakoutprop.com/program-rules/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-07-29",
+      "status": "verified",
+      "note": "Page 'Updated as of July 29, 2026'. Breach when equity reaches or exceeds limit (touch = breach). Position limits are per-instrument (Symbols page) -> null. Breakout funded-account rules not covered."
+    },
+    {
+      "firm": "Breakout",
+      "plan": "Evaluation 1-Step Pro",
+      "account_size": 100000,
+      "drawdown_type": "static",
+      "drawdown_amount": 5000,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct": "3",
+        "basis": "balance excl. open positions at 00:30 UTC"
+      },
+      "max_contracts": null,
+      "source_url": "https://www.breakoutprop.com/program-rules/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-07-29",
+      "status": "verified",
+      "note": "Page 'Updated as of July 29, 2026'. Breach when equity reaches or exceeds limit (touch = breach). Position limits are per-instrument (Symbols page) -> null. Breakout funded-account rules not covered."
+    },
+    {
+      "firm": "Breakout",
+      "plan": "Evaluation 1-Step Pro",
+      "account_size": 200000,
+      "drawdown_type": "static",
+      "drawdown_amount": 10000,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct": "3",
+        "basis": "balance excl. open positions at 00:30 UTC"
+      },
+      "max_contracts": null,
+      "source_url": "https://www.breakoutprop.com/program-rules/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-07-29",
+      "status": "verified",
+      "note": "Page 'Updated as of July 29, 2026'. Breach when equity reaches or exceeds limit (touch = breach). Position limits are per-instrument (Symbols page) -> null. Breakout funded-account rules not covered."
+    },
+    {
+      "firm": "Breakout",
+      "plan": "Evaluation 1-Step Turbo",
+      "account_size": 5000,
+      "drawdown_type": "static",
+      "drawdown_amount": 150,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct": "3",
+        "basis": "balance excl. open positions at 00:30 UTC"
+      },
+      "max_contracts": null,
+      "source_url": "https://www.breakoutprop.com/program-rules/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-07-29",
+      "status": "verified",
+      "note": "Page 'Updated as of July 29, 2026'. Breach when equity reaches or exceeds limit (touch = breach). Position limits are per-instrument (Symbols page) -> null. Breakout funded-account rules not covered."
+    },
+    {
+      "firm": "Breakout",
+      "plan": "Evaluation 1-Step Turbo",
+      "account_size": 10000,
+      "drawdown_type": "static",
+      "drawdown_amount": 300,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct": "3",
+        "basis": "balance excl. open positions at 00:30 UTC"
+      },
+      "max_contracts": null,
+      "source_url": "https://www.breakoutprop.com/program-rules/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-07-29",
+      "status": "verified",
+      "note": "Page 'Updated as of July 29, 2026'. Breach when equity reaches or exceeds limit (touch = breach). Position limits are per-instrument (Symbols page) -> null. Breakout funded-account rules not covered."
+    },
+    {
+      "firm": "Breakout",
+      "plan": "Evaluation 1-Step Turbo",
+      "account_size": 25000,
+      "drawdown_type": "static",
+      "drawdown_amount": 750,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct": "3",
+        "basis": "balance excl. open positions at 00:30 UTC"
+      },
+      "max_contracts": null,
+      "source_url": "https://www.breakoutprop.com/program-rules/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-07-29",
+      "status": "verified",
+      "note": "Page 'Updated as of July 29, 2026'. Breach when equity reaches or exceeds limit (touch = breach). Position limits are per-instrument (Symbols page) -> null. Breakout funded-account rules not covered."
+    },
+    {
+      "firm": "Breakout",
+      "plan": "Evaluation 1-Step Turbo",
+      "account_size": 50000,
+      "drawdown_type": "static",
+      "drawdown_amount": 1500,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct": "3",
+        "basis": "balance excl. open positions at 00:30 UTC"
+      },
+      "max_contracts": null,
+      "source_url": "https://www.breakoutprop.com/program-rules/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-07-29",
+      "status": "verified",
+      "note": "Page 'Updated as of July 29, 2026'. Breach when equity reaches or exceeds limit (touch = breach). Position limits are per-instrument (Symbols page) -> null. Breakout funded-account rules not covered."
+    },
+    {
+      "firm": "Breakout",
+      "plan": "Evaluation 1-Step Turbo",
+      "account_size": 100000,
+      "drawdown_type": "static",
+      "drawdown_amount": 3000,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct": "3",
+        "basis": "balance excl. open positions at 00:30 UTC"
+      },
+      "max_contracts": null,
+      "source_url": "https://www.breakoutprop.com/program-rules/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-07-29",
+      "status": "verified",
+      "note": "Page 'Updated as of July 29, 2026'. Breach when equity reaches or exceeds limit (touch = breach). Position limits are per-instrument (Symbols page) -> null. Breakout funded-account rules not covered."
+    },
+    {
+      "firm": "Breakout",
+      "plan": "Evaluation 1-Step Turbo",
+      "account_size": 200000,
+      "drawdown_type": "static",
+      "drawdown_amount": 6000,
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct": "3",
+        "basis": "balance excl. open positions at 00:30 UTC"
+      },
+      "max_contracts": null,
+      "source_url": "https://www.breakoutprop.com/program-rules/",
+      "checked_date": "2026-10-14",
+      "source_page_date": "2026-07-29",
+      "status": "verified",
+      "note": "Page 'Updated as of July 29, 2026'. Breach when equity reaches or exceeds limit (touch = breach). Position limits are per-instrument (Symbols page) -> null. Breakout funded-account rules not covered."
+    },
+    {
+      "firm": "MyFundedPerps",
+      "plan": "Evaluation 1-Step Select",
+      "account_size": null,
+      "drawdown_type": "static",
+      "drawdown_amount": {
+        "pct_of_start": "3"
+      },
+      "lock_rule": {
+        "text": "Select/Prime/Signature funded: floor locks to start on first withdrawal; Elite: no lock"
+      },
+      "daily_loss_limit": {
+        "pct_of_start": "3",
+        "reset": "00:00 America/New_York",
+        "basis": "start-of-day equity incl. open P&L"
+      },
+      "max_contracts": null,
+      "source_url": "https://docs.myfundedperpetuals.com/guides/challenges-and-rules",
+      "checked_date": "2026-10-14",
+      "source_page_date": null,
+      "status": "verified",
+      "note": "Percent of starting balance; account sizes not tabulated on this page -> compute per size. Before lock touch=breach; after lock equality allowed. Exposure caps on separate page -> null."
+    },
+    {
+      "firm": "MyFundedPerps",
+      "plan": "Evaluation 1-Step Prime",
+      "account_size": null,
+      "drawdown_type": "static",
+      "drawdown_amount": {
+        "pct_of_start": "5"
+      },
+      "lock_rule": {
+        "text": "Select/Prime/Signature funded: floor locks to start on first withdrawal; Elite: no lock"
+      },
+      "daily_loss_limit": {
+        "pct_of_start": "3",
+        "reset": "00:00 America/New_York",
+        "basis": "start-of-day equity incl. open P&L"
+      },
+      "max_contracts": null,
+      "source_url": "https://docs.myfundedperpetuals.com/guides/challenges-and-rules",
+      "checked_date": "2026-10-14",
+      "source_page_date": null,
+      "status": "verified",
+      "note": "Percent of starting balance; account sizes not tabulated on this page -> compute per size. Before lock touch=breach; after lock equality allowed. Exposure caps on separate page -> null."
+    },
+    {
+      "firm": "MyFundedPerps",
+      "plan": "Evaluation 1-Step Signature",
+      "account_size": null,
+      "drawdown_type": "static",
+      "drawdown_amount": {
+        "pct_of_start": "6"
+      },
+      "lock_rule": {
+        "text": "Select/Prime/Signature funded: floor locks to start on first withdrawal; Elite: no lock"
+      },
+      "daily_loss_limit": {
+        "pct_of_start": "3",
+        "reset": "00:00 America/New_York",
+        "basis": "start-of-day equity incl. open P&L"
+      },
+      "max_contracts": null,
+      "source_url": "https://docs.myfundedperpetuals.com/guides/challenges-and-rules",
+      "checked_date": "2026-10-14",
+      "source_page_date": null,
+      "status": "verified",
+      "note": "Percent of starting balance; account sizes not tabulated on this page -> compute per size. Before lock touch=breach; after lock equality allowed. Exposure caps on separate page -> null."
+    },
+    {
+      "firm": "MyFundedPerps",
+      "plan": "Evaluation Elite 3% DLL",
+      "account_size": null,
+      "drawdown_type": "static",
+      "drawdown_amount": {
+        "pct_of_start": "5"
+      },
+      "lock_rule": null,
+      "daily_loss_limit": {
+        "pct_of_start": "3",
+        "reset": "00:00 America/New_York",
+        "basis": "start-of-day equity incl. open P&L"
+      },
+      "max_contracts": null,
+      "source_url": "https://docs.myfundedperpetuals.com/guides/challenges-and-rules",
+      "checked_date": "2026-10-14",
+      "source_page_date": null,
+      "status": "verified",
+      "note": "Percent of starting balance; account sizes not tabulated on this page -> compute per size. Before lock touch=breach; after lock equality allowed. Exposure caps on separate page -> null."
+    },
+    {
+      "firm": "MyFundedPerps",
+      "plan": "Evaluation Elite No DLL",
+      "account_size": null,
+      "drawdown_type": "static",
+      "drawdown_amount": {
+        "pct_of_start": "5"
+      },
+      "lock_rule": null,
+      "daily_loss_limit": null,
+      "max_contracts": null,
+      "source_url": "https://docs.myfundedperpetuals.com/guides/challenges-and-rules",
+      "checked_date": "2026-10-14",
+      "source_page_date": null,
+      "status": "verified",
+      "note": "Percent of starting balance; account sizes not tabulated on this page -> compute per size. Before lock touch=breach; after lock equality allowed. Exposure caps on separate page -> null."
+    }
+  ]
+}

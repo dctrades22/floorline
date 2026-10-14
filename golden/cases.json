@@ -1,0 +1,528 @@
+{
+  "cases": [
+    {
+      "description": "static: equity above floor",
+      "expected": {
+        "breached": false,
+        "drawdown_room": "1100.00",
+        "equity": "49100.00",
+        "floor": "48000.00",
+        "locked": false,
+        "ok": true,
+        "peak": "50000.00"
+      },
+      "id": "DD-01",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [
+          {
+            "equity": "50800",
+            "kind": "mark"
+          },
+          {
+            "equity": "49100",
+            "kind": "mark"
+          }
+        ],
+        "start_balance": "50000",
+        "type": "static"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "static: touch floor exactly = breach",
+      "expected": {
+        "breached": true,
+        "drawdown_room": "0.00",
+        "equity": "48000.00",
+        "floor": "48000.00",
+        "locked": false,
+        "ok": true,
+        "peak": "50000.00"
+      },
+      "id": "DD-02",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [
+          {
+            "equity": "49000",
+            "kind": "mark"
+          },
+          {
+            "equity": "48000.00",
+            "kind": "mark"
+          },
+          {
+            "equity": "49500",
+            "kind": "mark"
+          }
+        ],
+        "start_balance": "50000",
+        "type": "static"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "eod trailing, no lock; intraday high ignored, floor trails EOD peak only",
+      "expected": {
+        "breached": false,
+        "drawdown_room": "400.00",
+        "equity": "49000.00",
+        "floor": "48600.00",
+        "locked": false,
+        "ok": true,
+        "peak": "50600.00"
+      },
+      "id": "DD-03",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [
+          {
+            "equity": "51500",
+            "kind": "mark"
+          },
+          {
+            "balance": "50600",
+            "kind": "eod"
+          },
+          {
+            "balance": "50300",
+            "kind": "eod"
+          },
+          {
+            "equity": "49000",
+            "kind": "mark"
+          }
+        ],
+        "lock_offset": null,
+        "start_balance": "50000",
+        "type": "eod_trailing"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "eod trailing, lock at start (offset 0)",
+      "expected": {
+        "breached": false,
+        "drawdown_room": "1000.00",
+        "equity": "51000.00",
+        "floor": "50000.00",
+        "locked": true,
+        "ok": true,
+        "peak": "54000.00"
+      },
+      "id": "DD-04",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [
+          {
+            "balance": "51000",
+            "kind": "eod"
+          },
+          {
+            "balance": "52500",
+            "kind": "eod"
+          },
+          {
+            "balance": "54000",
+            "kind": "eod"
+          },
+          {
+            "equity": "51000",
+            "kind": "mark"
+          }
+        ],
+        "lock_offset": "0",
+        "start_balance": "50000",
+        "type": "eod_trailing"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "eod trailing, lock at start+100",
+      "expected": {
+        "breached": false,
+        "drawdown_room": "50.25",
+        "equity": "50150.25",
+        "floor": "50100.00",
+        "locked": true,
+        "ok": true,
+        "peak": "53000.00"
+      },
+      "id": "DD-05",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [
+          {
+            "balance": "51000",
+            "kind": "eod"
+          },
+          {
+            "balance": "53000",
+            "kind": "eod"
+          },
+          {
+            "equity": "50150.25",
+            "kind": "mark"
+          }
+        ],
+        "lock_offset": "100",
+        "start_balance": "50000",
+        "type": "eod_trailing"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "eod trailing, lock exactly hit (peak-dd == lock level)",
+      "expected": {
+        "breached": false,
+        "drawdown_room": "900.00",
+        "equity": "51000.00",
+        "floor": "50100.00",
+        "locked": true,
+        "ok": true,
+        "peak": "52100.00"
+      },
+      "id": "DD-06",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [
+          {
+            "balance": "52100",
+            "kind": "eod"
+          },
+          {
+            "balance": "51000",
+            "kind": "eod"
+          }
+        ],
+        "lock_offset": "100",
+        "start_balance": "50000",
+        "type": "eod_trailing"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "eod trailing: intraday equity breaches floor between closes",
+      "expected": {
+        "breached": true,
+        "drawdown_room": "0.00",
+        "equity": "48999.99",
+        "floor": "49000.00",
+        "locked": false,
+        "ok": true,
+        "peak": "51000.00"
+      },
+      "id": "DD-07",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [
+          {
+            "balance": "51000",
+            "kind": "eod"
+          },
+          {
+            "equity": "49200",
+            "kind": "mark"
+          },
+          {
+            "equity": "48999.99",
+            "kind": "mark"
+          },
+          {
+            "balance": "50500",
+            "kind": "eod"
+          }
+        ],
+        "lock_offset": "0",
+        "start_balance": "50000",
+        "type": "eod_trailing"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "intraday trailing from open-equity peak incl. unrealized",
+      "expected": {
+        "breached": false,
+        "drawdown_room": "349.50",
+        "equity": "49100.00",
+        "floor": "48750.50",
+        "locked": false,
+        "ok": true,
+        "peak": "50750.50"
+      },
+      "id": "DD-08",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [
+          {
+            "equity": "50750.50",
+            "kind": "mark"
+          },
+          {
+            "equity": "50200",
+            "kind": "mark"
+          },
+          {
+            "equity": "49100",
+            "kind": "mark"
+          }
+        ],
+        "lock_offset": null,
+        "start_balance": "50000",
+        "type": "intraday_trailing"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "intraday trailing, lock at start",
+      "expected": {
+        "breached": false,
+        "drawdown_room": "300.00",
+        "equity": "25300.00",
+        "floor": "25000.00",
+        "locked": true,
+        "ok": true,
+        "peak": "26400.00"
+      },
+      "id": "DD-09",
+      "input": {
+        "drawdown_amount": "1000",
+        "events": [
+          {
+            "equity": "26400",
+            "kind": "mark"
+          },
+          {
+            "equity": "25300",
+            "kind": "mark"
+          }
+        ],
+        "lock_offset": "0",
+        "start_balance": "25000",
+        "type": "intraday_trailing"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "intraday trailing, lock exactly hit at start+100",
+      "expected": {
+        "breached": false,
+        "drawdown_room": "100.00",
+        "equity": "50200.00",
+        "floor": "50100.00",
+        "locked": true,
+        "ok": true,
+        "peak": "52600.00"
+      },
+      "id": "DD-10",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [
+          {
+            "equity": "52100",
+            "kind": "mark"
+          },
+          {
+            "equity": "52600",
+            "kind": "mark"
+          },
+          {
+            "equity": "50200",
+            "kind": "mark"
+          }
+        ],
+        "lock_offset": "100",
+        "start_balance": "50000",
+        "type": "intraday_trailing"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "intraday trailing breach after peak; later events ignored",
+      "expected": {
+        "breached": true,
+        "drawdown_room": "0.00",
+        "equity": "49000.00",
+        "floor": "49000.00",
+        "locked": false,
+        "ok": true,
+        "peak": "51000.00"
+      },
+      "id": "DD-11",
+      "input": {
+        "drawdown_amount": "2000",
+        "events": [
+          {
+            "equity": "51000",
+            "kind": "mark"
+          },
+          {
+            "equity": "49000",
+            "kind": "mark"
+          },
+          {
+            "equity": "51500",
+            "kind": "mark"
+          }
+        ],
+        "lock_offset": null,
+        "start_balance": "50000",
+        "type": "intraday_trailing"
+      },
+      "kind": "drawdown"
+    },
+    {
+      "description": "daily-loss room binds",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "350.00",
+        "daily_room": "350.00",
+        "drawdown_room": "1800.00",
+        "ok": true
+      },
+      "id": "RR-12",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-650",
+        "drawdown_room": "1800"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "drawdown room binds; positive day pnl gives full daily room",
+      "expected": {
+        "binding": "drawdown",
+        "binding_room": "400.00",
+        "daily_room": "1000.00",
+        "drawdown_room": "400.00",
+        "ok": true
+      },
+      "id": "RR-13",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "250",
+        "drawdown_room": "400"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "futures MES basic: floor(300/(16*1.25))",
+      "expected": {
+        "actual_risk": "300.00",
+        "capped": false,
+        "contracts": 15,
+        "ok": true,
+        "risk_per_contract": "20.00"
+      },
+      "id": "FS-14",
+      "input": {
+        "max_contracts": "50",
+        "risk": "300",
+        "stop_ticks": "16",
+        "tick_value": "1.25"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "futures ES: risk below one contract -> 0",
+      "expected": {
+        "actual_risk": "0.00",
+        "capped": false,
+        "contracts": 0,
+        "ok": true,
+        "risk_per_contract": "250.00"
+      },
+      "id": "FS-15",
+      "input": {
+        "max_contracts": "5",
+        "risk": "200",
+        "stop_ticks": "20",
+        "tick_value": "12.50"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "futures MNQ capped by max contracts",
+      "expected": {
+        "actual_risk": "600.00",
+        "capped": true,
+        "contracts": 30,
+        "ok": true,
+        "risk_per_contract": "20.00"
+      },
+      "id": "FS-16",
+      "input": {
+        "max_contracts": "30",
+        "risk": "1000",
+        "stop_ticks": "40",
+        "tick_value": "0.50"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "crypto perp qty with step size floor",
+      "expected": {
+        "actual_risk": "99.45",
+        "ok": true,
+        "qty": "0.153"
+      },
+      "id": "CS-17",
+      "input": {
+        "entry": "65000",
+        "risk": "100",
+        "step_size": "0.001",
+        "stop": "64350"
+      },
+      "kind": "crypto"
+    },
+    {
+      "description": "crypto perp short, no step",
+      "expected": {
+        "actual_risk": "50.00",
+        "ok": true,
+        "qty": "1.25"
+      },
+      "id": "CS-18",
+      "input": {
+        "entry": "3200",
+        "risk": "50",
+        "stop": "3240"
+      },
+      "kind": "crypto"
+    },
+    {
+      "description": "invalid: crypto entry == stop",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "entry == stop",
+        "ok": false
+      },
+      "id": "IV-19",
+      "input": {
+        "entry": "100",
+        "risk": "100",
+        "stop": "100"
+      },
+      "kind": "crypto"
+    },
+    {
+      "description": "invalid: futures stop_ticks = 0",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "stop_ticks must be > 0",
+        "ok": false
+      },
+      "id": "IV-20",
+      "input": {
+        "risk": "100",
+        "stop_ticks": "0",
+        "tick_value": "1.25"
+      },
+      "kind": "futures"
+    }
+  ],
+  "generated_by": "golden/oracle.py",
+  "label": "TEST fixtures only",
+  "spec_version": "0.1.0"
+}
