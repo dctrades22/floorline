@@ -31,3 +31,21 @@ Compared with `main` at `ca303e9bf9a5d3576a2020e1e6a8d6f56156c846`. Nineteen fil
 3. `js/config.js`, Gumroad URLs, and site assets are not in the diff.
 
 `git diff` of golden expected values: no old case changed its input or expected output.
+
+## Daily-loss status (follow-up on 19304db)
+
+An independent LibreOffice check found equity 49,000 (day reference 50,000, DLL 1,000) and equity 48,950 both left Accounts!AE false, daily room 0, and CONTRACTS 0. Every engine clamped daily capacity at 0. `daily_loss.enforcement` was stored on presets and described in MATH.md, and nothing read it.
+
+This change does not add a feature beside that status. Preset numbers are unchanged. The new Presets column is `dll_enforcement` (column Q), appended so columns A–P stay put. Positive rooms in RR-18..RR-21 stay the same numbers; each risk_room result also carries `daily_status`. Old futures inputs and expected counts are unchanged. The four required caps stay 13 / 1 / 5 / 50.
+
+| File | Why it is in this change |
+|---|---|
+| `golden/oracle.py`, `js/oracle.js` | Signed daily capacity, ROUND_FLOOR to the cent, and `daily_status`. |
+| `js/app.js`, `css/app.css` | The page shows the status instead of a tradable count when capacity is ≤ 0 or the floor is hit. Preset enforcement is passed through. Custom leaves it unstated. |
+| `tracker/build_tracker.py` | Workbook formulas. AS is the enforcement input. AU is the hidden trade-status word. AE is true for a floor hit or a hard daily exceed. |
+| `tracker/sheet_logic.py`, `tracker/test_tracker.py` | Same rules, plus the boundary rows. |
+| `tracker/gen_presets_tab.py`, `tracker/presets_tab.csv` | Export the existing enforcement field. |
+| `golden/cases.json`, `tracker/golden_map.json` | Regenerated. |
+| `docs/MATH.md`, `tracker/FORMULAS.md`, `README.md`, `docs/DEPLOY-CHECKLIST.md` | The status rules and the precedence order. |
+
+Hard vs soft: `hard` means the firm fails the account for going past the daily limit, so the status is BREACHED and AE is true. `soft` (Topstep) and a blank enforcement mean the rule does not define that breach, so the status is DAILY LIMIT EXCEEDED and AE stays false. Both block trading. Exactly zero is DAILY LIMIT REACHED, also blocked, also not a breach. A floor hit is BREACHED and outranks the daily word. INVALID and INCOMPLETE are still decided first and stay different words.

@@ -157,6 +157,11 @@
     }
     return v("ddAmt");
   }
+  function dllEnforcement() {
+    var p = state.preset, dl = p && !state.custom ? p.daily_loss : null;
+    var e = dl && dl.enforcement;
+    return e === "hard" || e === "soft" ? e : null;
+  }
   function dllAmount() {
     var p = state.preset, dl = p && !state.custom ? p.daily_loss : null;
     if (dl && (dl.kind === "pct" || dl.kind === "pct_of_start" || dl.kind === "pct_choice")) {
@@ -232,7 +237,10 @@
     var r2 = null, r3 = null, quick = [];
     if (!err) {
       var rr = { drawdown_room: r1.drawdown_room };
-      if (dllS) { rr.daily_loss_limit = dllS; rr.day_pnl = v("pnl") || "0"; }
+      if (dllS) {
+        rr.daily_loss_limit = dllS; rr.day_pnl = v("pnl") || "0";
+        var enf = dllEnforcement(); if (enf) rr.dll_enforcement = enf;
+      }
       r2 = Oracle.evaluate("risk_room", rr); if (!r2.ok) err = r2;
     }
     if (!err) {
@@ -284,19 +292,33 @@
       else if (v("lockOff") !== "") { lb.textContent = "TRAILING · locks at " + money(Dec.toFixed(Dec.add(D(v("start")), D(v("lockOff"))))); lb.className = "pill"; }
       else { lb.textContent = "TRAILING · no lock"; lb.className = "pill"; }
     } else { $("floor").textContent = "—"; shown.floor = null; $("lockBadge").textContent = ""; $("lockBadge").className = "pill"; }
+    // Incomplete or invalid inputs outrank a floor hit and every daily status.
+    var block = err ? null
+      : (r1 && r1.ok && r1.breached) ? "BREACHED"
+      : (r2 && r2.ok && r2.daily_status && r2.daily_status !== "OK") ? r2.daily_status : null;
     if (r2 && r2.ok) {
       $("ddRoom").textContent = money(r2.drawdown_room);
       $("dRoom").textContent = r2.daily_room == null ? (field("dll").classList.contains("flag") ? "not entered" : "no DLL") : money(r2.daily_room);
       tween($("bRoom"), r2.binding_room, "broom");
       $("bindBy").textContent = r2.binding === "daily_loss" ? "daily loss" : "drawdown";
       var ratio = parseFloat(r2.binding_room) / parseFloat(v("ddAmt") || "1");
-      level = r1.breached || ratio <= 0.25 ? "red" : ratio <= 0.5 ? "amber" : "green";
+      level = r1.breached || block || ratio <= 0.25 ? "red" : ratio <= 0.5 ? "amber" : "green";
     } else { ["ddRoom", "dRoom", "bRoom"].forEach(function (i) { $(i).textContent = "—"; }); $("bindBy").textContent = ""; shown.broom = null; }
     out.setAttribute("data-level", err && err.error !== "INCOMPLETE" ? "red" : level);
 
-    // size
+    // size. Floor BREACHED and any daily block replace the contract count. A numeric 0 is only a size.
     var flags = [];
-    if (r3 && r3.ok) {
+    $("contracts").classList.remove("statusWord");
+    if (block) {
+      $("sizeLbl").textContent = crypto ? "Max quantity" : (ci ? "Max contracts · " + ci.symbol : "Max contracts");
+      $("contracts").textContent = block;
+      $("contracts").classList.add("statusWord");
+      $("sizeDetail").textContent = "max contracts 0";
+      if (r1 && r1.breached) flags.push(["BREACHED", "drawdown floor hit"]);
+      else if (block === "BREACHED") flags.push(["BREACHED", "daily loss limit exceeded; this rule counts that as a breach"]);
+      else if (block === "DAILY LIMIT REACHED") flags.push(["DAILY LIMIT REACHED", "no daily loss room left"]);
+      else flags.push(["DAILY LIMIT EXCEEDED", "over the daily loss limit; this rule does not call it a breach"]);
+    } else if (r3 && r3.ok) {
       if (crypto) {
         $("sizeLbl").textContent = "Max quantity · " + r3.side; $("contracts").textContent = r3.qty;
         $("sizeDetail").innerHTML = "risk used <b>" + money(r3.actual_risk) + "</b> of " + money(r3.effective_risk);
@@ -310,7 +332,6 @@
       $("contracts").textContent = err && err.error !== "INCOMPLETE" ? "0" : r3 && !r3.ok ? "0" : "—";
       $("sizeDetail").textContent = r3 && !r3.ok ? r3.message : "";
     }
-    if (r1 && r1.ok && r1.breached) flags.unshift(["BREACHED", "account is past the floor"]);
     $("flags").innerHTML = flags.map(function (f) { return '<span class="flagchip"><b>' + f[0] + "</b> " + esc(f[1]) + "</span>"; }).join("");
 
     var tb = $("quick").querySelector("tbody");
@@ -318,7 +339,8 @@
     $("quickCap").textContent = ci ? ci.symbol + " contracts at your risk, by stop" : "";
     tb.innerHTML = quick.map(function (q) {
       var r = q[1], cur = String(q[0]) === v("ticks");
-      return "<tr" + (cur ? ' class="cur"' : "") + "><td>" + q[0] + " t</td><td>" + (r.ok ? money(r.risk_per_contract) : "—") + "</td><td>" + (r.ok ? r.contracts + (r.capped ? "<sup>cap</sup>" : "") : "0") + "</td><td>" + (r.ok ? money(r.actual_risk) : "—") + "</td></tr>";
+      var n = block ? esc(block) : (r.ok ? r.contracts + (r.capped ? "<sup>cap</sup>" : "") : "0");
+      return "<tr" + (cur ? ' class="cur"' : "") + "><td>" + q[0] + " t</td><td>" + (!block && r.ok ? money(r.risk_per_contract) : "—") + "</td><td>" + n + "</td><td>" + (!block && r.ok ? money(r.actual_risk) : "—") + "</td></tr>";
     }).join("");
 
     gauge(r1, r2, level);

@@ -13,6 +13,19 @@
   var CENT = -2;
   function rFloorLevel(x) { return Dec.toFixed(Dec.quantize(x, CENT, "CEILING")); }
   function rDown(x) { return Dec.toFixed(Dec.quantize(x, CENT, "DOWN")); }
+  function dllEnforcement(inp) {
+    if (!has(inp, "dll_enforcement") || inp.dll_enforcement === null) return null;
+    var v = inp.dll_enforcement;
+    if (typeof v !== "string") bad("dll_enforcement must be hard or soft");
+    var s = v.trim().toLowerCase();
+    if (s !== "hard" && s !== "soft") bad("dll_enforcement must be hard or soft");
+    return s;
+  }
+  function dailyStatus(capacity, enf) {
+    if (Dec.cmp(capacity, Dec.ZERO) > 0) return "OK";
+    if (Dec.cmp(capacity, Dec.ZERO) === 0) return "DAILY LIMIT REACHED";
+    return enf === "hard" ? "BREACHED" : "DAILY LIMIT EXCEEDED";
+  }
   function rNear(x) { return Dec.toFixed(Dec.quantize(x, CENT, "HALF_UP")); }
 
   function dec(v, name, o) {
@@ -72,15 +85,24 @@
       equity: rDown(equity), drawdown_room: rDown(room) };
   }
 
+  // Signed daily capacity. >0 OK; ==0 DAILY LIMIT REACHED; <0 BREACHED only when
+  // dll_enforcement is hard, otherwise DAILY LIMIT EXCEEDED. Omitted enforcement is not hard.
+  // Capacity is ROUND_FLOOR to the cent (same as ROUND_DOWN when the value is >= 0).
+  // binding_room is max(0, capacity) so sizing never sees a negative room.
+  // A drawdown-floor breach is drawdown(), not this function. The UI applies floor first.
   function riskRoom(inp) {
     var ddRoom = dec(need(inp, "drawdown_room"), "drawdown_room", { nonneg: true });
     var dl = get(inp, "daily_loss_limit");
-    if (dl === null) return { drawdown_room: rDown(ddRoom), daily_room: null, binding_room: rDown(ddRoom), binding: "drawdown" };
+    if (dl === null) return { drawdown_room: rDown(ddRoom), daily_room: null, binding_room: rDown(ddRoom), binding: "drawdown", daily_status: null };
     dl = dec(dl, "daily_loss_limit", { positive: true });
     var dayPnl = dec(need(inp, "day_pnl"), "day_pnl");
-    var dRoom = Dec.max(Dec.ZERO, Dec.sub(dl, Dec.max(Dec.ZERO, Dec.neg(dayPnl))));
-    return { drawdown_room: rDown(ddRoom), daily_room: rDown(dRoom), binding_room: rDown(Dec.min(ddRoom, dRoom)),
-      binding: Dec.cmp(dRoom, ddRoom) < 0 ? "daily_loss" : "drawdown" };
+    var enf = dllEnforcement(inp);
+    var raw = Dec.sub(dl, Dec.max(Dec.ZERO, Dec.neg(dayPnl)));
+    var dQ = Dec.quantize(raw, CENT, "FLOOR");
+    var sized = Dec.max(Dec.ZERO, dQ);
+    var roomStr = Dec.isZero(dQ) ? "0.00" : Dec.toFixed(dQ);
+    return { drawdown_room: rDown(ddRoom), daily_room: roomStr, binding_room: rDown(Dec.min(ddRoom, sized)),
+      binding: Dec.cmp(dQ, ddRoom) < 0 ? "daily_loss" : "drawdown", daily_status: dailyStatus(dQ, enf) };
   }
 
   function effRisk(inp) {

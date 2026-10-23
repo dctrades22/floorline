@@ -98,18 +98,55 @@ def drawdown(inp):
 
 
 # ---------------- binding room ----------------
+def _dll_enforcement(inp):
+    """hard = exceeding the daily limit fails the account. soft = flat for the session, not a fail.
+    Omitted or null = the rule does not define a breach, so it is not treated as hard."""
+    if "dll_enforcement" not in inp or inp.get("dll_enforcement") is None:
+        return None
+    v = inp["dll_enforcement"]
+    if not isinstance(v, str):
+        bad("dll_enforcement must be hard or soft")
+    s = v.strip().lower()
+    if s not in ("hard", "soft"):
+        bad("dll_enforcement must be hard or soft")
+    return s
+
+
+def _daily_status(capacity, enf):
+    if capacity > 0:
+        return "OK"
+    if capacity == 0:
+        return "DAILY LIMIT REACHED"
+    return "BREACHED" if enf == "hard" else "DAILY LIMIT EXCEEDED"
+
+
 def risk_room(inp):
+    """Signed daily capacity, then a status. Floor breach is not decided here (see drawdown()).
+
+    capacity > 0 → OK, and binding_room can size.
+    capacity == 0 → DAILY LIMIT REACHED. binding_room is 0.
+    capacity < 0 and dll_enforcement hard → BREACHED. Otherwise DAILY LIMIT EXCEEDED.
+    Unstated enforcement is not a breach. binding_room is never negative: max(0, capacity).
+    capacity is ROUND_FLOOR to the cent so a fraction below zero stays negative.
+    Non-negative cent values match ROUND_DOWN, so existing positive rooms are unchanged.
+    """
     dd_room = dec(need(inp, "drawdown_room"), "drawdown_room", nonneg=True)
     dl = inp.get("daily_loss_limit")
     if dl is None:
         return {"drawdown_room": r_down(dd_room), "daily_room": None,
-                "binding_room": r_down(dd_room), "binding": "drawdown"}
+                "binding_room": r_down(dd_room), "binding": "drawdown", "daily_status": None}
     dl = dec(dl, "daily_loss_limit", positive=True)
     day_pnl = dec(need(inp, "day_pnl"), "day_pnl")
-    d_room = max(D(0), dl - max(D(0), -day_pnl))
-    return {"drawdown_room": r_down(dd_room), "daily_room": r_down(d_room),
-            "binding_room": r_down(min(dd_room, d_room)),
-            "binding": "daily_loss" if d_room < dd_room else "drawdown"}
+    enf = _dll_enforcement(inp)
+    raw = dl - max(D(0), -day_pnl)
+    d_q = raw.quantize(CENT, rounding=ROUND_FLOOR)
+    if d_q.is_zero():
+        d_q = D("0.00")
+    sized = max(D(0), d_q)
+    return {"drawdown_room": r_down(dd_room), "daily_room": format(d_q, "f"),
+            "binding_room": r_down(min(dd_room, sized)),
+            "binding": "daily_loss" if d_q < dd_room else "drawdown",
+            "daily_status": _daily_status(d_q, enf)}
 
 
 def eff_risk(inp):
@@ -287,6 +324,18 @@ DEFS = [
  ("IA-12", "NEW: tick_value that matches the instrument is accepted and cannot disagree.", "futures", {"instrument": "MES", "tick_value": "1.25", "risk": "200", "binding_room": "10000", "stop_ticks": "12", "max_minis": "1", "max_micros": "50"}),
  ("IA-13", "NEW: MES uses the micro cap even when the mini cap is tighter.", "futures", {"instrument": "mes", "risk": "200", "binding_room": "10000", "stop_ticks": "12", "max_minis": "1", "max_micros": "50"}),
  ("IA-14", "NEW: ES uses the mini cap even when the micro cap is tighter.", "futures", {"instrument": "ES", "risk": "200", "binding_room": "10000", "stop_ticks": "12", "max_minis": "5", "max_micros": "1"}),
+ ("DL-01", "daily capacity $0.01 left sizes normally. Status OK. The stop may still round to 0 contracts.", "risk_room", {"drawdown_room": "1000.01", "daily_loss_limit": "1000", "day_pnl": "-999.99"}),
+ ("DL-02", "daily capacity exactly 0 is DAILY LIMIT REACHED. binding_room 0. Not a breach.", "risk_room", {"drawdown_room": "1000", "daily_loss_limit": "1000", "day_pnl": "-1000"}),
+ ("DL-03", "daily capacity -50 with enforcement unstated is DAILY LIMIT EXCEEDED, not a breach.", "risk_room", {"drawdown_room": "950", "daily_loss_limit": "1000", "day_pnl": "-1050"}),
+ ("DL-04", "daily capacity -50 with hard enforcement is BREACHED.", "risk_room", {"drawdown_room": "950", "daily_loss_limit": "1000", "day_pnl": "-1050", "dll_enforcement": "hard"}),
+ ("DL-05", "one cent past the daily limit, enforcement unstated, is DAILY LIMIT EXCEEDED. Floor-to-cent does not collapse this to zero.", "risk_room", {"drawdown_room": "999.99", "daily_loss_limit": "1000", "day_pnl": "-1000.01"}),
+ ("DL-06", "one cent past the daily limit, hard enforcement, is BREACHED.", "risk_room", {"drawdown_room": "999.99", "daily_loss_limit": "1000", "day_pnl": "-1000.01", "dll_enforcement": "hard"}),
+ ("DL-07", "explicit soft enforcement on a negative capacity is DAILY LIMIT EXCEEDED, not BREACHED.", "risk_room", {"drawdown_room": "950", "daily_loss_limit": "1000", "day_pnl": "-1050", "dll_enforcement": "soft"}),
+ ("DL-08", "hard enforcement with capacity still positive stays OK and sizes from that room.", "risk_room", {"drawdown_room": "1800", "daily_loss_limit": "1000", "day_pnl": "-650", "dll_enforcement": "hard"}),
+ ("DL-09", "binding room 0 sizes 0 contracts. A numeric 0 is not a daily-limit status.", "futures", {"instrument": "MES", "risk": "200", "binding_room": "0", "stop_ticks": "12", "max_minis": "NONE", "max_micros": "50"}),
+ ("DL-10", "dll_enforcement other than hard or soft is INVALID_INPUT.", "risk_room", {"drawdown_room": "950", "daily_loss_limit": "1000", "day_pnl": "-1050", "dll_enforcement": "nope"}),
+ ("DL-11", "a fraction of a cent below zero floors to -0.01, so it is DAILY LIMIT EXCEEDED and not reported as zero.", "risk_room", {"drawdown_room": "1000", "daily_loss_limit": "1000", "day_pnl": "-1000.004"}),
+ ("DL-12", "enforcement token HARD is case-insensitive and means hard.", "risk_room", {"drawdown_room": "950", "daily_loss_limit": "1000", "day_pnl": "-1050", "dll_enforcement": "HARD"}),
  ("IV-48", "L-2: breach_on_touch as string", "drawdown", DDI("static", "50000", "2000", [], breach_on_touch="false")),
  ("IV-49", "L-3: invalid event after breach still rejected", "drawdown", DDI("static", "50000", "2000", [ev("47000"), {"kind": "bogus"}])),
 ]

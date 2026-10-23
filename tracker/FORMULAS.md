@@ -30,7 +30,7 @@ Spreadsheets use IEEE doubles; the oracle uses Decimal. Rules that keep results 
   Lock: `ROUND(peak - DD - (S + X), 6) >= 0`. 1e-6 tolerance absorbs double error (~1e-11 at 1e6 magnitudes) and is far below one cent.
 - **Rounding at output only, conservative direction:**
   - `CENT_UP(x) := -INT(ROUND(-x*100, 6))/100` (ceiling to cents, correct for negatives; `INT` = floor in both apps). Used for floors.
-  - `CENT_DOWN(x) := INT(ROUND(x*100, 6))/100` for x ≥ 0 (toward zero). Used for rooms, effective risk, actual risk, displayed equity.
+  - `CENT_DOWN(x) := INT(ROUND(x*100, 6))/100`. `INT` floors, so for x ≥ 0 this is toward zero and matches the oracle's ROUND_DOWN. For a negative daily capacity it floors toward −∞ and matches ROUND_FLOOR, so −0.004 becomes −0.01 and cannot hide an exceed. Used for rooms, effective risk, actual risk, displayed equity, and the signed daily capacity.
   - `ROUND(x*100, 6)` before `INT` prevents e.g. 0.29*100 = 28.999999999999996 → 28.
 - Contracts: `INT(ROUND(eff_risk / (ticks*tv), 9))` — the inner ROUND guards exact multiples (300/(16*1.25) = 15 exactly).
 - Comparisons use **raw** (unrounded) floor helper columns; displayed values are rounded. Same as oracle.
@@ -60,12 +60,13 @@ Rows: every `verified` + `partial` preset (custom_only excluded) + final row `Ma
 | L | needs_user | `;`-list of fields the user must fill (`all` for Manual) |
 | M–O | source_url, checked_date, source_page_date | provenance shown on Accounts |
 | P | preset_id | Pnnn |
+| Q | dll_enforcement | `hard`, `soft`, or blank. Appended; A–P are unchanged. Blank means the rule does not define a daily-limit breach |
 
 Percent DLLs are **not** auto-converted (reset basis differs per firm, MATH §6); user enters the $ amount from the firm dashboard.
 MFP `breach_on_touch_after_lock` is not modeled; flagged in needs_user.
 
 ### 2.2 Accounts tab (rows 2–11; max 10 accounts; row 1 headers)
-Inputs (white, unlocked): A, B, D–P. Calculated (grey, locked): C, Q–AR. `$B2` drives lookups. `OK` gating: floor and room columns start with
+Inputs (white, unlocked): A, B, D–P, and AS (DLL enforcement). Calculated (grey, locked): C, Q–AR, AU. AT is unused and hidden (the test harness writes an equity-cent probe there; it is not a product formula). `$B2` drives lookups. `OK` gating: floor and room columns start with
 `IF($AA2<>"OK", $AA2, …)`. Sizing columns start with the sizing check `AO`. INVALID/INCOMPLETE propagate as text.
 
 | col | name | type | rule / formula |
@@ -100,20 +101,36 @@ Inputs (white, unlocked): A, B, D–P. Calculated (grey, locked): C, Q–AR. `$B
 | AB | Peak | calc | §3.2 |
 | AC | Floor (display) | calc | `=IF($AA2<>"OK",$AA2,CENT_UP(AN2))` |
 | AD | Locked | calc | guard 3: `AND(ISNUMBER(U2),R2<>"static",ROUND(AB2-T2-(S2+IF(ISNUMBER(U2),U2,0)),6)>=0)` |
-| AE | Breached | calc | log BREACHED or `HIT(M2,AN2)` |
-| AF | DD room | calc | `BREACHED` or `CENT_DOWN(MAX(0,M2-AN2))` |
-| AG | Daily room | calc | `NONE` when DLL is NONE, else the daily room. Not removed by a contract-cap NONE |
-| AH | Binding room | calc | `MIN(DD room, daily room)` (daily omitted when NONE). Tie → drawdown |
-| AI | Binding | calc | `daily_loss` iff daily room < DD room |
-| AJ | Effective risk | calc | `CENT_DOWN(MIN(risk, binding room))` |
-| AK | Contracts | calc | `IF(Z="NONE", raw, MIN(raw, Z))`. Z blank never reaches here (AA = INCOMPLETE) |
+| AE | Breached | calc | floor hit, or signed daily capacity < 0 and enforcement is `hard`. Soft, blank, and exactly zero do not set this flag |
+| AF | DD room | calc | `BREACHED` only when the floor was hit, else `CENT_DOWN(MAX(0,M2-AN2))`. A hard daily exceed does not replace this number |
+| AG | Daily room | calc | `BREACHED` only when the floor was hit. `NONE` when DLL is NONE. Otherwise the signed capacity (0 or negative allowed). Not removed by a contract-cap NONE |
+| AH | Binding room | calc | `MIN(DD room, max(0, daily room))` (daily omitted when NONE). Never negative. Tie → drawdown |
+| AI | Binding | calc | `BREACHED` when the floor was hit, else `daily_loss` iff signed daily room < DD room. This names the tighter room. The trade block is AK |
+| AJ | Effective risk | calc | the trade-status word when one is in force, else `CENT_DOWN(MIN(risk, binding room))` |
+| AK | Contracts | calc | the trade-status word when one is in force, else `IF(Z="NONE", raw, MIN(raw, Z))`. Z blank never reaches here (AA = INCOMPLETE). A numeric 0 is a size, not a daily-limit status |
 | AL | Capped flag | calc | `AND(Z<>"NONE", raw>Z)`. Explicit 0 with a positive raw is capped |
 | AM | Room-limited flag | calc | `risk > binding room` |
 | AN | Floor raw (hidden) | calc | §3.2 |
 | AO | Sizing check (hidden) | calc | risk, stop ticks and derived tick present and valid, else INCOMPLETE/INVALID |
-| AP | Contracts raw (hidden) | calc | `INT(ROUND(MIN(risk, binding)/(ticks*tick),9))` |
-| AQ | Actual risk | calc | `CENT_DOWN(contracts*ticks*tick)` |
-| AR | Flags | calc | partial preset, manual, overrides, INSTRUMENT MISSING, MAX CONTRACTS MISSING, as-of, stale, source |
+| AP | Contracts raw (hidden) | calc | 0 when the floor is hit or a daily status is in force, else `INT(ROUND(MIN(risk, binding)/(ticks*tick),9))` |
+| AQ | Actual risk | calc | the trade-status word when one is in force, else `CENT_DOWN(contracts*ticks*tick)` |
+| AR | Flags | calc | partial preset, manual, overrides (including AS), INSTRUMENT MISSING, MAX CONTRACTS MISSING, as-of, stale, source |
+| AS | DLL enforcement | input | `hard`, `soft`, or blank. Blank uses Presets column Q. Blank preset means unstated, which is not a breach |
+| AU | Trade status (hidden) | calc | blank when the row is not OK or capacity is > 0. `BREACHED` for a floor hit, or for capacity < 0 with hard enforcement. `DAILY LIMIT EXCEEDED` for capacity < 0 otherwise. `DAILY LIMIT REACHED` for capacity = 0. Floor wins |
+
+### 2.2a Trade-status precedence
+Checked in this order. Earlier words replace later ones. `INVALID` and `INCOMPLETE` stay different.
+
+1. Empty row (no ID and no preset) → blank.
+2. `INCOMPLETE` — a required input is missing, including a blank instrument, a blank cap for that instrument, a DLL with no day reference, an incomplete log row, or any unknown-account log row.
+3. `INVALID` — a value or rule is illegal, including a bad instrument, a bad cap, a bad enforcement token, or an invalid log row.
+4. Drawdown floor hit → `BREACHED`, max contracts 0. Outranks every daily status. AE is true. AF and AG show `BREACHED`.
+5. Signed daily capacity < 0 and enforcement is `hard` → `BREACHED`, max contracts 0. AE is true. AG stays the negative number, so this is distinguishable from a floor hit.
+6. Signed daily capacity < 0 and enforcement is `soft` or blank → `DAILY LIMIT EXCEEDED`, max contracts 0. AE stays false. The rule does not define a breach.
+7. Signed daily capacity = 0 → `DAILY LIMIT REACHED`, max contracts 0. AE stays false. Not a breach.
+8. Otherwise `OK` and a numeric contract count. Capacity > 0 still passes through risk, the stop, the tick, and the active cap. The count may be 0.
+
+No status permits trading when daily capacity is ≤ 0. AK shows the word in those cases, and AP is 0.
 
 Daily Log peak/floor reads Accounts type/start/DD/lock/touch from **R, S, T, U, V** (v0.1.1 was P–T).
 
@@ -220,11 +237,11 @@ shows `UNKNOWN_ACCOUNT` (red). Because the row's owner is unknowable, **every** 
 `Accounts!B14` shows the banner `=IF(COUNTIFS('Daily Log'!$I$2:$I$1001,"UNKNOWN_ACCOUNT")>0,COUNTIFS('Daily Log'!$I$2:$I$1001,"UNKNOWN_ACCOUNT")&" Daily Log row(s) with unknown account ID - fix before trading","")`.
 **H-1.** An INCOMPLETE row (e.g. low entered, close blank) makes its account INCOMPLETE; no room or contracts are shown.
 Log money fields obey the same L-2 range (`0 < x ≤ 1e8`, ≤2 dp) → else row INVALID.
-Breach is terminal: once any row is BREACHED, `Accounts!AA` stays TRUE; later rows are still shown but do not clear it.
+Breach is terminal: once any log row is BREACHED, `Accounts!AE` stays TRUE from that floor hit; later rows are still shown but do not clear it. A hard daily-loss exceed also sets AE without a log row.
 
 ## 4. Invalid-input convention
 - Calculated cells show exactly one of: number/boolean (OK), `INVALID` (bad value or rule configuration), `INCOMPLETE` (required input
-  missing, incl. partial-preset nulls and blank max contracts, an INCOMPLETE log row, or any orphan log row), `UNKNOWN_ACCOUNT` (log row only), `BREACHED` (rooms, sizing), `NONE` (no DLL / no cap), or `""` (unused row). Never a number when not OK.
+  missing, incl. partial-preset nulls and blank max contracts, an INCOMPLETE log row, or any orphan log row), `UNKNOWN_ACCOUNT` (log row only), `BREACHED` (floor hit, or hard daily exceed on the size columns), `DAILY LIMIT REACHED`, `DAILY LIMIT EXCEEDED`, `NONE` (no DLL / no cap), or `""` (unused row). CONTRACTS is never a tradable number when daily capacity is ≤ 0.
 - Propagation: every dependent formula begins with the upstream status test (`$W2`, `AK2`, `AA2`, `I2`); `IFERROR(…,"INVALID")` wraps
   each Accounts formula as a final guard (e.g. text in a numeric field).
 - Data validation (reject input, both apps): money ≤2 dp and `0 < x ≤ 100000000` (custom rule `=ROUND(x*100,6)=INT(ROUND(x*100,6))`; never `ROUND(x*100,0)=x*100`, which rejects 0.29 in float), stop ticks whole number ≥1, tick value decimal `0 < x ≤ 100000` with ≤6 dp (`=ROUND(x*1000000,3)=INT(ROUND(x*1000000,3))`),
@@ -235,7 +252,7 @@ Breach is terminal: once any row is BREACHED, `Accounts!AA` stays TRUE; later ro
   preset `checked_date` > 30 days old (compare to a user-entered "As of" date in `Accounts!B13`; no TODAY()) → amber.
 
 ## 5. Golden mapping
-`tracker/golden_map.json` (63 cases): yes 33 / partial 19 / no 11. Every yes/partial case with sheet inputs is evaluated by
+`tracker/golden_map.json` (75 cases): yes 43 / partial 21 / no 11. Every yes/partial case with sheet inputs is evaluated by
 `tracker/sheet_logic.py` (float, same formulas) and must match `golden/cases.json` on the listed fields; `--check` enforces it.
 FS-25 and FS-28 stay in that Python check. Their ticks (1 and 0.995) are not ES/MES/NQ/MNQ ticks, so the workbook test does not enter them.
 

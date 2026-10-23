@@ -537,6 +537,7 @@
         "binding": "daily_loss",
         "binding_room": "350.00",
         "daily_room": "350.00",
+        "daily_status": "OK",
         "drawdown_room": "1800.00",
         "ok": true
       },
@@ -554,6 +555,7 @@
         "binding": "drawdown",
         "binding_room": "400.00",
         "daily_room": "1000.00",
+        "daily_status": "OK",
         "drawdown_room": "400.00",
         "ok": true
       },
@@ -571,6 +573,7 @@
         "binding": "drawdown",
         "binding_room": "1234.56",
         "daily_room": null,
+        "daily_status": null,
         "drawdown_room": "1234.56",
         "ok": true
       },
@@ -586,6 +589,7 @@
         "binding": "drawdown",
         "binding_room": "500.00",
         "daily_room": "500.00",
+        "daily_status": "OK",
         "drawdown_room": "500.00",
         "ok": true
       },
@@ -1397,6 +1401,233 @@
         "stop_ticks": "12"
       },
       "kind": "futures"
+    },
+    {
+      "description": "daily capacity $0.01 left sizes normally. Status OK. The stop may still round to 0 contracts.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.01",
+        "daily_room": "0.01",
+        "daily_status": "OK",
+        "drawdown_room": "1000.01",
+        "ok": true
+      },
+      "id": "DL-01",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-999.99",
+        "drawdown_room": "1000.01"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "daily capacity exactly 0 is DAILY LIMIT REACHED. binding_room 0. Not a breach.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "0.00",
+        "daily_status": "DAILY LIMIT REACHED",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-02",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "daily capacity -50 with enforcement unstated is DAILY LIMIT EXCEEDED, not a breach.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-50.00",
+        "daily_status": "DAILY LIMIT EXCEEDED",
+        "drawdown_room": "950.00",
+        "ok": true
+      },
+      "id": "DL-03",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1050",
+        "drawdown_room": "950"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "daily capacity -50 with hard enforcement is BREACHED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-50.00",
+        "daily_status": "BREACHED",
+        "drawdown_room": "950.00",
+        "ok": true
+      },
+      "id": "DL-04",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1050",
+        "dll_enforcement": "hard",
+        "drawdown_room": "950"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "one cent past the daily limit, enforcement unstated, is DAILY LIMIT EXCEEDED. Floor-to-cent does not collapse this to zero.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-0.01",
+        "daily_status": "DAILY LIMIT EXCEEDED",
+        "drawdown_room": "999.99",
+        "ok": true
+      },
+      "id": "DL-05",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000.01",
+        "drawdown_room": "999.99"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "one cent past the daily limit, hard enforcement, is BREACHED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-0.01",
+        "daily_status": "BREACHED",
+        "drawdown_room": "999.99",
+        "ok": true
+      },
+      "id": "DL-06",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000.01",
+        "dll_enforcement": "hard",
+        "drawdown_room": "999.99"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "explicit soft enforcement on a negative capacity is DAILY LIMIT EXCEEDED, not BREACHED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-50.00",
+        "daily_status": "DAILY LIMIT EXCEEDED",
+        "drawdown_room": "950.00",
+        "ok": true
+      },
+      "id": "DL-07",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1050",
+        "dll_enforcement": "soft",
+        "drawdown_room": "950"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "hard enforcement with capacity still positive stays OK and sizes from that room.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "350.00",
+        "daily_room": "350.00",
+        "daily_status": "OK",
+        "drawdown_room": "1800.00",
+        "ok": true
+      },
+      "id": "DL-08",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-650",
+        "dll_enforcement": "hard",
+        "drawdown_room": "1800"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "binding room 0 sizes 0 contracts. A numeric 0 is not a daily-limit status.",
+      "expected": {
+        "active_cap": 50,
+        "actual_risk": "0.00",
+        "cap_class": "micro",
+        "capped": false,
+        "contracts": 0,
+        "effective_risk": "0.00",
+        "instrument": "MES",
+        "ok": true,
+        "risk_limited_by_room": true,
+        "risk_per_contract": "15.00",
+        "tick_value": "1.25"
+      },
+      "id": "DL-09",
+      "input": {
+        "binding_room": "0",
+        "instrument": "MES",
+        "max_micros": "50",
+        "max_minis": "NONE",
+        "risk": "200",
+        "stop_ticks": "12"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "dll_enforcement other than hard or soft is INVALID_INPUT.",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "dll_enforcement must be hard or soft",
+        "ok": false
+      },
+      "id": "DL-10",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1050",
+        "dll_enforcement": "nope",
+        "drawdown_room": "950"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "a fraction of a cent below zero floors to -0.01, so it is DAILY LIMIT EXCEEDED and not reported as zero.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-0.01",
+        "daily_status": "DAILY LIMIT EXCEEDED",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-11",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000.004",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "enforcement token HARD is case-insensitive and means hard.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-50.00",
+        "daily_status": "BREACHED",
+        "drawdown_room": "950.00",
+        "ok": true
+      },
+      "id": "DL-12",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1050",
+        "dll_enforcement": "HARD",
+        "drawdown_room": "950"
+      },
+      "kind": "risk_room"
     },
     {
       "description": "L-2: breach_on_touch as string",

@@ -50,6 +50,7 @@ def acc_row(cid, si):
          "L": inst, "M": si["equity"]}
     if "day_ref" in si: a["N"] = si["day_ref"]
     if "risk" in si: a.update(O=si["risk"], P=si["ticks"])
+    if si.get("dll_enforcement"): a["AS"] = si["dll_enforcement"]
     return a
 
 def log_rows(cid, si):
@@ -151,6 +152,36 @@ STATUS += [
  ("IA-TRAIL floor still moves", S("IAT", type="eod_trailing", lock=0, instrument="NQ", max_minis="NONE", max_micros="NONE", equity=51000),
      [{"A": "IAT", "B": datetime.date(2026, 10, 1), "C": 54000}],
      {"AA": "OK", "AC": 50000, "AD": True, "AK": 3, "Q": 5}),
+ # Daily capacity. Static floor is 48000, so 48950 and 49000 are not floor breaches.
+ # $0.01 left cannot buy one MES tick ($1.25), so the contract count is numeric 0 and the status stays OK.
+ ("DL-01 $0.01 room left", S("DL01", equity=49000.01, dll=1000, day_ref=50000, risk=200, ticks=12), [],
+     {"AA": "OK", "AE": False, "AG": 0.01, "AF": 1000.01, "AH": 0.01, "AI": "daily_loss", "AK": 0, "AJ": 0.01, "AU": None}),
+ ("DL-02 exact zero", S("DL02", equity=49000, dll=1000, day_ref=50000, risk=200, ticks=12), [],
+     {"AA": "OK", "AE": False, "AG": 0, "AF": 1000, "AH": 0, "AI": "daily_loss", "AK": "DAILY LIMIT REACHED",
+      "AU": "DAILY LIMIT REACHED", "AJ": "DAILY LIMIT REACHED", "AQ": "DAILY LIMIT REACHED", "AP": 0}),
+ ("DL-03 beyond unstated", S("DL03", equity=48950, dll=1000, day_ref=50000, risk=200, ticks=12), [],
+     {"AA": "OK", "AE": False, "AG": -50, "AF": 950, "AH": 0, "AI": "daily_loss", "AK": "DAILY LIMIT EXCEEDED",
+      "AU": "DAILY LIMIT EXCEEDED", "AJ": "DAILY LIMIT EXCEEDED"}),
+ ("DL-04 beyond hard", S("DL04", equity=48950, dll=1000, day_ref=50000, risk=200, ticks=12, dll_enforcement="hard"), [],
+     {"AA": "OK", "AE": True, "AG": -50, "AF": 950, "AH": 0, "AI": "daily_loss", "AK": "BREACHED", "AU": "BREACHED", "AP": 0}),
+ ("DL-05 one cent beyond", S("DL05", equity=48999.99, dll=1000, day_ref=50000, risk=200, ticks=12), [],
+     {"AA": "OK", "AE": False, "AG": -0.01, "AF": 999.99, "AK": "DAILY LIMIT EXCEEDED", "AU": "DAILY LIMIT EXCEEDED"}),
+ ("DL-06 one cent beyond hard", S("DL06", equity=48999.99, dll=1000, day_ref=50000, risk=200, ticks=12, dll_enforcement="hard"), [],
+     {"AA": "OK", "AE": True, "AG": -0.01, "AF": 999.99, "AK": "BREACHED", "AU": "BREACHED"}),
+ ("DL-07 explicit soft", S("DL07", equity=48950, dll=1000, day_ref=50000, risk=200, ticks=12, dll_enforcement="soft"), [],
+     {"AA": "OK", "AE": False, "AG": -50, "AK": "DAILY LIMIT EXCEEDED", "AU": "DAILY LIMIT EXCEEDED"}),
+ ("DL-08 hard still open", S("DL08", equity=49000, dll=1000, day_ref=49800, risk=10000, ticks=12, max_minis="NONE", max_micros="NONE", dll_enforcement="hard"), [],
+     {"AA": "OK", "AE": False, "AG": 200, "AI": "daily_loss", "AH": 200, "AK": 13, "AU": None}),
+ ("DL-09 floor outranks daily", S("DL09", equity=48000, dll=1000, day_ref=50000, risk=200, ticks=12, dll_enforcement="soft"), [],
+     {"AA": "OK", "AE": True, "AF": "BREACHED", "AG": "BREACHED", "AK": "BREACHED", "AU": "BREACHED", "AI": "BREACHED"}),
+ ("DL-10 preset soft", {"A": "DL10", "B": "Topstep | Trading Combine | 50000 [P001]", "I": 1000, "L": "MES", "M": 48950, "N": 50000, "O": 200, "P": 12}, [],
+     {"AA": "OK", "AE": False, "AG": -50, "AK": "DAILY LIMIT EXCEEDED", "AU": "DAILY LIMIT EXCEEDED"}),
+ ("DL-11 hard overrides soft preset", {"A": "DL11", "B": "Topstep | Trading Combine | 50000 [P001]", "I": 1000, "AS": "hard", "L": "MES", "M": 48950, "N": 50000, "O": 200, "P": 12}, [],
+     {"AA": "OK", "AE": True, "AG": -50, "AF": 950, "AK": "BREACHED", "AU": "BREACHED", "AR": "contains:OVERRIDES PRESET"}),
+ ("DL-12 HARD token", S("DL12", equity=48950, dll=1000, day_ref=50000, risk=200, ticks=12, dll_enforcement="HARD"), [],
+     {"AA": "OK", "AE": True, "AK": "BREACHED", "AG": -50}),
+ ("DL-13 bad enforcement", S("DL13", dll_enforcement="nope", dll=1000, day_ref=50000), [],
+     {"AA": "INVALID", "AK": "INVALID"}),
 ]
 
 def sha256_file(path):

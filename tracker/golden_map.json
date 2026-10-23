@@ -2,8 +2,8 @@
   "spec": "tracker v0.2.0 instrument caps / oracle 0.2.0",
   "generated_by": "tracker/sheet_logic.py",
   "counts": {
-    "yes": 33,
-    "partial": 19,
+    "yes": 43,
+    "partial": 21,
     "no": 11
   },
   "cases": [
@@ -668,6 +668,149 @@
         "effective_risk",
         "risk_limited_by_room",
         "actual_risk"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-01",
+      "reproducible": "yes",
+      "how": "equity 49000.01, day ref 50000, DLL 1000 \u2192 $0.01 left, status OK",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-02",
+      "reproducible": "yes",
+      "how": "equity 49000, day ref 50000, DLL 1000 \u2192 capacity 0, DAILY LIMIT REACHED",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-03",
+      "reproducible": "yes",
+      "how": "equity 48950, day ref 50000, DLL 1000 \u2192 -50, enforcement unstated, DAILY LIMIT EXCEEDED",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-04",
+      "reproducible": "yes",
+      "how": "same -50 with hard enforcement \u2192 BREACHED",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-05",
+      "reproducible": "yes",
+      "how": "equity 48999.99 \u2192 capacity -0.01, DAILY LIMIT EXCEEDED",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-06",
+      "reproducible": "yes",
+      "how": "capacity -0.01 with hard enforcement \u2192 BREACHED",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-07",
+      "reproducible": "yes",
+      "how": "explicit soft \u2192 DAILY LIMIT EXCEEDED",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-08",
+      "reproducible": "yes",
+      "how": "hard enforcement, day loss 650, capacity 350 still OK",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-09",
+      "reproducible": "yes",
+      "how": "touch false at the floor: room 0, no DLL, numeric contracts 0. Not a daily-limit status.",
+      "reason": "binding room 0",
+      "checked_fields": [
+        "contracts",
+        "capped",
+        "effective_risk",
+        "risk_limited_by_room",
+        "actual_risk"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-10",
+      "reproducible": "partial",
+      "how": "dll_enforcement other than hard or soft \u2192 INVALID on Accounts!AS and INVALID_INPUT in the oracle.",
+      "reason": "categorical: bad token is invalid, not a silent soft exceed"
+    },
+    {
+      "id": "DL-11",
+      "reproducible": "partial",
+      "how": "day_pnl -1000.004 floors to daily room -0.01. Sheet money inputs are 2 dp, so this exact loss is not typed; scenarios check CENT_DOWN.",
+      "reason": "oracle rounding case"
+    },
+    {
+      "id": "DL-12",
+      "reproducible": "yes",
+      "how": "enforcement HARD is hard \u2192 BREACHED",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
       ],
       "sheet_logic_match": true
     },

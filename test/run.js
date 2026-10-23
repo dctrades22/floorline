@@ -18,7 +18,7 @@ for (const c of cases) {
   else { fail++; console.log("MISMATCH", c.id, JSON.stringify(got), JSON.stringify(c.expected)); }
 }
 console.log(`GOLDEN ${pass === cases.length ? "PASS" : "FAIL"} ${pass}/${cases.length}`);
-if (cases.length !== 63) { fail++; console.log("expected 63 golden cases, got " + cases.length); }
+if (cases.length !== 75) { fail++; console.log("expected 75 golden cases, got " + cases.length); }
 const required = { "IA-01": 13, "IA-02": 1, "IA-03": 5, "IA-04": 50 };
 for (const id of Object.keys(required)) {
   const c = cases.find(x => x.id === id);
@@ -27,6 +27,18 @@ for (const id of Object.keys(required)) {
     fail++; console.log("REQUIRED FAIL", id, got && got.contracts);
   } else console.log(`REQUIRED ${id} PASS contracts=${got.contracts} tick=${got.tick_value} class=${got.cap_class} cap=${got.active_cap}`);
 }
+for (const id of ["DL-01", "DL-02", "DL-03", "DL-04", "DL-05", "DL-06", "DL-07", "DL-08", "DL-11", "DL-12"]) {
+  const c = cases.find(x => x.id === id);
+  const got = c && Oracle.evaluate(c.kind, c.input);
+  const exp = c && c.expected;
+  const same = got && exp && got.daily_status === exp.daily_status && got.daily_room === exp.daily_room && got.binding_room === exp.binding_room;
+  if (!same) { fail++; console.log("DAILY FAIL", id, got); }
+  else console.log(`DAILY ${id} PASS status=${got.daily_status} room=${got.daily_room} binding=${got.binding_room}`);
+}
+const d9 = cases.find(x => x.id === "DL-09");
+const g9 = d9 && Oracle.evaluate("futures", d9.input);
+if (!g9 || g9.contracts !== 0) { fail++; console.log("DAILY FAIL DL-09", g9); }
+else console.log("DAILY DL-09 PASS contracts=0");
 
 const presets = read("data/presets.json");
 const errs = validate(presets, read("data/presets.schema.json"));

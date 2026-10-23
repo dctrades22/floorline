@@ -66,7 +66,7 @@ B_HEAD = Border(bottom=Side(style="medium", color=BRAND))
 
 # ---- notation from FORMULAS.md, expanded inline ----
 PRESET_COL = {"A": "A", "B": "B", "C": "C", "D": "D", "E": "E", "F": "F", "G": "G", "H": "H", "I": "I", "J": "J",
-              "K": "K", "L": "L", "M": "M", "N": "N", "O": "O", "P": "P"}
+              "K": "K", "L": "L", "M": "M", "N": "N", "O": "O", "P": "P", "Q": "Q"}
 def PV(col, r): return f'IFERROR(INDEX(Presets!${col}$2:${col}$200,MATCH($B{r},Presets!$A$2:$A$200,0))&"","")'
 def HIT(v, f, touch): return f'IF({touch},ROUND({v}-({f}),6)<=0,ROUND({v}-({f}),6)<0)'
 def CENT_UP(x): return f'-INT(ROUND(-({x})*100,6))/100'
@@ -95,6 +95,7 @@ def account_formulas(r):
          f'IF(ISNUMBER(U{r}),OR(U{r}<-100000000,U{r}>100000000),FALSE),'
          f'AND(V{r}<>TRUE,V{r}<>FALSE),'
          f'AND(W{r}<>"NONE",OR(NOT(ISNUMBER(W{r})),W{r}<=0)),'
+         f'AND(AS{r}<>"",AS{r}<>"hard",AS{r}<>"soft"),'
          f'{cap_bad(f"X{r}")},{cap_bad(f"Y{r}")},'
          f'AND(L{r}<>"ES",L{r}<>"MES",L{r}<>"NQ",L{r}<>"MNQ"),'
          f'NOT(ISNUMBER(Q{r})),'
@@ -105,6 +106,9 @@ def account_formulas(r):
          f'IF(OR(COUNTIFS({LOGR},A{r},{LOGI},"INCOMPLETE")>0,COUNTIFS({LOGI},"UNKNOWN_ACCOUNT")>0),"INCOMPLETE","OK")))))')
     W = "=IFERROR(" + W[1:] + ',"INVALID")'
     ok = f'$AA{r}<>"OK",$AA{r}'
+    fh = f'OR(COUNTIFS({LOGR},A{r},{LOGI},"BREACHED")>0,{HIT(f"M{r}", f"AN{r}", f"V{r}")})'
+    dr = CENT_DOWN(f'W{r}-MAX(0,-(M{r}-N{r}))')
+    en = f'IF(AS{r}<>"",AS{r},{pv("Q")})'
     return {
         "C": f'={pv("B")}',
         "Q": G(f'IF(L{r}="","",IFERROR(INDEX(Contracts!$K$2:$K$5,MATCH(L{r},Contracts!$J$2:$J$5,0)),"INVALID"))'),
@@ -122,23 +126,26 @@ def account_formulas(r):
                 f'MAX(S{r},M{r},_xlfn.MAXIFS({LOGC},{LOGR},A{r}),_xlfn.MAXIFS({LOGD},{LOGR},A{r})))))'),
         "AC": G(f'IF({ok},{CENT_UP(f"AN{r}")})'),
         "AD": G(f'IF({ok},AND(ISNUMBER(U{r}),R{r}<>"static",ROUND(AB{r}-T{r}-(S{r}+IF(ISNUMBER(U{r}),U{r},0)),6)>=0))'),
-        "AE": G(f'IF({ok},OR(COUNTIFS({LOGR},A{r},{LOGI},"BREACHED")>0,{HIT(f"M{r}", f"AN{r}", f"V{r}")}))'),
-        "AF": G(f'IF({ok},IF(AE{r},"BREACHED",{CENT_DOWN(f"MAX(0,M{r}-AN{r})")}))'),
-        "AG": G(f'IF({ok},IF(AE{r},"BREACHED",IF(W{r}="NONE","NONE",{CENT_DOWN(f"MAX(0,W{r}-MAX(0,-(M{r}-N{r})))")})))'),
-        "AH": G(f'IF({ok},IF(AE{r},"BREACHED",IF(AG{r}="NONE",AF{r},MIN(AF{r},AG{r}))))'),
-        "AI": G(f'IF({ok},IF(AE{r},"BREACHED",IF(AND(AG{r}<>"NONE",AG{r}<AF{r}),"daily_loss","drawdown")))'),
-        "AJ": G(f'IF(AO{r}<>"OK",AO{r},IF(AE{r},"BREACHED",{CENT_DOWN(f"MIN(O{r},AH{r})")}))'),
-        "AK": G(f'IF(AO{r}<>"OK",AO{r},IF(AE{r},"BREACHED",IF(Z{r}="NONE",AP{r},MIN(AP{r},Z{r}))))'),
+        # fh is the drawdown floor only. dr is the signed daily capacity (floor to the cent, may be negative).
+        # en is the DLL enforcement override, else the preset. IF guards dr so a NONE limit is not evaluated.
+        "AE": G(f'IF({ok},OR({fh},IF(OR(W{r}="NONE",NOT(ISNUMBER(W{r}))),FALSE,AND({dr}<0,{en}="hard"))))'),
+        "AF": G(f'IF({ok},IF({fh},"BREACHED",{CENT_DOWN(f"MAX(0,M{r}-AN{r})")}))'),
+        "AG": G(f'IF({ok},IF({fh},"BREACHED",IF(OR(W{r}="NONE",NOT(ISNUMBER(W{r}))),"NONE",{dr})))'),
+        "AH": G(f'IF({ok},IF({fh},"BREACHED",IF(OR(AG{r}="NONE",NOT(ISNUMBER(AG{r}))),AF{r},MIN(AF{r},MAX(0,AG{r})))))'),
+        "AI": G(f'IF({ok},IF({fh},"BREACHED",IF(NOT(ISNUMBER(AG{r})),"drawdown",IF(AG{r}<AF{r},"daily_loss","drawdown"))))'),
+        "AJ": G(f'IF(AO{r}<>"OK",AO{r},IF(AU{r}<>"",AU{r},{CENT_DOWN(f"MIN(O{r},AH{r})")}))'),
+        "AK": G(f'IF(AO{r}<>"OK",AO{r},IF(AU{r}<>"",AU{r},IF(Z{r}="NONE",AP{r},MIN(AP{r},Z{r}))))'),
         "AL": G(f'IF(AO{r}<>"OK",AO{r},AND(Z{r}<>"NONE",AP{r}>Z{r}))'),
-        "AM": G(f'IF(AO{r}<>"OK",AO{r},O{r}>AH{r})'),
+        "AM": G(f'IF(AO{r}<>"OK",AO{r},IF(NOT(ISNUMBER(AH{r})),FALSE,O{r}>AH{r}))'),
         "AN": G(f'IF($AA{r}<>"OK","",IF(R{r}="static",S{r}-T{r},IF(U{r}="NONE",AB{r}-T{r},MIN(AB{r}-T{r},S{r}+U{r}))))'),
         "AO": G(f'IF({ok},IF(OR(O{r}="",P{r}="",Q{r}=""),"INCOMPLETE",IF(OR(NOT(ISNUMBER(O{r})),O{r}<0,O{r}>100000000,NOT(ISNUMBER(P{r})),P{r}<1,P{r}<>INT(P{r}),NOT(ISNUMBER(Q{r})),Q{r}<=0),"INVALID","OK")))'),
-        "AP": G(f'IF(AO{r}<>"OK","",IF(AE{r},0,INT(ROUND(MIN(O{r},AH{r})/(P{r}*Q{r}),9))))'),
-        "AQ": G(f'IF(AO{r}<>"OK",AO{r},IF(AE{r},"BREACHED",{CENT_DOWN(f"AK{r}*P{r}*Q{r}")}))'),
+        "AP": G(f'IF(AO{r}<>"OK","",IF(OR({fh},AU{r}<>""),0,INT(ROUND(MIN(O{r},AH{r})/(P{r}*Q{r}),9))))'),
+        "AQ": G(f'IF(AO{r}<>"OK",AO{r},IF(AU{r}<>"",AU{r},{CENT_DOWN(f"IF(Z{r}=\"NONE\",AP{r},MIN(AP{r},Z{r}))*P{r}*Q{r}")}))'),
+        "AU": G(f'IF(OR($AA{r}<>"OK",AO{r}<>"OK"),"",IF({fh},"BREACHED",IF(OR(W{r}="NONE",NOT(ISNUMBER(W{r}))),"",IF({dr}<0,IF({en}="hard","BREACHED","DAILY LIMIT EXCEEDED"),IF({dr}=0,"DAILY LIMIT REACHED","")))))'),
         "AR": G(f'IF(AND(A{r}="",B{r}=""),"",_xlfn.TEXTJOIN("; ",TRUE,IF(C{r}="partial","PARTIAL PRESET: verify "&{pv("L")},""),'
                 f'IF(C{r}="manual","MANUAL: all params user-entered",""),'
                 f'IF(OR(AND(D{r}<>"",{pv("C")}<>""),AND(E{r}<>"",{pv("D")}<>""),AND(F{r}<>"",{pv("E")}<>""),AND(G{r}<>"",{pv("G")}<>""),'
-                f'AND(H{r}<>"",{pv("H")}<>""),AND(I{r}<>"",{pv("I")}<>""),AND(J{r}<>"",{pv("J")}<>""),AND(K{r}<>"",{pv("K")}<>"")),"OVERRIDES PRESET",""),'
+                f'AND(H{r}<>"",{pv("H")}<>""),AND(I{r}<>"",{pv("I")}<>""),AND(J{r}<>"",{pv("J")}<>""),AND(K{r}<>"",{pv("K")}<>""),AS{r}<>""),"OVERRIDES PRESET",""),'
                 f'IF(AND(A{r}<>"",L{r}=""),"INSTRUMENT MISSING: choose ES, MES, NQ or MNQ",""),'
                 f'IF(AND(A{r}<>"",L{r}<>"",Z{r}=""),"MAX CONTRACTS MISSING: enter the "&IF(OR(L{r}="MES",L{r}="MNQ"),"micro","mini")&" cap (number, 0, or NONE)","") ,'
                 f'IF(AND({pv("N")}<>"",NOT(ISNUMBER($B$13))),"AS-OF DATE MISSING: enter today in B13 (stale check off)",""),'
@@ -174,11 +181,12 @@ ACC_HEAD = [("A", "Account ID", 13), ("B", "Preset", 46), ("C", "Preset status",
     ("V", "Touch = breach", 8), ("W", "DLL $", 9), ("X", "Max minis", 10), ("Y", "Max micros", 10), ("Z", "Active cap", 10),
     ("AA", "Check", 12), ("AB", "Peak", 12), ("AC", "FLOOR", 14), ("AD", "Locked", 9), ("AE", "Breached", 10),
     ("AF", "DD room", 12), ("AG", "Daily room", 12), ("AH", "BINDING ROOM", 14), ("AI", "Binding", 11),
-    ("AJ", "Effective risk", 11), ("AK", "CONTRACTS", 11), ("AL", "Capped", 8), ("AM", "Room-limited", 9),
-    ("AN", "floor raw", 4), ("AO", "sizing check", 4), ("AP", "contracts raw", 4), ("AQ", "Actual risk", 11), ("AR", "Flags", 70)]
+    ("AJ", "Effective risk", 12), ("AK", "CONTRACTS", 22), ("AL", "Capped", 8), ("AM", "Room-limited", 9),
+    ("AN", "floor raw", 4), ("AO", "sizing check", 4), ("AP", "contracts raw", 4), ("AQ", "Actual risk", 12), ("AR", "Flags", 70),
+    ("AS", "DLL enforcement", 14), ("AU", "Trade status", 4)]
 LOG_HEAD = [("A", "Account ID", 13), ("B", "Trading date", 13), ("C", "EOD balance", 13), ("D", "Intraday high", 13),
     ("E", "Intraday low", 13), ("F", "acct row", 4), ("G", "Peak (this row)", 13), ("H", "floor raw", 4), ("I", "Status", 12), ("J", "FLOOR", 13)]
-INPUT_ACC = set("ABDEFGHIJKLMNOP"); MONEY = "#,##0.00;[Color9]-#,##0.00"
+INPUT_ACC = set("ABDEFGHIJKLMNOP") | {"AS"}; MONEY = "#,##0.00;[Color9]-#,##0.00"
 
 def base_sheet(ws, tab):
     ws.sheet_properties.tabColor = tab
@@ -250,11 +258,11 @@ def build(path, accounts=(), logs=(), demo_asof=None):
         "2. Fill any field named in 'PARTIAL PRESET: verify ...' using the override columns D-K (amber flag until resolved).",
         "3. Choose Instrument (ES, MES, NQ or MNQ). Tick value fills in from that instrument (ES 12.50, MES 1.25, NQ 5.00, MNQ 0.50) and cannot be typed. Enter Equity now, Day reference balance, Risk $ and Stop ticks. ES/NQ use the mini cap; MES/MNQ use the micro cap. Blank required cap = INCOMPLETE. 0 stays 0. NONE removes only the contract cap. Risk, trailing drawdown and the daily loss limit stay active.",
         "4. Daily Log: after each session add one row per account: Trading date (firm session date), EOD balance, intraday high and intraday low.",
-        "5. Read FLOOR, BINDING ROOM and CONTRACTS on Accounts. Then tick the Checklist. If your firm dashboard disagrees, the firm's number wins.",
+        "5. Read FLOOR, BINDING ROOM and CONTRACTS on Accounts. CONTRACTS is a number only while daily capacity is above zero and the floor is intact. Exactly zero daily capacity shows DAILY LIMIT REACHED. Below zero shows BREACHED when DLL enforcement is hard, otherwise DAILY LIMIT EXCEEDED. A floor hit shows BREACHED and outranks the daily status. In every blocked case the max is 0. Then tick the Checklist. If your firm dashboard disagrees, the firm's number wins.",
         "6. Enter today's date in Accounts!B13 (As of). Flags shows AS-OF DATE MISSING while it is blank and STALE PRESET when a preset was checked more than 30 days before it. The workbook never uses TODAY().",
         "7. If Accounts!B14 shows a red Log check message, a Daily Log row has an unknown or blank account ID; every account shows INCOMPLETE until it is fixed.",
         ("s", "STATUS WORDS"),
-        "OK / a number = calculated.  INVALID = a value or rule is wrong (money must be 0 < x <= 100,000,000 with at most 2 decimals; instrument must be ES, MES, NQ or MNQ).  INCOMPLETE = a required input is missing, incl. a blank instrument or a blank cap for that instrument (type NONE for no contract cap), an incomplete log row, or any unknown-account log row.  UNKNOWN_ACCOUNT = log row whose account ID matches no account.  BREACHED = the floor was hit; rooms and size are blocked.  NONE = no daily loss limit, or no contract cap. Risk, trailing drawdown and daily loss stay active either way.",
+        "OK / a number = calculated.  INVALID = a value or rule is wrong (money must be 0 < x <= 100,000,000 with at most 2 decimals; instrument must be ES, MES, NQ or MNQ; DLL enforcement must be blank, hard, or soft).  INCOMPLETE = a required input is missing, incl. a blank instrument or a blank cap for that instrument (type NONE for no contract cap), an incomplete log row, or any unknown-account log row.  UNKNOWN_ACCOUNT = log row whose account ID matches no account.  BREACHED = the drawdown floor was hit, or daily capacity is below zero and DLL enforcement is hard. Rooms show BREACHED only for a floor hit; a hard daily exceed keeps the negative daily room visible and still blocks size.  DAILY LIMIT REACHED = daily capacity is exactly zero. Not a breach. Max contracts 0.  DAILY LIMIT EXCEEDED = daily capacity is below zero and enforcement is soft or unstated. Not a breach, because the rule does not define one. Max contracts 0.  NONE = no daily loss limit, or no contract cap. Risk, trailing drawdown and daily loss stay active either way. Precedence: empty row, then INCOMPLETE, then INVALID, then floor BREACHED, then hard daily BREACHED, then DAILY LIMIT EXCEEDED, then DAILY LIMIT REACHED, then a numeric size. No status permits trading when daily capacity is zero or negative.",
         ("s", "COLOURS"),
         "Green = buffer above 50% of max drawdown or lock reached.  Amber = 25-50% buffer, partial preset, overrides, stale preset.  Red = under 25%, INVALID or BREACHED.  Blue = sizing was capped or clamped to the room.",
         ("s", "LIMITS"),
@@ -263,7 +271,7 @@ def build(path, accounts=(), logs=(), demo_asof=None):
 
     # ---------------- Accounts ----------------
     ws = wb.create_sheet("Accounts"); base_sheet(ws, BRAND)
-    paint(ws, 16, len(ACC_HEAD))
+    paint(ws, 16, 47)   # A..AU. AT is an unused hidden probe column (tests write equity cents there).
     calc = {c for c, _, _ in ACC_HEAD if c not in INPUT_ACC}
     header(ws, ACC_HEAD, calc)
     for r in range(2, NA + 1):
@@ -275,7 +283,7 @@ def build(path, accounts=(), logs=(), demo_asof=None):
             c.fill = F_IN if inp else F_BG
             c.border = B_IN if inp else B_CELL
             c.protection = Protection(locked=not inp)
-            c.alignment = Alignment(vertical="center", horizontal="left" if col in ("A", "B", "L", "AA", "R", "AI", "AR") else "right")
+            c.alignment = Alignment(vertical="center", horizontal="left" if col in ("A", "B", "L", "AA", "R", "AI", "AR", "AS", "AU") else "right")
             bold = col in ("AC", "AH", "AK")
             muted = col in ("C", "R", "S", "T", "U", "V", "W", "X", "Y", "Z")
             c.font = Font(name=MONO, size=12 if bold else 10, bold=bold, color=INK if (inp or bold) else MUT if muted else INK)
@@ -290,11 +298,11 @@ def build(path, accounts=(), logs=(), demo_asof=None):
                  '" Daily Log row(s) with unknown account ID - fix before trading","")')
     ws["B14"].font = Font(name=MONO, size=10, bold=True, color=RED)
     ws.conditional_formatting.add("B14:C14", FormulaRule(formula=['$B$14<>""'], fill=fill(RED), font=Font(color="000000", bold=True)))
-    ws["A15"] = "Inputs: shaded cells except C and Q.  Instrument L is ES, MES, NQ or MNQ.  Tick value Q is calculated from the instrument and is not typed.  ES/NQ use the mini cap; MES/MNQ use the micro cap.  FLOOR / BINDING ROOM / CONTRACTS are the numbers to trade by."
+    ws["A15"] = "Inputs: shaded cells except C and Q.  Instrument L is ES, MES, NQ or MNQ.  Tick value Q is calculated from the instrument and is not typed.  ES/NQ use the mini cap; MES/MNQ use the micro cap.  DLL enforcement AS is hard, soft, or blank (blank uses the preset; blank preset = not a breach).  CONTRACTS is a number only when daily capacity is above zero and the floor is intact."
     ws["A15"].font = Font(name=MONO, size=9, color=DIM)
-    for col in ("AN", "AO", "AP"): ws.column_dimensions[col].hidden = True
+    for col in ("AN", "AO", "AP", "AT", "AU"): ws.column_dimensions[col].hidden = True
 
-    rng = f"$A$2:$AR${NA}"
+    rng = f"$A$2:$AU${NA}"
     def cf(ref, formula, **kw): ws.conditional_formatting.add(ref, FormulaRule(formula=[formula], stopIfTrue=False, **kw))
     font = lambda c, b=False: Font(color=c, bold=b)
     # whole-row BREACHED, then cell-level states
@@ -310,7 +318,9 @@ def build(path, accounts=(), logs=(), demo_asof=None):
     cf(f"AH2:AH{NA}", f'{lvl}', font=font(GREEN, True))
     cf(f"AC2:AC{NA}", f'{lvl}', font=Font(color=INK, bold=True))
     cf(f"AL2:AM{NA}", 'AL2=TRUE', fill=fill("0E2A40"), font=font(BLUE, True))
-    cf(f"AK2:AK{NA}", 'OR($AL2=TRUE,$AM2=TRUE)', font=font(BLUE, True))
+    cf(f"AK2:AK{NA}", 'AND(ISNUMBER(AK2),OR($AL2=TRUE,$AM2=TRUE))', font=font(BLUE, True))
+    cf(f"AK2:AK{NA}", 'AK2="DAILY LIMIT REACHED"', fill=fill(AMBER), font=font("000000", True))
+    cf(f"AK2:AK{NA}", 'AK2="DAILY LIMIT EXCEEDED"', fill=fill(RED), font=font("000000", True))
     cf(f"AR2:AR{NA}", 'OR(ISNUMBER(SEARCH("PARTIAL",AR2)),ISNUMBER(SEARCH("OVERRIDES",AR2)),ISNUMBER(SEARCH("MISSING",AR2)),ISNUMBER(SEARCH("STALE",AR2)))', font=font(AMBER))
     cf(f"C2:C{NA}", 'C2="verified"', font=font(GREEN, True))
     cf(f"C2:C{NA}", 'C2="partial"', font=font(AMBER, True))
@@ -328,6 +338,7 @@ def build(path, accounts=(), logs=(), demo_asof=None):
     for col in ("J", "K"):
         v = dv(type="custom", formula1=f'OR({col}2="NONE",AND(ISNUMBER({col}2),{col}2>=0,{col}2=INT({col}2)))', allow_blank=True, error="Whole number >= 0 (0 is allowed) or NONE"); v.add(f"{col}2:{col}{NA}"); ws.add_data_validation(v)
     v = dv(type="list", formula1="Contracts!$J$2:$J$5", allow_blank=True, error="Choose ES, MES, NQ or MNQ"); v.add(f"L2:L{NA}"); ws.add_data_validation(v)
+    v = dv(type="list", formula1='"hard,soft"', allow_blank=True, error="hard, soft, or blank"); v.add(f"AS2:AS{NA}"); ws.add_data_validation(v)
     v = dv(type="whole", operator="greaterThanOrEqual", formula1="1", allow_blank=True, error="Whole number >= 1"); v.add(f"P2:P{NA}"); ws.add_data_validation(v)
     v = dv(type="date", operator="greaterThan", formula1="1", allow_blank=True); v.add("B13"); ws.add_data_validation(v)
     ws.protection.sheet = True; ws.protection.formatColumns = False; ws.protection.formatRows = False
@@ -379,7 +390,7 @@ def build(path, accounts=(), logs=(), demo_asof=None):
             if r > 1: cell.number_format = "@"
             if r == 1: cell.font = Font(name=MONO, size=9, bold=True, color=MUT); cell.border = B_HEAD
             elif c == 2: cell.font = Font(name=MONO, size=10, bold=True, color=GREEN if val == "verified" else AMBER if val == "partial" else MUT)
-    for c, w in zip("ABCDEFGHIJKLMNOP", (52, 9, 16, 11, 9, 7, 8, 7, 8, 7, 7, 40, 60, 11, 11, 7)): ws.column_dimensions[c].width = w
+    for c, w in zip("ABCDEFGHIJKLMNOPQ", (52, 9, 16, 11, 9, 7, 8, 7, 8, 7, 7, 40, 60, 11, 11, 7, 12)): ws.column_dimensions[c].width = w
     ws.freeze_panes = "B2"; ws.protection.sheet = True
 
     # ---------------- Contracts ----------------
@@ -415,7 +426,7 @@ def build(path, accounts=(), logs=(), demo_asof=None):
         "All needs_user / PARTIAL flags resolved.",
         "Lock offset confirmed (0 = start, X = start+X, NONE).",
         "Touch rule confirmed (\"hit/touch\" = TRUE, \"below\" = FALSE).",
-        "DLL entered in $ for today's reset (% plans: firm dashboard value).",
+        "DLL entered in $ for today's reset (% plans: firm dashboard value). Capacity above zero sizes normally. Exactly zero is DAILY LIMIT REACHED. Below zero is BREACHED only when enforcement is hard; otherwise DAILY LIMIT EXCEEDED. A floor hit is BREACHED either way.",
         "Day reference balance = firm's reset reference (incl./excl. unrealized per firm).",
         "Mini cap and micro cap confirmed. ES/NQ use max minis; MES/MNQ use max micros. Blank required cap is incomplete. NONE removes only the contract cap. 0 means zero contracts.",
         "Today's Daily Log row entered incl. intraday low.",
@@ -433,7 +444,7 @@ def build(path, accounts=(), logs=(), demo_asof=None):
             x.alignment = Alignment(horizontal="center", vertical="center"); x.font = Font(name=MONO, size=12, bold=True, color=GREEN)
         ws[f"C{i}"].font = Font(name=MONO, size=10, color=INK)
         ws[f"D{i}"] = t; ws[f"D{i}"].font = Font(name=MONO, size=10, color=INK)
-        ws[f"D{i}"].alignment = Alignment(wrap_text=True, vertical="center"); ws.row_dimensions[i].height = 30
+        ws[f"D{i}"].alignment = Alignment(wrap_text=True, vertical="center"); ws.row_dimensions[i].height = 36
     n = 5 + len(items) + 1
     ws[f"C{n}"] = "Done"; ws[f"C{n}"].font = Font(name=MONO, size=9, bold=True, color=MUT); ws[f"C{n}"].alignment = Alignment(horizontal="right")
     ws[f"D{n}"] = f'=COUNTIFS(B5:B{4+len(items)},"<>")&" / {len(items)}"'

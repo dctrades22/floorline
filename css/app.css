@@ -114,6 +114,7 @@ button.ghost:hover { border-color: var(--ink); }
 .size { margin-top: 22px; }
 .sizeRow { display: flex; align-items: flex-end; gap: 18px; margin-top: 8px; }
 .big2 { font: 600 56px/1 var(--mono); font-variant-numeric: tabular-nums; }
+.big2.statusWord { font: 600 22px/1.25 var(--mono); letter-spacing: 0; }
 .detail { font: 13px/1.45 var(--mono); color: var(--mut); padding-bottom: 4px; }
 .detail b { color: var(--ink); font-weight: 500; }
 .flags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }

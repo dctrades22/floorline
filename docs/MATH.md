@@ -2,7 +2,8 @@
 
 All arithmetic is defined by `golden/oracle.py` (stdlib, `decimal.Decimal`, prec 50). Golden vectors: `golden/cases.json`,
 verify with `python3 golden/oracle.py --check`. Units: account currency (USD) unless noted. Intermediate values are unrounded; rounding happens **only at output**, always in the conservative direction (M-7):
-`floor` → ROUND_CEILING to cents; `drawdown_room`, `daily_room`, `binding_room`, `effective_risk`, `actual_risk`, `equity` → ROUND_DOWN to cents;
+`floor` → ROUND_CEILING to cents; `drawdown_room`, `binding_room`, `effective_risk`, `actual_risk`, `equity` → ROUND_DOWN to cents;
+`daily_room` → ROUND_FLOOR to cents (identical to ROUND_DOWN for every value ≥ 0; a negative fraction of a cent stays negative);
 `peak` → HALF_UP (informational only). Contract counts and crypto qty use ROUND_FLOOR. Numbers are decimal strings or ints; floats/bools rejected.
 
 ## 1. Common inputs
@@ -49,17 +50,24 @@ conservative order: for trailing types, the adverse extreme is evaluated against
 raises the peak (long: O, L, H, C; i.e. assume the low came first). Ambiguity resolution is the caller's job and must be documented.
 
 ## 6. Remaining room and binding constraint
-- `drawdown_room = max(0, E - F)` (0 when breached).
+- `drawdown_room = max(0, E - F)` (0 when breached). Floor breach is `drawdown().breached`. It is not decided inside `risk_room`.
 - `day_pnl` (M-6) = current equity incl. unrealized P&L − the firm's daily reference value at the last reset (preset `daily_loss.basis`/`reset`).
   Transfers/withdrawals that move the reference (Vest) must be folded into the reference by the caller.
-- `day_loss = max(0, -day_pnl)`; `daily_room = max(0, DLL - day_loss)` when a $ DLL exists, else null.
-- `binding_room = min(drawdown_room, daily_room)`; `binding = "daily_loss"` iff `daily_room < drawdown_room`, ties → "drawdown".
+- `day_loss = max(0, -day_pnl)`. Signed daily capacity is `DLL - day_loss` when a $ DLL exists, else there is no daily room.
+  `daily_room` is that capacity, ROUND_FLOOR to the cent. It is not clamped at zero. A fraction of a cent below zero becomes `-0.01`, not `0.00`.
+- `binding_room = min(drawdown_room, max(0, daily_room))`. Sizing never sees a negative room. `binding = "daily_loss"` iff `daily_room < drawdown_room`, ties → "drawdown". `binding` names the tighter room. It is not permission to trade.
+- `daily_status` when a DLL exists:
+  - capacity > 0 → `OK`. Size normally, subject to risk, the stop, the contract cap, and the drawdown room.
+  - capacity = 0 → `DAILY LIMIT REACHED`. Max contracts 0. Not a breach.
+  - capacity < 0 and `dll_enforcement` is `hard` → `BREACHED`. The configured rule treats exceeding the daily limit as a failed account.
+  - capacity < 0 otherwise (`soft`, or the field omitted) → `DAILY LIMIT EXCEEDED`. Max contracts 0. The breached flag stays false. Unstated enforcement is not treated as hard: the rule does not define a breach, so the calculator must not invent one. Trading is still blocked.
+- No status permits trading when daily capacity is ≤ 0. A numeric contract count of 0 with `daily_status = OK` means the stop does not fit in a still-positive room, or the cap is 0. That is not a daily-limit status.
 - Percentage DLLs (Breakout, Vest, MyFundedPerps) must be converted to $ at the firm's reset instant
   (DLL_$ = rate × reset basis) before calling; reset basis/time is firm-specific (see presets notes).
-- `daily_loss.enforcement` in presets: `hard` = breach/fail; `soft` = forced flat for the session, not a violation (Topstep).
-  Either way the sizing room is the same; status reporting differs.
+- `daily_loss.enforcement` in presets: `hard` = breach/fail; `soft` = forced flat for the session, not a violation (Topstep). The token is case-insensitive. Any other token is `INVALID_INPUT`.
 - Missing `day_pnl` when a DLL is given → INVALID_INPUT.
-Examples: RR-18 daily binds 350.00; RR-19 drawdown binds; RR-20 no DLL; RR-21 tie → "drawdown".
+- Precedence, applied by the workbook and the page (the oracle functions stay separate): (1) empty row is blank; (2) `INCOMPLETE` (missing required input, including a blank instrument or cap, a DLL with no day reference, an incomplete log row, or any unknown-account log row); (3) `INVALID` (bad value, bad instrument, bad enforcement token, or an invalid log row); (4) drawdown floor hit → `BREACHED`, max contracts 0, and this outranks every daily status; (5) daily capacity < 0 and enforcement hard → `BREACHED`, max contracts 0; (6) daily capacity < 0 otherwise → `DAILY LIMIT EXCEEDED`, max contracts 0; (7) daily capacity = 0 → `DAILY LIMIT REACHED`, max contracts 0; (8) otherwise a numeric size. `INVALID` and `INCOMPLETE` stay different words. On the sheet, DD room and daily room show the word `BREACHED` only when the floor was hit. A hard daily exceed leaves the negative daily room visible so the two breach causes can be told apart. The breached flag is true for a floor hit and for a hard daily exceed.
+Examples: RR-18 daily binds 350.00 and status OK; RR-19 drawdown binds; RR-20 no DLL (`daily_status` null); RR-21 tie → "drawdown". DL-01 is $0.01 left (OK). DL-02 is exactly 0 (`DAILY LIMIT REACHED`). DL-03 is −50 with enforcement unstated (`DAILY LIMIT EXCEEDED`). DL-04 is the same loss with `hard` (`BREACHED`). DL-05 / DL-06 are one cent past the limit. DL-11 floors −0.004 to −0.01.
 
 ## 7. Futures sizing
 `risk_per_contract = stop_ticks × tick_value`; `contracts = floor(risk / risk_per_contract)`; result < 1 → 0;

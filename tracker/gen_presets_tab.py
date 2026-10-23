@@ -5,7 +5,8 @@ import csv, io, json, os, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "tracker", "presets_tab.csv")
 COLS = ["preset_key", "status", "dd_type", "start_balance", "dd_amount", "dd_pct", "lock_token", "breach_on_touch",
-        "dll_token", "max_minis", "max_micros", "needs_user", "source_url", "checked_date", "source_page_date", "preset_id"]
+        "dll_token", "max_minis", "max_micros", "needs_user", "source_url", "checked_date", "source_page_date", "preset_id",
+        "dll_enforcement"]
 
 def rows():
     d = json.load(open(os.path.join(ROOT, "data", "presets.json")))
@@ -18,6 +19,8 @@ def rows():
         elif lk["kind"] == "offset": lock = lk["offset_usd"]
         else: lock = ""; need.append("lock_offset(" + lk["kind"] + ")")
         dl = p["daily_loss"]
+        enf = dl.get("enforcement") or ""
+        if enf not in ("hard", "soft"): enf = ""
         if dl["kind"] == "none": dll = "NONE"
         elif dl["kind"] == "fixed_usd" and not dl["optional"]: dll = dl["amount_usd"]
         else: dll = ""; need.append("dll_usd(" + dl["kind"] + (",optional" if dl["optional"] else "") + ")")
@@ -38,8 +41,8 @@ def rows():
         key = f'{p["firm"]} | {p["plan"]} | {size or "size?"} [{p["id"]}]'
         out.append([key, p["status"], p["drawdown"]["type"], size, p["drawdown"]["amount_usd"] or "",
                     p["drawdown"]["pct_of_start"] or "", lock, touch, dll, max_minis, max_micros,
-                    ";".join(need), p["source_url"], p["checked_date"], p["source_page_date"] or "", p["id"]])
-    out.append(["Manual", "manual", "", "", "", "", "", "", "", "", "", "all", "", "", "", ""])
+                    ";".join(need), p["source_url"], p["checked_date"], p["source_page_date"] or "", p["id"], enf])
+    out.append(["Manual", "manual", "", "", "", "", "", "", "", "", "", "all", "", "", "", "", ""])
     return out
 
 def render():
