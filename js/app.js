@@ -293,9 +293,11 @@
       else { lb.textContent = "TRAILING · no lock"; lb.className = "pill"; }
     } else { $("floor").textContent = "—"; shown.floor = null; $("lockBadge").textContent = ""; $("lockBadge").className = "pill"; }
     // Incomplete or invalid inputs outrank a floor hit and every daily status.
-    var block = err ? null
-      : (r1 && r1.ok && r1.breached) ? "BREACHED"
-      : (r2 && r2.ok && r2.daily_status && r2.daily_status !== "OK") ? r2.daily_status : null;
+    var block = err ? null : (r1 && r1.ok ? (function () {
+      var word = Oracle.accountStatus(!!r1.breached, r2 && r2.ok ? r2.daily_status : null);
+      return word === "OK" ? null : word;
+    })() : null);
+    var dllUnc = !!(dllS && !dllEnforcement());
     if (r2 && r2.ok) {
       $("ddRoom").textContent = money(r2.drawdown_room);
       $("dRoom").textContent = r2.daily_room == null ? (field("dll").classList.contains("flag") ? "not entered" : "no DLL") : money(r2.daily_room);
@@ -315,9 +317,11 @@
       $("contracts").classList.add("statusWord");
       $("sizeDetail").textContent = "max contracts 0";
       if (r1 && r1.breached) flags.push(["BREACHED", "drawdown floor hit"]);
-      else if (block === "BREACHED") flags.push(["BREACHED", "daily loss limit exceeded; this rule counts that as a breach"]);
+      else if (block === "BREACHED") flags.push(["BREACHED", "daily loss limit exceeded; this confirmed rule counts that as a breach"]);
       else if (block === "DAILY LIMIT REACHED") flags.push(["DAILY LIMIT REACHED", "no daily loss room left"]);
-      else flags.push(["DAILY LIMIT EXCEEDED", "over the daily loss limit; this rule does not call it a breach"]);
+      else if (block === "DAILY LIMIT EXCEEDED") flags.push(["DAILY LIMIT EXCEEDED", "over the daily loss limit; this confirmed soft rule does not call it a breach"]);
+      else if (block === "RULE CONFIRMATION REQUIRED") flags.push(["RULE CONFIRMATION REQUIRED", "daily room is below zero and hard/soft is not confirmed. Max contracts 0. Not a safe clearance and not classified as soft."]);
+      else flags.push([block, "trading blocked"]);
     } else if (r3 && r3.ok) {
       if (crypto) {
         $("sizeLbl").textContent = "Max quantity · " + r3.side; $("contracts").textContent = r3.qty;
@@ -332,7 +336,9 @@
       $("contracts").textContent = err && err.error !== "INCOMPLETE" ? "0" : r3 && !r3.ok ? "0" : "—";
       $("sizeDetail").textContent = r3 && !r3.ok ? r3.message : "";
     }
+    if (dllUnc) flags.push(["DLL RULE UNCONFIRMED", "A daily loss limit is on, but hard or soft is not from a verified preset or a typed confirmation. Do not read a blank rule as soft. Sizing is unchanged while daily room is above zero."]);
     $("flags").innerHTML = flags.map(function (f) { return '<span class="flagchip"><b>' + f[0] + "</b> " + esc(f[1]) + "</span>"; }).join("");
+    markUnconfirmed(dllUnc);
 
     var tb = $("quick").querySelector("tbody");
     $("quick").hidden = crypto || !quick.length;
@@ -344,6 +350,31 @@
     }).join("");
 
     gauge(r1, r2, level);
+  }
+
+  function markUnconfirmed(on) {
+    var meta = $("presetMeta");
+    if (!meta) return;
+    var note = meta.querySelector(".dll-unconfirmed");
+    if (note) note.remove();
+    var b = meta.querySelector(".badge");
+    if (b && b.getAttribute("data-base")) {
+      b.className = b.getAttribute("data-base-class");
+      b.textContent = b.getAttribute("data-base");
+    }
+    if (!on || !b) return;
+    if (!b.getAttribute("data-base")) {
+      b.setAttribute("data-base", b.textContent);
+      b.setAttribute("data-base-class", b.className);
+    }
+    if ((" " + b.getAttribute("data-base-class") + " ").indexOf(" verified ") >= 0) {
+      b.className = "badge partial";
+      b.textContent = "not fully verified";
+    }
+    var span = document.createElement("span");
+    span.className = "badge partial dll-unconfirmed";
+    span.textContent = "DLL RULE UNCONFIRMED";
+    meta.appendChild(span);
   }
 
   function gauge(r1, r2, level) {

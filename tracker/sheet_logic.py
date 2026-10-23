@@ -45,28 +45,41 @@ def signed_daily(a):
     """CENT_DOWN is floor (toward -inf), so a fraction of a cent below zero stays negative."""
     return CENT_DOWN(a["dll"] - max(0.0, -(a["equity"] - a["day_ref"])))
 
+def dll_rule_of(enf):
+    s = enf.strip().lower() if isinstance(enf, str) else ""
+    return s if s in ("hard", "soft") else "unconfirmed"
+
 def daily_word(capacity, enf):
     if capacity > 0: return "OK"
     if capacity == 0: return "DAILY LIMIT REACHED"
-    if isinstance(enf, str) and enf.strip().lower() == "hard": return "BREACHED"
-    return "DAILY LIMIT EXCEEDED"
+    rule = dll_rule_of(enf)
+    if rule == "hard": return "BREACHED"
+    if rule == "soft": return "DAILY LIMIT EXCEEDED"
+    return "RULE CONFIRMATION REQUIRED"
 
 def risk(a, dd_room):
     if a.get("dll", "NONE") == "NONE":
         return {"binding_room": dd_room, "daily_room": None, "drawdown_room": dd_room,
-                "binding": "drawdown", "daily_status": None}
+                "binding": "drawdown", "daily_status": None, "dll_rule": None}
     dr = signed_daily(a)
     sized = max(0.0, dr)
+    rule = dll_rule_of(a.get("dll_enforcement"))
     return {"binding_room": min(dd_room, sized), "daily_room": dr, "drawdown_room": dd_room,
             "binding": "daily_loss" if dr < dd_room else "drawdown",
-            "daily_status": daily_word(dr, a.get("dll_enforcement"))}
+            "daily_status": daily_word(dr, rule), "dll_rule": rule}
 
 def trade_status(acc, rr):
     """Floor hit outranks every daily status. Daily words block trading. OK is the only tradable word."""
     if acc.get("breached"): return "BREACHED"
     st = rr.get("daily_status")
-    if st in ("DAILY LIMIT REACHED", "DAILY LIMIT EXCEEDED", "BREACHED"): return st
+    if st in ("DAILY LIMIT REACHED", "DAILY LIMIT EXCEEDED", "BREACHED", "RULE CONFIRMATION REQUIRED"): return st
     return "OK"
+
+def breach_cell(acc, rr):
+    """AE. TRUE is a confirmed breach. FALSE is not a breach. UNCONFIRMED is not a safe clearance and not soft."""
+    if acc.get("breached") or rr.get("daily_status") == "BREACHED": return True
+    if rr.get("daily_status") == "RULE CONFIRMATION REQUIRED": return "UNCONFIRMED"
+    return False
 
 # NEW instrument table. The workbook dropdown is the first four. The free calculator also
 # knows the other symbols; the class rule is the same (mini cap vs micro cap).
@@ -147,19 +160,24 @@ def dl_row(cid, equity, day_ref, dll, note, enf=None):
     M[cid] = (Y, note, si, RRF, "signed daily capacity; binding_room is max(0, capacity)")
 dl_row("DL-01", 49000.01, 50000, 1000, "equity 49000.01, day ref 50000, DLL 1000 → $0.01 left, status OK")
 dl_row("DL-02", 49000, 50000, 1000, "equity 49000, day ref 50000, DLL 1000 → capacity 0, DAILY LIMIT REACHED")
-dl_row("DL-03", 48950, 50000, 1000, "equity 48950, day ref 50000, DLL 1000 → -50, enforcement unstated, DAILY LIMIT EXCEEDED")
+dl_row("DL-03", 48950, 50000, 1000, "equity 48950, day ref 50000, DLL 1000 → -50, enforcement unconfirmed, RULE CONFIRMATION REQUIRED")
 dl_row("DL-04", 48950, 50000, 1000, "same -50 with hard enforcement → BREACHED", "hard")
-dl_row("DL-05", 48999.99, 50000, 1000, "equity 48999.99 → capacity -0.01, DAILY LIMIT EXCEEDED")
+dl_row("DL-05", 48999.99, 50000, 1000, "equity 48999.99 → capacity -0.01, RULE CONFIRMATION REQUIRED")
 dl_row("DL-06", 48999.99, 50000, 1000, "capacity -0.01 with hard enforcement → BREACHED", "hard")
 dl_row("DL-07", 48950, 50000, 1000, "explicit soft → DAILY LIMIT EXCEEDED", "soft")
 dl_row("DL-08", 49800, 50450, 1000, "hard enforcement, day loss 650, capacity 350 still OK", "hard")
 dl_row("DL-12", 48950, 50000, 1000, "enforcement HARD is hard → BREACHED", "HARD")
+dl_row("DL-14", 49000.01, 50000, 1000, "capacity 0.01 with hard stays OK", "hard")
+dl_row("DL-15", 49000.01, 50000, 1000, "capacity 0.01 with soft stays OK", "soft")
+dl_row("DL-16", 49000, 50000, 1000, "capacity 0 with hard is DAILY LIMIT REACHED", "hard")
+dl_row("DL-17", 49000, 50000, 1000, "capacity 0 with soft is DAILY LIMIT REACHED", "soft")
+dl_row("DL-18", 48999.99, 50000, 1000, "capacity -0.01 with soft is DAILY LIMIT EXCEEDED", "soft")
 M["DL-09"] = (Y, "touch false at the floor: room 0, no DLL, numeric contracts 0. Not a daily-limit status.",
               ST(50000, 2000, 48000, touch=False, risk=200, ticks=12, instrument="MES", max_minis="NONE", max_micros=50),
               FSF, "binding room 0")
 M["DL-10"] = (P, "dll_enforcement other than hard or soft → INVALID on Accounts!AS and INVALID_INPUT in the oracle.",
               None, None, "categorical: bad token is invalid, not a silent soft exceed")
-M["DL-11"] = (P, "day_pnl -1000.004 floors to daily room -0.01. Sheet money inputs are 2 dp, so this exact loss is not typed; scenarios check CENT_DOWN.",
+M["DL-11"] = (P, "day_pnl -1000.004 floors to daily room -0.01, so unconfirmed enforcement is RULE CONFIRMATION REQUIRED. Sheet money inputs are 2 dp, so this exact loss is not typed; scenarios check CENT_DOWN.",
               None, None, "oracle rounding case")
 def fs(cid, room, risk, ticks, tv, maxc="NONE", extra=None):
     eq = 48000 + room
@@ -226,6 +244,8 @@ def build():
             # daily_status is oracle/UI/sheet-status. The xlsx column map checks the blocking word separately.
             if "daily_status" in exp and "daily_status" in got and "daily_status" not in check:
                 check.append("daily_status")
+            if "dll_rule" in exp and "dll_rule" in got and "dll_rule" not in check:
+                check.append("dll_rule")
             mism = {f: [norm(got[f]), exp[f]] for f in check if norm(got[f]) != exp[f]}
             ent["checked_fields"] = fields; ent["sheet_logic_match"] = not mism
             if mism: errs.append((cid, mism)); ent["mismatch"] = mism
@@ -365,14 +385,55 @@ def scenarios():
     t("DL-02 status", trade_status(c02, c02), "DAILY LIMIT REACHED")
     t("DL-02 room", c02["daily_room"], 0.0)
     c03 = run({"type": "static", "start": 50000, "dd": 2000, "equity": 48950, "dll": 1000, "day_ref": 50000, "lock": "NONE", "touch": True})
-    t("DL-03 status", trade_status(c03, c03), "DAILY LIMIT EXCEEDED")
+    t("DL-03 status", trade_status(c03, c03), "RULE CONFIRMATION REQUIRED")
     t("DL-03 room", c03["daily_room"], -50.0)
+    t("DL-03 flag", breach_cell(c03, c03), "UNCONFIRMED")
+    t("DL-03 rule", c03["dll_rule"], "unconfirmed")
     c04 = run({"type": "static", "start": 50000, "dd": 2000, "equity": 48950, "dll": 1000, "day_ref": 50000, "lock": "NONE", "touch": True, "dll_enforcement": "hard"})
     t("DL-04 status", trade_status(c04, c04), "BREACHED")
     t("DL-04 floor not hit", c04["breached"], False)
-    floor = run({"type": "static", "start": 50000, "dd": 2000, "equity": 48000, "dll": 1000, "day_ref": 50000, "lock": "NONE", "touch": True, "dll_enforcement": "soft"})
-    t("DL floor outranks daily", trade_status(floor, floor), "BREACHED")
-    t("DL floor flag", floor["breached"], True)
+    t("DL-04 flag", breach_cell(c04, c04), True)
+    # Blank / hard / soft at the four daily boundaries. Words are the spec, not a copy of another engine's output.
+    spec = {
+        (None, 49000.01): ("OK", False, "unconfirmed", 0.01),
+        ("hard", 49000.01): ("OK", False, "hard", 0.01),
+        ("soft", 49000.01): ("OK", False, "soft", 0.01),
+        (None, 49000): ("DAILY LIMIT REACHED", False, "unconfirmed", 0.0),
+        ("hard", 49000): ("DAILY LIMIT REACHED", False, "hard", 0.0),
+        ("soft", 49000): ("DAILY LIMIT REACHED", False, "soft", 0.0),
+        (None, 48999.99): ("RULE CONFIRMATION REQUIRED", "UNCONFIRMED", "unconfirmed", -0.01),
+        ("hard", 48999.99): ("BREACHED", True, "hard", -0.01),
+        ("soft", 48999.99): ("DAILY LIMIT EXCEEDED", False, "soft", -0.01),
+        (None, 48950): ("RULE CONFIRMATION REQUIRED", "UNCONFIRMED", "unconfirmed", -50.0),
+        ("hard", 48950): ("BREACHED", True, "hard", -50.0),
+        ("soft", 48950): ("DAILY LIMIT EXCEEDED", False, "soft", -50.0),
+    }
+    for (enf, eq), (word, flag, rule, room) in spec.items():
+        si = {"type": "static", "start": 50000, "dd": 2000, "equity": eq, "dll": 1000, "day_ref": 50000, "lock": "NONE", "touch": True, "risk": 200, "ticks": 12, "instrument": "MES", "max_minis": "NONE", "max_micros": 50}
+        if enf: si["dll_enforcement"] = enf
+        got = run(si)
+        label = f"MX {enf or 'blank'} {eq}"
+        t(label + " status", trade_status(got, got), word)
+        t(label + " flag", breach_cell(got, got), flag)
+        t(label + " rule", got["dll_rule"], rule)
+        t(label + " room", got["daily_room"], room)
+        if word == "OK":
+            t(label + " contracts", got["contracts"], 0)
+        else:
+            t(label + " binding", got["binding_room"], 0.0)
+    for enf in (None, "hard", "soft"):
+        si = {"type": "static", "start": 50000, "dd": 2000, "equity": 49800, "dll": 1000, "day_ref": 50450, "lock": "NONE", "touch": True, "risk": 200, "ticks": 12, "instrument": "MES", "max_minis": "NONE", "max_micros": 50}
+        if enf: si["dll_enforcement"] = enf
+        got = run(si)
+        t(f"MX open {enf or 'blank'} contracts", got["contracts"], 13)
+        t(f"MX open {enf or 'blank'} status", trade_status(got, got), "OK")
+    for enf in (None, "hard", "soft"):
+        si = {"type": "static", "start": 50000, "dd": 2000, "equity": 48000, "dll": 1000, "day_ref": 50000, "lock": "NONE", "touch": True, "dll_enforcement": enf or ""}
+        if enf: si["dll_enforcement"] = enf
+        else: si.pop("dll_enforcement", None)
+        got = run(si)
+        t(f"MX floor {enf or 'blank'} status", trade_status(got, got), "BREACHED")
+        t(f"MX floor {enf or 'blank'} flag", breach_cell(got, got), True)
     return T
 
 def run_scenarios():

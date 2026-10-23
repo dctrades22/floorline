@@ -2,7 +2,7 @@
   "spec": "tracker v0.2.0 instrument caps / oracle 0.2.0",
   "generated_by": "tracker/sheet_logic.py",
   "counts": {
-    "yes": 43,
+    "yes": 48,
     "partial": 21,
     "no": 11
   },
@@ -700,7 +700,7 @@
     {
       "id": "DL-03",
       "reproducible": "yes",
-      "how": "equity 48950, day ref 50000, DLL 1000 \u2192 -50, enforcement unstated, DAILY LIMIT EXCEEDED",
+      "how": "equity 48950, day ref 50000, DLL 1000 \u2192 -50, enforcement unconfirmed, RULE CONFIRMATION REQUIRED",
       "reason": "signed daily capacity; binding_room is max(0, capacity)",
       "checked_fields": [
         "drawdown_room",
@@ -726,7 +726,7 @@
     {
       "id": "DL-05",
       "reproducible": "yes",
-      "how": "equity 48999.99 \u2192 capacity -0.01, DAILY LIMIT EXCEEDED",
+      "how": "equity 48999.99 \u2192 capacity -0.01, RULE CONFIRMATION REQUIRED",
       "reason": "signed daily capacity; binding_room is max(0, capacity)",
       "checked_fields": [
         "drawdown_room",
@@ -798,13 +798,78 @@
     {
       "id": "DL-11",
       "reproducible": "partial",
-      "how": "day_pnl -1000.004 floors to daily room -0.01. Sheet money inputs are 2 dp, so this exact loss is not typed; scenarios check CENT_DOWN.",
+      "how": "day_pnl -1000.004 floors to daily room -0.01, so unconfirmed enforcement is RULE CONFIRMATION REQUIRED. Sheet money inputs are 2 dp, so this exact loss is not typed; scenarios check CENT_DOWN.",
       "reason": "oracle rounding case"
     },
     {
       "id": "DL-12",
       "reproducible": "yes",
       "how": "enforcement HARD is hard \u2192 BREACHED",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-14",
+      "reproducible": "yes",
+      "how": "capacity 0.01 with hard stays OK",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-15",
+      "reproducible": "yes",
+      "how": "capacity 0.01 with soft stays OK",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-16",
+      "reproducible": "yes",
+      "how": "capacity 0 with hard is DAILY LIMIT REACHED",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-17",
+      "reproducible": "yes",
+      "how": "capacity 0 with soft is DAILY LIMIT REACHED",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-18",
+      "reproducible": "yes",
+      "how": "capacity -0.01 with soft is DAILY LIMIT EXCEEDED",
       "reason": "signed daily capacity; binding_room is max(0, capacity)",
       "checked_fields": [
         "drawdown_room",

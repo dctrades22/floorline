@@ -21,10 +21,20 @@
     if (s !== "hard" && s !== "soft") bad("dll_enforcement must be hard or soft");
     return s;
   }
+  function dllRule(enf) { return enf === "hard" || enf === "soft" ? enf : "unconfirmed"; }
   function dailyStatus(capacity, enf) {
     if (Dec.cmp(capacity, Dec.ZERO) > 0) return "OK";
     if (Dec.cmp(capacity, Dec.ZERO) === 0) return "DAILY LIMIT REACHED";
-    return enf === "hard" ? "BREACHED" : "DAILY LIMIT EXCEEDED";
+    if (enf === "hard") return "BREACHED";
+    if (enf === "soft") return "DAILY LIMIT EXCEEDED";
+    return "RULE CONFIRMATION REQUIRED";
+  }
+  // After empty / INCOMPLETE / INVALID. Floor outranks every daily word.
+  function accountStatus(floorBreached, dailyStatusWord) {
+    if (floorBreached) return "BREACHED";
+    if (dailyStatusWord === "BREACHED" || dailyStatusWord === "RULE CONFIRMATION REQUIRED" ||
+        dailyStatusWord === "DAILY LIMIT EXCEEDED" || dailyStatusWord === "DAILY LIMIT REACHED") return dailyStatusWord;
+    return "OK";
   }
   function rNear(x) { return Dec.toFixed(Dec.quantize(x, CENT, "HALF_UP")); }
 
@@ -85,15 +95,16 @@
       equity: rDown(equity), drawdown_room: rDown(room) };
   }
 
-  // Signed daily capacity. >0 OK; ==0 DAILY LIMIT REACHED; <0 BREACHED only when
-  // dll_enforcement is hard, otherwise DAILY LIMIT EXCEEDED. Omitted enforcement is not hard.
-  // Capacity is ROUND_FLOOR to the cent (same as ROUND_DOWN when the value is >= 0).
+  // Signed daily capacity. >0 OK (dll_rule may still be unconfirmed). ==0 DAILY LIMIT REACHED
+  // for hard, soft, and unconfirmed. <0 is BREACHED only when dll_enforcement is hard,
+  // DAILY LIMIT EXCEEDED when it is soft, and RULE CONFIRMATION REQUIRED when it is omitted.
+  // Omitted enforcement is not soft and not hard. Capacity is ROUND_FLOOR to the cent.
   // binding_room is max(0, capacity) so sizing never sees a negative room.
-  // A drawdown-floor breach is drawdown(), not this function. The UI applies floor first.
+  // A drawdown-floor breach is drawdown(), not this function. accountStatus applies floor first.
   function riskRoom(inp) {
     var ddRoom = dec(need(inp, "drawdown_room"), "drawdown_room", { nonneg: true });
     var dl = get(inp, "daily_loss_limit");
-    if (dl === null) return { drawdown_room: rDown(ddRoom), daily_room: null, binding_room: rDown(ddRoom), binding: "drawdown", daily_status: null };
+    if (dl === null) return { drawdown_room: rDown(ddRoom), daily_room: null, binding_room: rDown(ddRoom), binding: "drawdown", daily_status: null, dll_rule: null };
     dl = dec(dl, "daily_loss_limit", { positive: true });
     var dayPnl = dec(need(inp, "day_pnl"), "day_pnl");
     var enf = dllEnforcement(inp);
@@ -102,7 +113,7 @@
     var sized = Dec.max(Dec.ZERO, dQ);
     var roomStr = Dec.isZero(dQ) ? "0.00" : Dec.toFixed(dQ);
     return { drawdown_room: rDown(ddRoom), daily_room: roomStr, binding_room: rDown(Dec.min(ddRoom, sized)),
-      binding: Dec.cmp(dQ, ddRoom) < 0 ? "daily_loss" : "drawdown", daily_status: dailyStatus(dQ, enf) };
+      binding: Dec.cmp(dQ, ddRoom) < 0 ? "daily_loss" : "drawdown", daily_status: dailyStatus(dQ, enf), dll_rule: dllRule(enf) };
   }
 
   function effRisk(inp) {
@@ -191,6 +202,6 @@
       return { ok: false, error: "INVALID_INPUT", message: "malformed input: " + ((e && e.name) || "Error") };
     }
   }
-  var api = { evaluate: evaluate, SPEC_VERSION: "0.2.0", TICKS: TICKS, MICROS: MICROS };
+  var api = { evaluate: evaluate, accountStatus: accountStatus, SPEC_VERSION: "0.2.0", TICKS: TICKS, MICROS: MICROS };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.Oracle = api;
 })(this);

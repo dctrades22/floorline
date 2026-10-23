@@ -27,6 +27,8 @@ INCLUDE = [
     "docs/GUMROAD-FILE-REPLACE.md",
     "docs/PRIVATE-TRACKER-MIGRATION.md",
     "docs/MATH.md",
+    "docs/PRESET-SOURCES.md",
+    "docs/EXCEL-SPOT-CHECK.md",
 ]
 
 README = """# Floorline tracker (private)

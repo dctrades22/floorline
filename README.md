@@ -19,8 +19,10 @@ no CDN, no web fonts, no dependencies. Open `index.html` directly from disk and 
   a generic count, applies to every instrument. No 10:1 equivalence is assumed. Blank cap = incomplete. Explicit 0
   stays 0. Type NONE to remove only the contract cap. Risk, trailing drawdown and the daily loss limit stay active.
   Daily capacity above zero sizes normally. Exactly zero shows DAILY LIMIT REACHED and max contracts 0. Below zero shows
-  BREACHED only when the preset says exceeding the daily limit is a breach (`hard`); otherwise DAILY LIMIT EXCEEDED.
-  A drawdown floor hit is BREACHED and outranks the daily status. None of those statuses can be traded.
+  BREACHED when the confirmed rule is `hard`, DAILY LIMIT EXCEEDED when it is `soft`, and RULE CONFIRMATION REQUIRED
+  when hard/soft is not confirmed. A blank rule is not soft. The page flags DLL RULE UNCONFIRMED while that limit is
+  on, including while room is still above zero. A drawdown floor hit is BREACHED and outranks the daily status.
+  None of those statuses can be traded.
 - The paid 10-account workbook is built from `tracker/` and is not part of the GitHub Pages site. Its instrument
   list is ES, MES, NQ, MNQ. See `docs/DEPLOY-CHECKLIST.md`.
 

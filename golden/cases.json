@@ -538,6 +538,7 @@
         "binding_room": "350.00",
         "daily_room": "350.00",
         "daily_status": "OK",
+        "dll_rule": "unconfirmed",
         "drawdown_room": "1800.00",
         "ok": true
       },
@@ -556,6 +557,7 @@
         "binding_room": "400.00",
         "daily_room": "1000.00",
         "daily_status": "OK",
+        "dll_rule": "unconfirmed",
         "drawdown_room": "400.00",
         "ok": true
       },
@@ -574,6 +576,7 @@
         "binding_room": "1234.56",
         "daily_room": null,
         "daily_status": null,
+        "dll_rule": null,
         "drawdown_room": "1234.56",
         "ok": true
       },
@@ -590,6 +593,7 @@
         "binding_room": "500.00",
         "daily_room": "500.00",
         "daily_status": "OK",
+        "dll_rule": "unconfirmed",
         "drawdown_room": "500.00",
         "ok": true
       },
@@ -1403,12 +1407,13 @@
       "kind": "futures"
     },
     {
-      "description": "daily capacity $0.01 left sizes normally. Status OK. The stop may still round to 0 contracts.",
+      "description": "daily capacity $0.01 left sizes normally. Status OK. Enforcement omitted stays unconfirmed and does not change the count.",
       "expected": {
         "binding": "daily_loss",
         "binding_room": "0.01",
         "daily_room": "0.01",
         "daily_status": "OK",
+        "dll_rule": "unconfirmed",
         "drawdown_room": "1000.01",
         "ok": true
       },
@@ -1421,12 +1426,13 @@
       "kind": "risk_room"
     },
     {
-      "description": "daily capacity exactly 0 is DAILY LIMIT REACHED. binding_room 0. Not a breach.",
+      "description": "daily capacity exactly 0 is DAILY LIMIT REACHED. binding_room 0. Not a breach. Unconfirmed does not change that word.",
       "expected": {
         "binding": "daily_loss",
         "binding_room": "0.00",
         "daily_room": "0.00",
         "daily_status": "DAILY LIMIT REACHED",
+        "dll_rule": "unconfirmed",
         "drawdown_room": "1000.00",
         "ok": true
       },
@@ -1439,12 +1445,13 @@
       "kind": "risk_room"
     },
     {
-      "description": "daily capacity -50 with enforcement unstated is DAILY LIMIT EXCEEDED, not a breach.",
+      "description": "daily capacity -50 with enforcement unconfirmed is RULE CONFIRMATION REQUIRED. Not soft and not a breach.",
       "expected": {
         "binding": "daily_loss",
         "binding_room": "0.00",
         "daily_room": "-50.00",
-        "daily_status": "DAILY LIMIT EXCEEDED",
+        "daily_status": "RULE CONFIRMATION REQUIRED",
+        "dll_rule": "unconfirmed",
         "drawdown_room": "950.00",
         "ok": true
       },
@@ -1463,6 +1470,7 @@
         "binding_room": "0.00",
         "daily_room": "-50.00",
         "daily_status": "BREACHED",
+        "dll_rule": "hard",
         "drawdown_room": "950.00",
         "ok": true
       },
@@ -1476,12 +1484,13 @@
       "kind": "risk_room"
     },
     {
-      "description": "one cent past the daily limit, enforcement unstated, is DAILY LIMIT EXCEEDED. Floor-to-cent does not collapse this to zero.",
+      "description": "one cent past the daily limit, enforcement unconfirmed, is RULE CONFIRMATION REQUIRED. Floor-to-cent does not collapse this to zero.",
       "expected": {
         "binding": "daily_loss",
         "binding_room": "0.00",
         "daily_room": "-0.01",
-        "daily_status": "DAILY LIMIT EXCEEDED",
+        "daily_status": "RULE CONFIRMATION REQUIRED",
+        "dll_rule": "unconfirmed",
         "drawdown_room": "999.99",
         "ok": true
       },
@@ -1500,6 +1509,7 @@
         "binding_room": "0.00",
         "daily_room": "-0.01",
         "daily_status": "BREACHED",
+        "dll_rule": "hard",
         "drawdown_room": "999.99",
         "ok": true
       },
@@ -1519,6 +1529,7 @@
         "binding_room": "0.00",
         "daily_room": "-50.00",
         "daily_status": "DAILY LIMIT EXCEEDED",
+        "dll_rule": "soft",
         "drawdown_room": "950.00",
         "ok": true
       },
@@ -1538,6 +1549,7 @@
         "binding_room": "350.00",
         "daily_room": "350.00",
         "daily_status": "OK",
+        "dll_rule": "hard",
         "drawdown_room": "1800.00",
         "ok": true
       },
@@ -1593,12 +1605,13 @@
       "kind": "risk_room"
     },
     {
-      "description": "a fraction of a cent below zero floors to -0.01, so it is DAILY LIMIT EXCEEDED and not reported as zero.",
+      "description": "a fraction of a cent below zero floors to -0.01, so unconfirmed enforcement is RULE CONFIRMATION REQUIRED and not reported as zero.",
       "expected": {
         "binding": "daily_loss",
         "binding_room": "0.00",
         "daily_room": "-0.01",
-        "daily_status": "DAILY LIMIT EXCEEDED",
+        "daily_status": "RULE CONFIRMATION REQUIRED",
+        "dll_rule": "unconfirmed",
         "drawdown_room": "1000.00",
         "ok": true
       },
@@ -1617,6 +1630,7 @@
         "binding_room": "0.00",
         "daily_room": "-50.00",
         "daily_status": "BREACHED",
+        "dll_rule": "hard",
         "drawdown_room": "950.00",
         "ok": true
       },
@@ -1626,6 +1640,106 @@
         "day_pnl": "-1050",
         "dll_enforcement": "HARD",
         "drawdown_room": "950"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "daily capacity $0.01 with hard enforcement stays OK. The hard token does not change a positive room.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.01",
+        "daily_room": "0.01",
+        "daily_status": "OK",
+        "dll_rule": "hard",
+        "drawdown_room": "1000.01",
+        "ok": true
+      },
+      "id": "DL-14",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-999.99",
+        "dll_enforcement": "hard",
+        "drawdown_room": "1000.01"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "daily capacity $0.01 with soft enforcement stays OK.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.01",
+        "daily_room": "0.01",
+        "daily_status": "OK",
+        "dll_rule": "soft",
+        "drawdown_room": "1000.01",
+        "ok": true
+      },
+      "id": "DL-15",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-999.99",
+        "dll_enforcement": "soft",
+        "drawdown_room": "1000.01"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "daily capacity exactly 0 with hard enforcement is DAILY LIMIT REACHED, not BREACHED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "0.00",
+        "daily_status": "DAILY LIMIT REACHED",
+        "dll_rule": "hard",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-16",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "dll_enforcement": "hard",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "daily capacity exactly 0 with soft enforcement is DAILY LIMIT REACHED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "0.00",
+        "daily_status": "DAILY LIMIT REACHED",
+        "dll_rule": "soft",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-17",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "dll_enforcement": "soft",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "one cent past the daily limit with soft enforcement is DAILY LIMIT EXCEEDED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-0.01",
+        "daily_status": "DAILY LIMIT EXCEEDED",
+        "dll_rule": "soft",
+        "drawdown_room": "999.99",
+        "ok": true
+      },
+      "id": "DL-18",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000.01",
+        "dll_enforcement": "soft",
+        "drawdown_room": "999.99"
       },
       "kind": "risk_room"
     },

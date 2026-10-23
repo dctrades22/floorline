@@ -127,8 +127,11 @@ def account_formulas(r):
         "AC": G(f'IF({ok},{CENT_UP(f"AN{r}")})'),
         "AD": G(f'IF({ok},AND(ISNUMBER(U{r}),R{r}<>"static",ROUND(AB{r}-T{r}-(S{r}+IF(ISNUMBER(U{r}),U{r},0)),6)>=0))'),
         # fh is the drawdown floor only. dr is the signed daily capacity (floor to the cent, may be negative).
-        # en is the DLL enforcement override, else the preset. IF guards dr so a NONE limit is not evaluated.
-        "AE": G(f'IF({ok},OR({fh},IF(OR(W{r}="NONE",NOT(ISNUMBER(W{r}))),FALSE,AND({dr}<0,{en}="hard"))))'),
+        # en is the DLL enforcement override, else the preset. Blank en is unconfirmed: not hard and not soft.
+        # AE is TRUE for a floor hit or a confirmed hard exceed, FALSE when that is not a breach,
+        # and the text UNCONFIRMED when capacity is below zero and the rule is not confirmed.
+        # UNCONFIRMED is not a safe clearance and is not the soft exceed.
+        "AE": G(f'IF({ok},IF({fh},TRUE,IF(OR(W{r}="NONE",NOT(ISNUMBER(W{r}))),FALSE,IF(AND({dr}<0,{en}="hard"),TRUE,IF(AND({dr}<0,{en}<>"hard",{en}<>"soft"),"UNCONFIRMED",FALSE)))))'),
         "AF": G(f'IF({ok},IF({fh},"BREACHED",{CENT_DOWN(f"MAX(0,M{r}-AN{r})")}))'),
         "AG": G(f'IF({ok},IF({fh},"BREACHED",IF(OR(W{r}="NONE",NOT(ISNUMBER(W{r}))),"NONE",{dr})))'),
         "AH": G(f'IF({ok},IF({fh},"BREACHED",IF(OR(AG{r}="NONE",NOT(ISNUMBER(AG{r}))),AF{r},MIN(AF{r},MAX(0,AG{r})))))'),
@@ -141,8 +144,8 @@ def account_formulas(r):
         "AO": G(f'IF({ok},IF(OR(O{r}="",P{r}="",Q{r}=""),"INCOMPLETE",IF(OR(NOT(ISNUMBER(O{r})),O{r}<0,O{r}>100000000,NOT(ISNUMBER(P{r})),P{r}<1,P{r}<>INT(P{r}),NOT(ISNUMBER(Q{r})),Q{r}<=0),"INVALID","OK")))'),
         "AP": G(f'IF(AO{r}<>"OK","",IF(OR({fh},AU{r}<>""),0,INT(ROUND(MIN(O{r},AH{r})/(P{r}*Q{r}),9))))'),
         "AQ": G(f'IF(AO{r}<>"OK",AO{r},IF(AU{r}<>"",AU{r},{CENT_DOWN(f"IF(Z{r}=\"NONE\",AP{r},MIN(AP{r},Z{r}))*P{r}*Q{r}")}))'),
-        "AU": G(f'IF(OR($AA{r}<>"OK",AO{r}<>"OK"),"",IF({fh},"BREACHED",IF(OR(W{r}="NONE",NOT(ISNUMBER(W{r}))),"",IF({dr}<0,IF({en}="hard","BREACHED","DAILY LIMIT EXCEEDED"),IF({dr}=0,"DAILY LIMIT REACHED","")))))'),
-        "AR": G(f'IF(AND(A{r}="",B{r}=""),"",_xlfn.TEXTJOIN("; ",TRUE,IF(C{r}="partial","PARTIAL PRESET: verify "&{pv("L")},""),'
+        "AU": G(f'IF(OR($AA{r}<>"OK",AO{r}<>"OK"),"",IF({fh},"BREACHED",IF(OR(W{r}="NONE",NOT(ISNUMBER(W{r}))),"",IF({dr}<0,IF({en}="hard","BREACHED",IF({en}="soft","DAILY LIMIT EXCEEDED","RULE CONFIRMATION REQUIRED")),IF({dr}=0,"DAILY LIMIT REACHED","")))))'),
+        "AR": G(f'IF(AND(A{r}="",B{r}=""),"",_xlfn.TEXTJOIN("; ",TRUE,IF(AND(ISNUMBER(W{r}),{en}<>"hard",{en}<>"soft"),"DLL RULE UNCONFIRMED",""),IF(C{r}="partial","PARTIAL PRESET: verify "&{pv("L")},""),'
                 f'IF(C{r}="manual","MANUAL: all params user-entered",""),'
                 f'IF(OR(AND(D{r}<>"",{pv("C")}<>""),AND(E{r}<>"",{pv("D")}<>""),AND(F{r}<>"",{pv("E")}<>""),AND(G{r}<>"",{pv("G")}<>""),'
                 f'AND(H{r}<>"",{pv("H")}<>""),AND(I{r}<>"",{pv("I")}<>""),AND(J{r}<>"",{pv("J")}<>""),AND(K{r}<>"",{pv("K")}<>""),AS{r}<>""),"OVERRIDES PRESET",""),'
@@ -181,7 +184,7 @@ ACC_HEAD = [("A", "Account ID", 13), ("B", "Preset", 46), ("C", "Preset status",
     ("V", "Touch = breach", 8), ("W", "DLL $", 9), ("X", "Max minis", 10), ("Y", "Max micros", 10), ("Z", "Active cap", 10),
     ("AA", "Check", 12), ("AB", "Peak", 12), ("AC", "FLOOR", 14), ("AD", "Locked", 9), ("AE", "Breached", 10),
     ("AF", "DD room", 12), ("AG", "Daily room", 12), ("AH", "BINDING ROOM", 14), ("AI", "Binding", 11),
-    ("AJ", "Effective risk", 12), ("AK", "CONTRACTS", 22), ("AL", "Capped", 8), ("AM", "Room-limited", 9),
+    ("AJ", "Effective risk", 12), ("AK", "CONTRACTS", 32), ("AL", "Capped", 8), ("AM", "Room-limited", 9),
     ("AN", "floor raw", 4), ("AO", "sizing check", 4), ("AP", "contracts raw", 4), ("AQ", "Actual risk", 12), ("AR", "Flags", 70),
     ("AS", "DLL enforcement", 14), ("AU", "Trade status", 4)]
 LOG_HEAD = [("A", "Account ID", 13), ("B", "Trading date", 13), ("C", "EOD balance", 13), ("D", "Intraday high", 13),
@@ -258,11 +261,11 @@ def build(path, accounts=(), logs=(), demo_asof=None):
         "2. Fill any field named in 'PARTIAL PRESET: verify ...' using the override columns D-K (amber flag until resolved).",
         "3. Choose Instrument (ES, MES, NQ or MNQ). Tick value fills in from that instrument (ES 12.50, MES 1.25, NQ 5.00, MNQ 0.50) and cannot be typed. Enter Equity now, Day reference balance, Risk $ and Stop ticks. ES/NQ use the mini cap; MES/MNQ use the micro cap. Blank required cap = INCOMPLETE. 0 stays 0. NONE removes only the contract cap. Risk, trailing drawdown and the daily loss limit stay active.",
         "4. Daily Log: after each session add one row per account: Trading date (firm session date), EOD balance, intraday high and intraday low.",
-        "5. Read FLOOR, BINDING ROOM and CONTRACTS on Accounts. CONTRACTS is a number only while daily capacity is above zero and the floor is intact. Exactly zero daily capacity shows DAILY LIMIT REACHED. Below zero shows BREACHED when DLL enforcement is hard, otherwise DAILY LIMIT EXCEEDED. A floor hit shows BREACHED and outranks the daily status. In every blocked case the max is 0. Then tick the Checklist. If your firm dashboard disagrees, the firm's number wins.",
+        "5. Read FLOOR, BINDING ROOM and CONTRACTS on Accounts. CONTRACTS is a number only while daily capacity is above zero and the floor is intact. Exactly zero daily capacity shows DAILY LIMIT REACHED. Below zero shows BREACHED when DLL enforcement is hard, DAILY LIMIT EXCEEDED when it is soft, and RULE CONFIRMATION REQUIRED when hard/soft is not confirmed. A blank enforcement is not soft. A floor hit shows BREACHED and outranks the daily status. In every blocked case the max is 0. Flags shows DLL RULE UNCONFIRMED while a daily limit is on and the rule is still unconfirmed, including when capacity is above zero. Then tick the Checklist. If your firm dashboard disagrees, the firm's number wins.",
         "6. Enter today's date in Accounts!B13 (As of). Flags shows AS-OF DATE MISSING while it is blank and STALE PRESET when a preset was checked more than 30 days before it. The workbook never uses TODAY().",
         "7. If Accounts!B14 shows a red Log check message, a Daily Log row has an unknown or blank account ID; every account shows INCOMPLETE until it is fixed.",
         ("s", "STATUS WORDS"),
-        "OK / a number = calculated.  INVALID = a value or rule is wrong (money must be 0 < x <= 100,000,000 with at most 2 decimals; instrument must be ES, MES, NQ or MNQ; DLL enforcement must be blank, hard, or soft).  INCOMPLETE = a required input is missing, incl. a blank instrument or a blank cap for that instrument (type NONE for no contract cap), an incomplete log row, or any unknown-account log row.  UNKNOWN_ACCOUNT = log row whose account ID matches no account.  BREACHED = the drawdown floor was hit, or daily capacity is below zero and DLL enforcement is hard. Rooms show BREACHED only for a floor hit; a hard daily exceed keeps the negative daily room visible and still blocks size.  DAILY LIMIT REACHED = daily capacity is exactly zero. Not a breach. Max contracts 0.  DAILY LIMIT EXCEEDED = daily capacity is below zero and enforcement is soft or unstated. Not a breach, because the rule does not define one. Max contracts 0.  NONE = no daily loss limit, or no contract cap. Risk, trailing drawdown and daily loss stay active either way. Precedence: empty row, then INCOMPLETE, then INVALID, then floor BREACHED, then hard daily BREACHED, then DAILY LIMIT EXCEEDED, then DAILY LIMIT REACHED, then a numeric size. No status permits trading when daily capacity is zero or negative.",
+        "OK / a number = calculated.  INVALID = a value or rule is wrong (money must be 0 < x <= 100,000,000 with at most 2 decimals; instrument must be ES, MES, NQ or MNQ; DLL enforcement must be blank, hard, or soft).  INCOMPLETE = a required input is missing, incl. a blank instrument or a blank cap for that instrument (type NONE for no contract cap), an incomplete log row, or any unknown-account log row.  UNKNOWN_ACCOUNT = log row whose account ID matches no account.  BREACHED = the drawdown floor was hit, or daily capacity is below zero and DLL enforcement is confirmed hard. Rooms show BREACHED only for a floor hit; a hard daily exceed keeps the negative daily room visible and still blocks size.  DAILY LIMIT REACHED = daily capacity is exactly zero, whether enforcement is hard, soft, or unconfirmed. Not a breach. Max contracts 0.  DAILY LIMIT EXCEEDED = daily capacity is below zero and enforcement is confirmed soft. Not a breach. Max contracts 0.  RULE CONFIRMATION REQUIRED = daily capacity is below zero and enforcement is blank (not a verified preset hard/soft, and not typed). Max contracts 0. The breached flag shows UNCONFIRMED. That is not a safe clearance and not a soft exceed.  DLL RULE UNCONFIRMED in Flags means a daily limit is on and the rule is still unconfirmed, including while capacity is above zero. Sizing does not change until capacity is zero or below.  NONE = no daily loss limit, or no contract cap. Risk, trailing drawdown and daily loss stay active either way. Precedence: empty row, then INCOMPLETE, then INVALID, then floor BREACHED, then hard daily BREACHED, then RULE CONFIRMATION REQUIRED, then DAILY LIMIT EXCEEDED, then DAILY LIMIT REACHED, then a numeric size. No status permits trading when daily capacity is zero or negative.",
         ("s", "COLOURS"),
         "Green = buffer above 50% of max drawdown or lock reached.  Amber = 25-50% buffer, partial preset, overrides, stale preset.  Red = under 25%, INVALID or BREACHED.  Blue = sizing was capped or clamped to the room.",
         ("s", "LIMITS"),
@@ -298,7 +301,7 @@ def build(path, accounts=(), logs=(), demo_asof=None):
                  '" Daily Log row(s) with unknown account ID - fix before trading","")')
     ws["B14"].font = Font(name=MONO, size=10, bold=True, color=RED)
     ws.conditional_formatting.add("B14:C14", FormulaRule(formula=['$B$14<>""'], fill=fill(RED), font=Font(color="000000", bold=True)))
-    ws["A15"] = "Inputs: shaded cells except C and Q.  Instrument L is ES, MES, NQ or MNQ.  Tick value Q is calculated from the instrument and is not typed.  ES/NQ use the mini cap; MES/MNQ use the micro cap.  DLL enforcement AS is hard, soft, or blank (blank uses the preset; blank preset = not a breach).  CONTRACTS is a number only when daily capacity is above zero and the floor is intact."
+    ws["A15"] = "Inputs: shaded cells except C and Q.  Instrument L is ES, MES, NQ or MNQ.  Tick value Q is calculated from the instrument and is not typed.  ES/NQ use the mini cap; MES/MNQ use the micro cap.  DLL enforcement AS is hard, soft, or blank (blank uses the preset). A blank result is unconfirmed, not soft and not hard. Below zero that row shows RULE CONFIRMATION REQUIRED and breached flag UNCONFIRMED.  CONTRACTS is a number only when daily capacity is above zero and the floor is intact."
     ws["A15"].font = Font(name=MONO, size=9, color=DIM)
     for col in ("AN", "AO", "AP", "AT", "AU"): ws.column_dimensions[col].hidden = True
 
@@ -321,7 +324,9 @@ def build(path, accounts=(), logs=(), demo_asof=None):
     cf(f"AK2:AK{NA}", 'AND(ISNUMBER(AK2),OR($AL2=TRUE,$AM2=TRUE))', font=font(BLUE, True))
     cf(f"AK2:AK{NA}", 'AK2="DAILY LIMIT REACHED"', fill=fill(AMBER), font=font("000000", True))
     cf(f"AK2:AK{NA}", 'AK2="DAILY LIMIT EXCEEDED"', fill=fill(RED), font=font("000000", True))
-    cf(f"AR2:AR{NA}", 'OR(ISNUMBER(SEARCH("PARTIAL",AR2)),ISNUMBER(SEARCH("OVERRIDES",AR2)),ISNUMBER(SEARCH("MISSING",AR2)),ISNUMBER(SEARCH("STALE",AR2)))', font=font(AMBER))
+    cf(f"AK2:AK{NA}", 'AK2="RULE CONFIRMATION REQUIRED"', fill=fill(AMBER), font=font("000000", True))
+    cf(f"AE2:AE{NA}", 'AE2="UNCONFIRMED"', fill=fill(AMBER), font=font("000000", True))
+    cf(f"AR2:AR{NA}", 'OR(ISNUMBER(SEARCH("PARTIAL",AR2)),ISNUMBER(SEARCH("OVERRIDES",AR2)),ISNUMBER(SEARCH("MISSING",AR2)),ISNUMBER(SEARCH("STALE",AR2)),ISNUMBER(SEARCH("UNCONFIRMED",AR2)))', font=font(AMBER))
     cf(f"C2:C{NA}", 'C2="verified"', font=font(GREEN, True))
     cf(f"C2:C{NA}", 'C2="partial"', font=font(AMBER, True))
     cf(f"B2:C{NA}", f'ISNUMBER(SEARCH("STALE PRESET",$AR2))', fill=fill("3A2A08"), font=font(AMBER, True))
@@ -426,7 +431,7 @@ def build(path, accounts=(), logs=(), demo_asof=None):
         "All needs_user / PARTIAL flags resolved.",
         "Lock offset confirmed (0 = start, X = start+X, NONE).",
         "Touch rule confirmed (\"hit/touch\" = TRUE, \"below\" = FALSE).",
-        "DLL entered in $ for today's reset (% plans: firm dashboard value). Capacity above zero sizes normally. Exactly zero is DAILY LIMIT REACHED. Below zero is BREACHED only when enforcement is hard; otherwise DAILY LIMIT EXCEEDED. A floor hit is BREACHED either way.",
+        "DLL entered in $ for today's reset (% plans: firm dashboard value). Capacity above zero sizes normally. Exactly zero is DAILY LIMIT REACHED. Below zero is BREACHED when enforcement is hard, DAILY LIMIT EXCEEDED when it is soft, and RULE CONFIRMATION REQUIRED when it is unconfirmed. A floor hit is BREACHED either way. DLL RULE UNCONFIRMED stays in Flags until hard or soft is confirmed.",
         "Day reference balance = firm's reset reference (incl./excl. unrealized per firm).",
         "Mini cap and micro cap confirmed. ES/NQ use max minis; MES/MNQ use max micros. Blank required cap is incomplete. NONE removes only the contract cap. 0 means zero contracts.",
         "Today's Daily Log row entered incl. intraday low.",

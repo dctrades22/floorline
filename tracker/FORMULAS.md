@@ -60,7 +60,7 @@ Rows: every `verified` + `partial` preset (custom_only excluded) + final row `Ma
 | L | needs_user | `;`-list of fields the user must fill (`all` for Manual) |
 | M–O | source_url, checked_date, source_page_date | provenance shown on Accounts |
 | P | preset_id | Pnnn |
-| Q | dll_enforcement | `hard`, `soft`, or blank. Appended; A–P are unchanged. Blank means the rule does not define a daily-limit breach |
+| Q | dll_enforcement | `hard`, `soft`, or blank. Appended; A–P are unchanged. Blank means the rule is unconfirmed. It is not soft and it is not hard |
 
 Percent DLLs are **not** auto-converted (reset basis differs per firm, MATH §6); user enters the $ amount from the firm dashboard.
 MFP `breach_on_touch_after_lock` is not modeled; flagged in needs_user.
@@ -101,7 +101,7 @@ Inputs (white, unlocked): A, B, D–P, and AS (DLL enforcement). Calculated (gre
 | AB | Peak | calc | §3.2 |
 | AC | Floor (display) | calc | `=IF($AA2<>"OK",$AA2,CENT_UP(AN2))` |
 | AD | Locked | calc | guard 3: `AND(ISNUMBER(U2),R2<>"static",ROUND(AB2-T2-(S2+IF(ISNUMBER(U2),U2,0)),6)>=0)` |
-| AE | Breached | calc | floor hit, or signed daily capacity < 0 and enforcement is `hard`. Soft, blank, and exactly zero do not set this flag |
+| AE | Breached | calc | `TRUE` for a floor hit, or for signed daily capacity < 0 with confirmed `hard`. `FALSE` when that is not a breach, including exactly zero and confirmed `soft`. The text `UNCONFIRMED` when capacity is < 0 and enforcement is not hard or soft. `UNCONFIRMED` is not a safe clearance |
 | AF | DD room | calc | `BREACHED` only when the floor was hit, else `CENT_DOWN(MAX(0,M2-AN2))`. A hard daily exceed does not replace this number |
 | AG | Daily room | calc | `BREACHED` only when the floor was hit. `NONE` when DLL is NONE. Otherwise the signed capacity (0 or negative allowed). Not removed by a contract-cap NONE |
 | AH | Binding room | calc | `MIN(DD room, max(0, daily room))` (daily omitted when NONE). Never negative. Tie → drawdown |
@@ -114,9 +114,9 @@ Inputs (white, unlocked): A, B, D–P, and AS (DLL enforcement). Calculated (gre
 | AO | Sizing check (hidden) | calc | risk, stop ticks and derived tick present and valid, else INCOMPLETE/INVALID |
 | AP | Contracts raw (hidden) | calc | 0 when the floor is hit or a daily status is in force, else `INT(ROUND(MIN(risk, binding)/(ticks*tick),9))` |
 | AQ | Actual risk | calc | the trade-status word when one is in force, else `CENT_DOWN(contracts*ticks*tick)` |
-| AR | Flags | calc | partial preset, manual, overrides (including AS), INSTRUMENT MISSING, MAX CONTRACTS MISSING, as-of, stale, source |
-| AS | DLL enforcement | input | `hard`, `soft`, or blank. Blank uses Presets column Q. Blank preset means unstated, which is not a breach |
-| AU | Trade status (hidden) | calc | blank when the row is not OK or capacity is > 0. `BREACHED` for a floor hit, or for capacity < 0 with hard enforcement. `DAILY LIMIT EXCEEDED` for capacity < 0 otherwise. `DAILY LIMIT REACHED` for capacity = 0. Floor wins |
+| AR | Flags | calc | `DLL RULE UNCONFIRMED` when a numeric DLL is on and effective enforcement is not hard or soft (including while capacity is > 0), then partial preset, manual, overrides (including AS), INSTRUMENT MISSING, MAX CONTRACTS MISSING, as-of, stale, source |
+| AS | DLL enforcement | input | `hard`, `soft`, or blank. Blank uses Presets column Q. A blank result is unconfirmed. It is not soft |
+| AU | Trade status (hidden) | calc | blank when the row is not OK or capacity is > 0. `BREACHED` for a floor hit, or for capacity < 0 with hard enforcement. `RULE CONFIRMATION REQUIRED` for capacity < 0 when enforcement is not hard or soft. `DAILY LIMIT EXCEEDED` for capacity < 0 with soft enforcement. `DAILY LIMIT REACHED` for capacity = 0, whatever the rule is. Floor wins |
 
 ### 2.2a Trade-status precedence
 Checked in this order. Earlier words replace later ones. `INVALID` and `INCOMPLETE` stay different.
@@ -126,9 +126,10 @@ Checked in this order. Earlier words replace later ones. `INVALID` and `INCOMPLE
 3. `INVALID` — a value or rule is illegal, including a bad instrument, a bad cap, a bad enforcement token, or an invalid log row.
 4. Drawdown floor hit → `BREACHED`, max contracts 0. Outranks every daily status. AE is true. AF and AG show `BREACHED`.
 5. Signed daily capacity < 0 and enforcement is `hard` → `BREACHED`, max contracts 0. AE is true. AG stays the negative number, so this is distinguishable from a floor hit.
-6. Signed daily capacity < 0 and enforcement is `soft` or blank → `DAILY LIMIT EXCEEDED`, max contracts 0. AE stays false. The rule does not define a breach.
-7. Signed daily capacity = 0 → `DAILY LIMIT REACHED`, max contracts 0. AE stays false. Not a breach.
-8. Otherwise `OK` and a numeric contract count. Capacity > 0 still passes through risk, the stop, the tick, and the active cap. The count may be 0.
+6. Signed daily capacity < 0 and enforcement is not `hard` or `soft` → `RULE CONFIRMATION REQUIRED`, max contracts 0. AE is the text `UNCONFIRMED`. That is not a safe clearance and not a soft exceed. Flags also show `DLL RULE UNCONFIRMED`.
+7. Signed daily capacity < 0 and enforcement is `soft` → `DAILY LIMIT EXCEEDED`, max contracts 0. AE stays false. The confirmed rule does not call this a breach.
+8. Signed daily capacity = 0 → `DAILY LIMIT REACHED`, max contracts 0. AE stays false. Not a breach, for hard, soft, and unconfirmed.
+9. Otherwise `OK` and a numeric contract count. Capacity > 0 still passes through risk, the stop, the tick, and the active cap. The count may be 0. If the DLL is on and the rule is unconfirmed, Flags shows `DLL RULE UNCONFIRMED` and the count does not change.
 
 No status permits trading when daily capacity is ≤ 0. AK shows the word in those cases, and AP is 0.
 
@@ -241,7 +242,7 @@ Breach is terminal: once any log row is BREACHED, `Accounts!AE` stays TRUE from 
 
 ## 4. Invalid-input convention
 - Calculated cells show exactly one of: number/boolean (OK), `INVALID` (bad value or rule configuration), `INCOMPLETE` (required input
-  missing, incl. partial-preset nulls and blank max contracts, an INCOMPLETE log row, or any orphan log row), `UNKNOWN_ACCOUNT` (log row only), `BREACHED` (floor hit, or hard daily exceed on the size columns), `DAILY LIMIT REACHED`, `DAILY LIMIT EXCEEDED`, `NONE` (no DLL / no cap), or `""` (unused row). CONTRACTS is never a tradable number when daily capacity is ≤ 0.
+  missing, incl. partial-preset nulls and blank max contracts, an INCOMPLETE log row, or any orphan log row), `UNKNOWN_ACCOUNT` (log row only), `BREACHED` (floor hit, or hard daily exceed on the size columns), `RULE CONFIRMATION REQUIRED`, `DAILY LIMIT REACHED`, `DAILY LIMIT EXCEEDED`, `UNCONFIRMED` (breached flag only, when daily capacity is below zero and the rule is not confirmed), `NONE` (no DLL / no cap), or `""` (unused row). CONTRACTS is never a tradable number when daily capacity is ≤ 0.
 - Propagation: every dependent formula begins with the upstream status test (`$W2`, `AK2`, `AA2`, `I2`); `IFERROR(…,"INVALID")` wraps
   each Accounts formula as a final guard (e.g. text in a numeric field).
 - Data validation (reject input, both apps): money ≤2 dp and `0 < x ≤ 100000000` (custom rule `=ROUND(x*100,6)=INT(ROUND(x*100,6))`; never `ROUND(x*100,0)=x*100`, which rejects 0.29 in float), stop ticks whole number ≥1, tick value decimal `0 < x ≤ 100000` with ≤6 dp (`=ROUND(x*1000000,3)=INT(ROUND(x*1000000,3))`),
