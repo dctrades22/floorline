@@ -4,8 +4,11 @@ No macros. Formulas are the FORMULAS.md cell formulas with PV/HIT/CENT_UP/CENT_D
 
   python3 tracker/build_tracker.py            # writes tracker/Floorline-Tracker.xlsx (empty, ready to use)
   python3 tracker/build_tracker.py --demo OUT # same workbook with illustrative example rows (screenshots only)
+  SOURCE_DATE_EPOCH=1792713600 python3 tracker/build_tracker.py
+Bytes are reproducible. The default epoch is 2026-10-23T00:00:00Z. Set SOURCE_DATE_EPOCH
+(integer UTC seconds) to use another instant. openpyxl's clock stamps are rewritten after save.
 Library use: build(path, accounts=[...], logs=[...]) (used by tracker/test_tracker.py)."""
-import csv, datetime, json, os, sys
+import csv, datetime, io, json, os, re, sys, zipfile
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, Protection
 from openpyxl.formatting.rule import FormulaRule
@@ -15,6 +18,40 @@ from openpyxl.utils import get_column_letter
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 NA, NL = 11, 1001          # last account row, last log row
+
+# Workbook bytes must not depend on the clock. openpyxl writes created/modified and
+# zip entry times from datetime.now. SOURCE_DATE_EPOCH (integer seconds, UTC) overrides
+# this default. Two builds of the same tree with the same epoch are byte-identical.
+BUILD_EPOCH = datetime.datetime(2026, 10, 23, 0, 0, 0)
+
+def build_epoch():
+    raw = os.environ.get("SOURCE_DATE_EPOCH")
+    if not raw:
+        return BUILD_EPOCH
+        return datetime.datetime.fromtimestamp(int(raw), datetime.timezone.utc).replace(tzinfo=None)
+
+def freeze_xlsx(path, epoch=None):
+    """Rewrite zip entry times and core.xml created/modified to a fixed UTC instant."""
+    epoch = epoch or build_epoch()
+    stamp = epoch.strftime("%Y-%m-%dT%H:%M:%SZ")
+    zdt = (epoch.year, epoch.month, epoch.day, epoch.hour, epoch.minute, epoch.second)
+    with zipfile.ZipFile(path, "r") as zin:
+        items = [(i, zin.read(i.filename)) for i in zin.infolist() if not i.is_dir()]
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zout:
+        for info, data in sorted(items, key=lambda t: t[0].filename):
+            if info.filename == "docProps/core.xml":
+                text = data.decode("utf-8")
+                text = re.sub(r"(<dcterms:created[^>]*>)[^<]*", r"\g<1>" + stamp, text, count=1)
+                text = re.sub(r"(<dcterms:modified[^>]*>)[^<]*", r"\g<1>" + stamp, text, count=1)
+                data = text.encode("utf-8")
+            ni = zipfile.ZipInfo(filename=info.filename, date_time=zdt)
+            ni.compress_type = zipfile.ZIP_DEFLATED
+            ni.create_system = 0
+            ni.external_attr = 0
+            zout.writestr(ni, data, compresslevel=6)
+    with open(path, "wb") as f:
+        f.write(buf.getvalue())
 
 # ---- design tokens (mirror css/app.css) ----
 BG, PANEL, INPUT, LINE, LINE2 = "0B0C0D", "121416", "1B1F23", "262A2F", "3A4048"
@@ -195,7 +232,7 @@ def build(path, accounts=(), logs=(), demo_asof=None):
         "Prop firm rules change without notice. Every preset shows source_url, checked_date (2026-10-14 for v0.1) and page date; verify against the firm's current rules and your dashboard before trading. Presets are not guaranteed permanent or complete; \"partial\" presets require user input.",
         "The tracker relies on user-entered balances; it cannot see intraday order of events and can differ from the firm's real-time system. The firm's own calculation is authoritative.",
         "Spreadsheet floating-point arithmetic; values are rounded to cents conservatively.", "",
-        ("m", "Spec: tracker v0.1.0 / oracle v0.2.0. No macros, no scripts, no external links or data connections.")], tab=RED)
+        ("m", "Spec: tracker v0.2.0 / oracle v0.2.0. No macros, no scripts, no external links or data connections.")], tab=RED)
 
     # ---------------- How to use ----------------
     text_sheet(wb, "How to use", [("h", "How to use"),
@@ -355,7 +392,7 @@ def build(path, accounts=(), logs=(), demo_asof=None):
     for r, k in enumerate(cj["contracts"], 2):
         for c, h in enumerate(head, 1):
             x = ws.cell(r, c, k[h]); x.number_format = "@"
-            if h == "status": x.font = Font(name=MONO, size=10, bold=True, color=AMBER)
+            if h == "status": x.font = Font(name=MONO, size=10, bold=True, color=GREEN if k[h] == "verified" else AMBER)
             if h == "symbol": x.font = Font(name=MONO, size=10, bold=True, color=INK)
     # Locked lookup for Accounts tick formulas. Dropdown and tick share this list, so a mismatch cannot be typed.
     expect = {"ES": 12.5, "MES": 1.25, "NQ": 5.0, "MNQ": 0.5}
@@ -367,7 +404,7 @@ def build(path, accounts=(), logs=(), demo_asof=None):
     for i, sym in enumerate(("ES", "MES", "NQ", "MNQ"), 2):
         ws.cell(i, 10, sym).font = Font(name=MONO, size=10, bold=True, color=INK)
         cell = ws.cell(i, 11, expect[sym]); cell.number_format = "0.00"; cell.font = Font(name=MONO, size=10, color=INK)
-    ws.cell(len(cj["contracts"]) + 3, 1, "Accounts tick value looks up J2:K5 only (ES 12.50, MES 1.25, NQ 5.00, MNQ 0.50). Other rows are reference. All tick values verified indirectly (CME pages bot-blocked); confirm on cmegroup.com.").font = Font(name=MONO, size=9, color=AMBER)
+    ws.cell(len(cj["contracts"]) + 3, 1, "Accounts tick value looks up J2:K5 only (ES 12.50, MES 1.25, NQ 5.00, MNQ 0.50). Those four match CME Rulebook chapters 358, 353, 359 and 361, checked 2026-10-23. Other rows are reference and may still be verified indirectly. Confirm on cmegroup.com.").font = Font(name=MONO, size=9, color=AMBER)
     for c, w in zip("ABCDEFGHJK", (8, 28, 10, 13, 17, 12, 50, 80, 12, 12)): ws.column_dimensions[c].width = w
     ws.freeze_panes = "B2"; ws.protection.sheet = True
 
@@ -410,7 +447,15 @@ def build(path, accounts=(), logs=(), demo_asof=None):
 
     wb.active = 0
     wb.calculation.fullCalcOnLoad = True
+    epoch = build_epoch()
+    wb.properties.creator = "Floorline"
+    wb.properties.lastModifiedBy = "Floorline"
+    wb.properties.title = "Floorline Multi-Account Tracker"
+    wb.properties.created = epoch
+    wb.properties.modified = epoch
+    wb.properties.revision = "1"
     wb.save(path)
+    freeze_xlsx(path, epoch)
     return path
 
 DEMO_ACC = [

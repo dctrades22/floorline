@@ -213,9 +213,11 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-fut]"), function (e) { e.hidden = crypto; });
     field("cap").hidden = crypto;
     var ci = C.filter(function (c) { return c.symbol === sym; })[0];
+    var spec = !ci ? "" : ci.status === "flagged" ? "flagged" : ci.status === "verified" ? "verified on the CME rulebook" : "verified indirectly";
     $("instNote").innerHTML = ci ? esc(ci.symbol) + ": tick " + esc(ci.tick_size) + " = $" + esc(ci.tick_value_usd) +
-      ' · <span class="ind">' + (ci.status === "flagged" ? "flagged: " : "") + 'verified indirectly</span> (CME page bot-blocked; read from an index copy of the <a href="' + esc(ci.source_url) +
-      '" target="_blank" rel="noopener noreferrer">cited page</a>, ' + esc(ci.checked_date) + "). Confirm on cmegroup.com." + (capInfo ? " · " + esc(capInfo) : "")
+      ' · <span class="ind">' + spec + '</span> (<a href="' + esc(ci.source_url) +
+      '" target="_blank" rel="noopener noreferrer">source</a>, ' + esc(ci.checked_date) + ")." +
+      (ci.status === "verified" ? "" : " Confirm on cmegroup.com.") + (capInfo ? " · " + esc(capInfo) : "")
       : "Crypto perp: quantity floored to your exchange's step. Fees, slippage, leverage and margin not modeled.";
 
     var err = null, out = {};

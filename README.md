@@ -13,7 +13,7 @@ no CDN, no web fonts, no dependencies. Open `index.html` directly from disk and 
   - **Edit as custom** copies the current rule into fully editable fields.
 - Outputs floor, drawdown room, daily room, binding room (and which constraint binds), lock status, max contracts for the
   chosen instrument with a quick by-stop table, plus CLAMPED / CAPPED / BREACHED flags.
-- Contract specs (`data/contracts.json`) are labelled *verified indirectly* (CME pages are bot-blocked).
+- ES, MES, NQ and MNQ tick values were read from the CME Rulebook on 2026-10-23 (`docs/CME-TICKS.md`). Other symbols in `data/contracts.json` are still labelled *verified indirectly*. MCL remains flagged.
 - Tick value comes from the instrument. ES 12.50, MES 1.25, NQ 5.00, MNQ 0.50. It is not a separate input.
 - ES/NQ use the firm's mini cap. MES/MNQ (and the other micros) use the micro cap. A generic contract count, and only
   a generic count, applies to every instrument. No 10:1 equivalence is assumed. Blank cap = incomplete. Explicit 0
@@ -51,4 +51,4 @@ Screenshots: `sh tools/shots.sh` (needs a local Chrome/Chromium) writes `shots/`
 4. After a minute the site is at `https://<you>.github.io/floorline/`. All paths are relative, so no config is needed.
 5. Optional: add a `CNAME` file for a custom domain.
 
-Before publishing, re-verify presets older than a few weeks and the flagged contract specs (ES, MCL).
+Before publishing, re-verify presets older than a few weeks and the flagged contract spec (MCL). ES, MES, NQ and MNQ were checked on 2026-10-23.

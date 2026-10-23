@@ -1,9 +1,19 @@
 #!/usr/bin/env python3
-"""Tests the REAL workbook formulas: builds test workbooks with build_tracker.build(), recalculates them headlessly
-in LibreOffice, reads the computed cells and compares with golden/cases.json for every golden_map case marked
-yes/partial, plus INVALID / INCOMPLETE / BREACHED scenarios.   python3 tracker/test_tracker.py
+"""Tests the REAL workbook formulas. Recalculates them headlessly in LibreOffice, reads the computed cells and
+compares with golden/cases.json for every golden_map case marked yes/partial, plus INVALID / INCOMPLETE / BREACHED
+scenarios.
+
+  python3 tracker/test_tracker.py
+      builds a fresh workbook per batch with build_tracker.build()
+
+  python3 tracker/test_tracker.py --workbook PATH [--expect-sha HEX]
+      copies PATH (the release xlsx) and writes only scenario inputs into the copy.
+      PATH itself is not modified. The test prints PATH's SHA-256 before and after and exits
+      non-zero if those hashes differ, or if --expect-sha does not match. Formulas are the
+      ones stored in PATH, not a second build().
+
 Case inputs come from QUANT's mapping in tracker/sheet_logic.py (M); the arithmetic under test is the spreadsheet's."""
-import datetime, json, os, shutil, subprocess, sys, tempfile
+import datetime, hashlib, json, os, shutil, subprocess, sys, tempfile
 from openpyxl import load_workbook
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
@@ -143,10 +153,42 @@ STATUS += [
      {"AA": "OK", "AC": 50000, "AD": True, "AK": 3, "Q": 5}),
 ]
 
-def run_batches(items):
+def sha256_file(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+def fill_template(src, dest, accounts, logs, demo_asof):
+    """Copy the release workbook and write scenario inputs only. Formulas stay the ones in src."""
+    shutil.copyfile(src, dest)
+    wb = load_workbook(dest)
+    ws = wb["Accounts"]
+    tick = ws["Q2"].value
+    if not isinstance(tick, str) or "Contracts!$K$2:$K$5" not in tick:
+        raise SystemExit("template Q2 is not the instrument tick lookup: " + repr(tick))
+    for i, a in enumerate(accounts, 2):
+        for col, val in a.items():
+            ws[f"{col}{i}"] = val
+    if demo_asof:
+        ws["B13"] = demo_asof
+    log = wb["Daily Log"]
+    for i, row in enumerate(logs, 2):
+        for col, val in row.items():
+            log[f"{col}{i}"] = val
+    for r in range(2, 12):
+        ws[f"AT{r}"] = f'=IF(M{r}="","",INT(ROUND(M{r}*100,6))/100)'
+    if "Contracts!$K$2:$K$5" not in str(ws["Q2"].value):
+        raise SystemExit("filling the template rewrote the tick formula")
+    wb.save(dest)
+
+def run_batches(items, template=None):
     """items: (name, account|[accounts], logs, expect[, opts]). opts: solo=True (own workbook, e.g. orphan rows poison
     every account), asof=date (Accounts!B13). Getter keys: column letter (first account), 'acc2:COL', 'log:I' (last log
-    row of this account), 'logid:<ID>' (log status of rows with that ID), or an absolute cell like 'B14'."""
+    row of this account), 'logid:<ID>' (log status of rows with that ID), or an absolute cell like 'B14'.
+
+    template: path of the release xlsx. Each batch is a copy of that file. None builds with build()."""
     tmp = tempfile.mkdtemp(); files = []
     plain = [it for it in items if not (it[4] if len(it) > 4 else {})]
     groups, cur, n = [], [], 0
@@ -163,10 +205,15 @@ def run_batches(items):
         assert len(accs) <= 10
         opts = chunk[0][4] if len(chunk) == 1 and len(chunk[0]) > 4 else {}
         p = os.path.join(tmp, f"b{gi:02d}.xlsx")
-        bt.build(p, [{k: v for k, v in a.items() if v is not None} for a in accs], logs, demo_asof=opts.get("asof"))
-        wb = load_workbook(p); ws = wb["Accounts"]          # test-only probe: oracle 'equity' = CENT_DOWN(K)
-        for r in range(2, 12): ws[f"AT{r}"] = f"=IF(M{r}=\"\",\"\",INT(ROUND(M{r}*100,6))/100)"
-        wb.save(p); files.append((p, chunk))
+        clean = [{k: v for k, v in a.items() if v is not None} for a in accs]
+        if template:
+            fill_template(template, p, clean, logs, opts.get("asof"))
+        else:
+            bt.build(p, clean, logs, demo_asof=opts.get("asof"))
+            wb = load_workbook(p); ws = wb["Accounts"]          # test-only probe: oracle 'equity' = CENT_DOWN(K)
+            for r in range(2, 12): ws[f"AT{r}"] = f"=IF(M{r}=\"\",\"\",INT(ROUND(M{r}*100,6))/100)"
+            wb.save(p)
+        files.append((p, chunk))
     out = os.path.join(tmp, "calc")
     subprocess.run(["soffice", "--headless", "--calc", "--convert-to", "xlsx", "--outdir", out] + [f for f, _ in files],
                    check=True, capture_output=True, timeout=600)
@@ -214,9 +261,32 @@ def status_ok(got, e):
     if num(e): return num(got) and round(got, 2) == got and got == e
     return got == e
 
-def main():
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    template = expect = None
+    if "--workbook" in argv:
+        template = os.path.abspath(argv[argv.index("--workbook") + 1])
+        if not os.path.isfile(template):
+            raise SystemExit("workbook not found: " + template)
+    if "--expect-sha" in argv:
+        expect = argv[argv.index("--expect-sha") + 1].lower()
+    before = sha256_file(template) if template else None
+    if template:
+        print(f"WORKBOOK {template}")
+        print(f"WORKBOOK_SHA256 {before}")
+        if expect and before != expect:
+            print(f"WORKBOOK_SHA256_EXPECT {expect}")
+            print("HASH_MATCH no")
+            sys.exit(1)
     items = GOLDEN + STATUS
-    res = run_batches(items)
+    res = run_batches(items, template=template)
+    if template:
+        after = sha256_file(template)
+        print(f"WORKBOOK_SHA256_AFTER {after}")
+        print(f"HASH_MATCH {'yes' if after == before else 'no'}")
+        if after != before:
+            print("FAIL template bytes changed during the test")
+            sys.exit(1)
     passed = failed = 0; notes = []; counts = {}
     print(f"{'case':30} {'map':8} result")
     for cid, _, _, fields in GOLDEN:
@@ -251,6 +321,8 @@ def main():
     for g, (a, n) in counts.items(): print(f"GROUP {g:7} {a} / {n}")
     print(f"TOTAL PASS {passed} / {passed + failed}")
     if notes: print("note: breached cases require literal 'BREACHED' in drawdown_room (oracle 0.00):", ", ".join(notes))
+    if template:
+        print(f"TESTED_FILE_SHA256 {before}")
     sys.exit(1 if failed else 0)
 
 if __name__ == "__main__":

@@ -8,59 +8,56 @@ GitHub Pages for `dctrades22/floorline` is **Deploy from a branch**, branch `mai
 
 A push to `main` publishes the repository root, including `index.html`, `js/`, `data/`, and anything else that is not gitignored. The live site is https://dctrades22.github.io/floorline/.
 
+## Build the paid workbook
+
+From a clean checkout of the commit you intend to ship (do not build from a dirty tree):
+
+```sh
+git archive HEAD | tar -x -C /tmp/floorline-release
+cd /tmp/floorline-release
+python3 tracker/build_tracker.py
+sha256sum tracker/Floorline-Tracker.xlsx
+python3 tracker/test_tracker.py --workbook tracker/Floorline-Tracker.xlsx --expect-sha "$(sha256sum tracker/Floorline-Tracker.xlsx | awk '{print $1}')"
+```
+
+`python3 tracker/build_tracker.py` writes `tracker/Floorline-Tracker.xlsx`. That path is gitignored. The default epoch is `2026-10-23T00:00:00Z` (`SOURCE_DATE_EPOCH=1792713600`). Set `SOURCE_DATE_EPOCH` to another integer UTC second only if you want a different stamp; the Gumroad file must be the same bytes the test hashed.
+
+Two archives of the same commit, built with the same epoch, must have the same SHA-256. The test copies that file, fills inputs, and recalculates in LibreOffice. It exits non-zero if the file's hash changes or does not match `--expect-sha`.
+
+Excel 2019 or Microsoft 365 is still required before Gumroad (the file uses `MAXIFS` and `TEXTJOIN`). LibreOffice is the engine in the tests. Excel itself has not been re-tested.
+
+Spot-check: MES $200 / 12 ticks / 50 micros = 13; ES $200 / 12 / 5 minis = 1; NQ $200 / 8 / 10 minis = 5; MNQ $200 / 8 / 100 micros = 50. Blank instrument is INCOMPLETE. A blank cap for that class is INCOMPLETE. Cap 0 sizes 0. NONE still respects the daily loss limit and the floor.
+
+Tick values: `docs/CME-TICKS.md`. ES, MES, NQ and MNQ were read from the CME Rulebook on 2026-10-23. ES is no longer flagged.
+
 ## Paid workbook vs public site
 
-Anyone who clones `main` can rebuild the paid workbook. These files are the product:
+Anyone who clones `main` can still rebuild the paid workbook. `docs/PRIVATE-TRACKER-MIGRATION.md` is the plan for a private tree. It does not delete public files. Run `python3 tools/export_private_tracker.py <tarball>` to pack a ready-to-init copy. Removing `tracker/` from this repo needs a separate approval.
 
-- `tracker/build_tracker.py` writes the xlsx
-- `tracker/FORMULAS.md` is the formula spec
-- `tracker/presets_tab.csv` and `data/presets.json` are the preset tables
-- `tracker/Floorline-Tracker.xlsx` was committed on `main` before this branch (the raw GitHub URL is a free copy)
+## Replacing the Gumroad file
 
-Practical split, without hiding the free calculator:
+Full quotes and UNCONFIRMED items: `docs/GUMROAD-FILE-REPLACE.md` (pages read 2026-10-23).
 
-1. Keep the free site on this public repo: `index.html`, `css/`, `js/`, `data/`, `assets/`, `docs/MATH.md`.
-2. Move `tracker/` (builder, formula spec, workbook tests, presets tab) to a private repository. Build the xlsx there.
-3. Leave `tracker/Floorline-Tracker.xlsx` gitignored. This branch stops tracking it. History on `main` still contains older copies until the owner rewrites history, which this change does not do.
-4. Upload only the private build to Gumroad.
+Do not assume buyers are emailed when the file is replaced. The fetched help pages do not say that. Library shows up-to-date files. Emails and Workflows are a separate step. Workflow triggers listed that day do not include "file replaced."
 
-The math is already public in the free calculator. A private builder stops one-click cloning of the exact file. It does not stop someone from recreating a spreadsheet from the site.
+1. Archive the current Gumroad file locally, named with the date.
+2. Replace the xlsx on the Content tab of the product (or the version buyers own). Publish.
+3. Download from a receipt or the Library and match the SHA-256.
+4. Send an Email to Customers about the Instrument column, the calculated tick, and the separate caps. Resend a receipt only if a buyer needs the mail again.
+5. Old filled workbooks do not pick up the new formulas.
 
-## Before replacing the Gumroad file
-
-1. On this branch, `node test/run.js`, `python3 golden/oracle.py --check`, `python3 tracker/sheet_logic.py --check`, and `python3 tracker/test_tracker.py` are green.
-2. Open the xlsx in Excel 2019 or Microsoft 365 (the file uses `MAXIFS` and `TEXTJOIN`). LibreOffice is the engine used in the tests. Excel itself has not been re-tested in this change.
-3. Spot-check one row of each instrument: MES $200 / 12 ticks / 50 micros = 13; ES $200 / 12 / 5 minis = 1; NQ $200 / 8 / 10 minis = 5; MNQ $200 / 8 / 100 micros = 50.
-4. Confirm a blank instrument says INCOMPLETE, a blank cap for that instrument says INCOMPLETE, cap 0 sizes 0, and NONE still respects the daily loss limit and the floor.
-5. Do not commit the xlsx. Do not push this branch until the checks above are accepted.
-
-## Replacing the file for existing buyers
-
-Gumroad serves the product's current content from the buyer's Library and receipt link.
-
-- Content tab: "Your customers will see the product just as you see it in the editor." https://gumroad.com/help/article/149-adding-a-product
-- Library: "click on the product's card and you'll see the product's up-to-date files and posts." https://gumroad.com/help/article/211-im-not-receiving-updates.html
-- If the product uses versions, files belong to a version. Reassign a purchase from the Sales dashboard (no charge, no refund) and resend the receipt. https://gumroad.com/help/article/126-setting-up-versions-on-a-digital-product and https://gumroad.com/blog/p/update-customers-variants-versions-tiers
-- API `files` on `PUT /v2/products/:id` replaces the whole file list. Keep existing file ids if other files must stay. https://gumroad.com/api
-
-Steps:
-
-1. Duplicate the current Gumroad file to a local archive named with the date, before replacing it.
-2. Edit the product (or the version buyers actually own). Replace the xlsx in the Content tab. Publish.
-3. Buy a test copy, or open an existing receipt, and confirm the new file downloads.
-4. Resend receipts only if buyers need the email again. The Library should already show the new file.
-5. Tell buyers the sheet changed: add the Instrument column, tick value is calculated, and mini/micro caps are separate. Old workbooks do not pick up the new formulas by themselves. Buyers who already typed a manual tick value must pick ES, MES, NQ, or MNQ and enter both caps.
+API `files` on `PUT /v2/products/:id` replaces the whole file list (https://gumroad.com/api). Keep existing file ids if other files must stay.
 
 ## Shipping the free site
 
 1. Merge the approved branch to `main`. That is the Pages deploy.
 2. Watch the `pages-build-deployment` run. The site should still show the firm chips, a floor, and a contract count.
-3. On the calculator, MES with a stated micro cap must size from tick 1.25. Clearing the cap must show INCOMPLETE, not an unlimited size. NONE must still clamp to the binding room.
+3. On the calculator, MES with a stated micro cap must size from tick 1.25. Clearing the cap must show INCOMPLETE. NONE must still clamp to the binding room. ES, MES, NQ and MNQ should show as verified on the CME rulebook.
 
 ## Rollback
 
-**Paid file.** Upload the archived previous xlsx to the same Gumroad content slot (or reassign the version). Resend a receipt if a buyer already downloaded the bad file. Their old download is not updated on disk; only the Library copy changes.
+**Paid file.** Upload the archived previous xlsx to the same Gumroad content slot (or reassign the version). Resend a receipt if a buyer already downloaded the bad file and needs the mail. Their old download is not updated on disk; the Library card is what shows the current file (`docs/GUMROAD-FILE-REPLACE.md`).
 
 **Free site.** `git revert` the merge commit on `main` and push. Pages rebuilds from `main`. Do not force-push and do not delete `main`. If the bad commit is the tip and has not been announced, a revert is still the safer rollback.
 
-**Do not** roll back by editing `gh-pages` (there is no such branch) and do not change the Gumroad product URL in `js/config.js` as part of a formula fix.
+**Do not** roll back by editing `gh-pages` (there is no such branch) and do not change the Gumroad product URL in `js/config.js` as part of a formula fix. Do not rewrite history to remove the builder or the old xlsx.
