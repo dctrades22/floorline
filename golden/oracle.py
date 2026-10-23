@@ -120,7 +120,28 @@ def eff_risk(inp):
 
 
 # ---------------- sizing ----------------
-def size_futures(inp):
+# OLD single-cap path: the caller supplies tick_value and one optional max_contracts.
+# NEW instrument-aware path (instrument present): tick value is derived, ES/NQ use
+# max_minis, MES/MNQ (and the other micros) use max_micros. NONE removes only the
+# contract cap. Risk is still min(risk, binding_room). Explicit 0 stays 0.
+# A supplied tick_value that disagrees with the instrument is a mismatch.
+INSTRUMENT_TICK = {
+    "ES": D("12.50"), "MES": D("1.25"), "NQ": D("5.00"), "MNQ": D("0.50"),
+    "GC": D("10.00"), "MGC": D("1.00"), "CL": D("10.00"), "MCL": D("1.00"),
+    "6E": D("6.25"), "M6E": D("1.25"),
+}
+MICRO_INSTRUMENTS = {"MES", "MNQ", "MGC", "MCL", "M6E"}
+
+
+def _cap_token(v, name):
+    if v is None:
+        bad(f"missing {name}")
+    if isinstance(v, str) and v.strip().lower() == "none":
+        return None
+    return int(dec(v, name, nonneg=True, integer=True))
+
+
+def size_futures_legacy(inp):
     risk, limited = eff_risk(inp)
     ticks = dec(need(inp, "stop_ticks"), "stop_ticks", positive=True, integer=True)
     tv = dec(need(inp, "tick_value"), "tick_value", positive=True)
@@ -133,6 +154,44 @@ def size_futures(inp):
     return {"effective_risk": r_down(risk), "risk_limited_by_room": limited,
             "risk_per_contract": fixed(per), "contracts": n, "capped": capped,
             "actual_risk": r_down(per * n)}
+
+
+def size_futures_instrument(inp):
+    raw = need(inp, "instrument")
+    if not isinstance(raw, str) or raw.strip() == "":
+        bad("missing instrument")
+    sym = raw.strip().upper()
+    if sym not in INSTRUMENT_TICK:
+        bad("invalid instrument")
+    tv = INSTRUMENT_TICK[sym]
+    if "tick_value" in inp and inp.get("tick_value") is not None:
+        given = dec(inp["tick_value"], "tick_value", positive=True)
+        if given != tv:
+            bad("tick_value mismatch")
+    klass = "micro" if sym in MICRO_INSTRUMENTS else "mini"
+    key = "max_micros" if klass == "micro" else "max_minis"
+    other = "max_minis" if key == "max_micros" else "max_micros"
+    if other in inp and inp.get(other) is not None:
+        _cap_token(inp[other], other)
+    if key not in inp:
+        bad(f"missing {key}")
+    cap = _cap_token(inp[key], key)
+    legacy = {"risk": need(inp, "risk"), "binding_room": need(inp, "binding_room"),
+              "stop_ticks": need(inp, "stop_ticks"), "tick_value": format(tv, "f")}
+    if cap is not None:
+        legacy["max_contracts"] = str(cap)
+    out = size_futures_legacy(legacy)
+    out["instrument"] = sym
+    out["tick_value"] = format(tv, "f")
+    out["cap_class"] = klass
+    out["active_cap"] = "NONE" if cap is None else cap
+    return out
+
+
+def size_futures(inp):
+    if isinstance(inp, dict) and "instrument" in inp:
+        return size_futures_instrument(inp)
+    return size_futures_legacy(inp)
 
 
 def size_crypto(inp):
@@ -188,13 +247,13 @@ DEFS = [
  ("RR-19", "drawdown room binds; positive day pnl", "risk_room", {"drawdown_room": "400", "daily_loss_limit": "1000", "day_pnl": "250"}),
  ("RR-20", "no DLL: drawdown binds", "risk_room", {"drawdown_room": "1234.56"}),
  ("RR-21", "tie daily == drawdown -> binding drawdown", "risk_room", {"drawdown_room": "500", "daily_loss_limit": "1000", "day_pnl": "-500"}),
- ("FS-22", "futures MES basic", "futures", {"risk": "300", "binding_room": "1000", "stop_ticks": "16", "tick_value": "1.25", "max_contracts": "50"}),
- ("FS-23", "futures ES: below one contract -> 0", "futures", {"risk": "200", "binding_room": "1000", "stop_ticks": "20", "tick_value": "12.50", "max_contracts": "5"}),
- ("FS-24", "futures MNQ capped by max contracts", "futures", {"risk": "1000", "binding_room": "2000", "stop_ticks": "40", "tick_value": "0.50", "max_contracts": "30"}),
- ("FS-25", "H-2: risk above binding room is clamped", "futures", {"risk": "999999", "binding_room": "350", "stop_ticks": "1", "tick_value": "1"}),
- ("FS-26", "max_contracts 0 -> 0", "futures", {"risk": "500", "binding_room": "500", "stop_ticks": "4", "tick_value": "1.25", "max_contracts": "0"}),
- ("FS-27", "risk 0 -> 0", "futures", {"risk": "0", "binding_room": "500", "stop_ticks": "4", "tick_value": "1.25"}),
- ("FS-28", "M-7: actual_risk never above risk", "futures", {"risk": "0.996", "binding_room": "10", "stop_ticks": "1", "tick_value": "0.995"}),
+ ("FS-22", "OLD single-cap (kept): MES-equivalent tick 1.25 and one max_contracts 50. NEW path derives the tick from the instrument and picks max_minis or max_micros. Inner floor-division invariant unchanged.", "futures", {"risk": "300", "binding_room": "1000", "stop_ticks": "16", "tick_value": "1.25", "max_contracts": "50"}),
+ ("FS-23", "OLD single-cap (kept): ES-equivalent tick 12.50 and one max_contracts 5, below one contract -> 0. NEW path derives tick 12.50 from ES.", "futures", {"risk": "200", "binding_room": "1000", "stop_ticks": "20", "tick_value": "12.50", "max_contracts": "5"}),
+ ("FS-24", "OLD single-cap (kept): MNQ-equivalent tick 0.50 and one max_contracts 30. NEW path uses max_micros for MNQ.", "futures", {"risk": "1000", "binding_room": "2000", "stop_ticks": "40", "tick_value": "0.50", "max_contracts": "30"}),
+ ("FS-25", "OLD single-cap (kept): H-2 risk above binding room is clamped. Arbitrary tick 1 is not an instrument tick; the sheet no longer accepts it. Room clamp stays in force on the new path.", "futures", {"risk": "999999", "binding_room": "350", "stop_ticks": "1", "tick_value": "1"}),
+ ("FS-26", "OLD single-cap (kept): max_contracts 0 -> 0. NEW path: an explicit 0 cap stays 0.", "futures", {"risk": "500", "binding_room": "500", "stop_ticks": "4", "tick_value": "1.25", "max_contracts": "0"}),
+ ("FS-27", "OLD single-cap (kept): risk 0 -> 0 with no max_contracts. NEW path: NONE removes only the contract cap; risk 0 is still 0.", "futures", {"risk": "0", "binding_room": "500", "stop_ticks": "4", "tick_value": "1.25"}),
+ ("FS-28", "OLD single-cap (kept): M-7 actual_risk never above risk. Sub-cent tick 0.995 is not an instrument tick.", "futures", {"risk": "0.996", "binding_room": "10", "stop_ticks": "1", "tick_value": "0.995"}),
  ("CS-29", "crypto long with step", "crypto", {"risk": "100", "binding_room": "1000", "entry": "65000", "stop": "64350", "step_size": "0.001"}),
  ("CS-30", "crypto short with step", "crypto", {"risk": "50", "binding_room": "1000", "entry": "3200", "stop": "3240", "step_size": "0.01"}),
  ("CS-31", "crypto sub-step result -> 0", "crypto", {"risk": "1", "binding_room": "1000", "entry": "65000", "stop": "60000", "step_size": "0.001"}),
@@ -202,9 +261,9 @@ DEFS = [
  ("CS-33", "crypto huge price", "crypto", {"risk": "250", "binding_room": "1000", "entry": "1250000", "stop": "1237500", "step_size": "0.0001"}),
  ("CS-34", "crypto risk clamped by room", "crypto", {"risk": "500", "binding_room": "120", "entry": "100", "stop": "98", "step_size": "0.1"}),
  ("IV-35", "invalid: crypto entry == stop", "crypto", {"risk": "100", "binding_room": "1000", "entry": "100", "stop": "100", "step_size": "0.01"}),
- ("IV-36", "invalid: futures stop_ticks = 0", "futures", {"risk": "100", "binding_room": "1000", "stop_ticks": "0", "tick_value": "1.25"}),
+ ("IV-36", "OLD single-cap (kept): invalid futures stop_ticks = 0. Still invalid on the instrument path.", "futures", {"risk": "100", "binding_room": "1000", "stop_ticks": "0", "tick_value": "1.25"}),
  ("IV-37", "invalid: crypto without step_size (M-2)", "crypto", {"risk": "100", "binding_room": "1000", "entry": "100", "stop": "97"}),
- ("IV-38", "invalid: sizing without binding_room (H-2)", "futures", {"risk": "100", "stop_ticks": "4", "tick_value": "1.25"}),
+ ("IV-38", "OLD single-cap (kept): sizing without binding_room (H-2). Still required when an instrument is set; risk, drawdown and daily loss stay active.", "futures", {"risk": "100", "stop_ticks": "4", "tick_value": "1.25"}),
  ("IV-39", "config: lock level below initial floor", "drawdown", DDI("eod_trailing", "50000", "2000", [], lock_offset="-2500")),
  ("IV-40", "config: static with lock", "drawdown", DDI("static", "50000", "2000", [], lock_offset="0")),
  ("IV-41", "config: unknown drawdown type", "drawdown", DDI("hybrid", "50000", "2000", [])),
@@ -212,8 +271,22 @@ DEFS = [
  ("IV-43", "M-1: DLL without day_pnl", "risk_room", {"drawdown_room": "500", "daily_loss_limit": "1000"}),
  ("IV-44", "M-1: missing type", "drawdown", {"start_balance": "50000", "drawdown_amount": "2000", "events": []}),
  ("IV-45", "M-1: crypto huge risk / tiny step overflows precision", "crypto", {"risk": "1E+40", "binding_room": "1E+40", "entry": "2", "stop": "1", "step_size": "1E-20"}),
- ("IV-46", "L-1: fractional max_contracts", "futures", {"risk": "100", "binding_room": "100", "stop_ticks": "4", "tick_value": "1.25", "max_contracts": "2.9"}),
- ("IV-47", "L-1: fractional stop_ticks", "futures", {"risk": "100", "binding_room": "100", "stop_ticks": "0.5", "tick_value": "1.25"}),
+ ("IV-46", "OLD single-cap (kept): fractional max_contracts. NEW path rejects a fractional active cap the same way.", "futures", {"risk": "100", "binding_room": "100", "stop_ticks": "4", "tick_value": "1.25", "max_contracts": "2.9"}),
+ ("IV-47", "OLD single-cap (kept): fractional stop_ticks. Still invalid on the instrument path.", "futures", {"risk": "100", "binding_room": "100", "stop_ticks": "0.5", "tick_value": "1.25"}),
+ ("IA-01", "NEW instrument-aware: MES $200, 12-tick stop, 50 micro cap -> 13. Mini cap is not used.", "futures", {"instrument": "MES", "risk": "200", "binding_room": "10000", "stop_ticks": "12", "max_minis": "1", "max_micros": "50"}),
+ ("IA-02", "NEW instrument-aware: ES $200, 12 ticks, 5 mini cap -> 1. Micro cap is not used.", "futures", {"instrument": "ES", "risk": "200", "binding_room": "10000", "stop_ticks": "12", "max_minis": "5", "max_micros": "1"}),
+ ("IA-03", "NEW instrument-aware: NQ $200, 8 ticks, 10 mini cap -> 5.", "futures", {"instrument": "NQ", "risk": "200", "binding_room": "10000", "stop_ticks": "8", "max_minis": "10", "max_micros": "NONE"}),
+ ("IA-04", "NEW instrument-aware: MNQ $200, 8 ticks, 100 micro cap -> 50.", "futures", {"instrument": "MNQ", "risk": "200", "binding_room": "10000", "stop_ticks": "8", "max_minis": "NONE", "max_micros": "100"}),
+ ("IA-05", "NEW: MES missing max_micros is an error. A mini cap does not fill it.", "futures", {"instrument": "MES", "risk": "200", "binding_room": "10000", "stop_ticks": "12", "max_minis": "5"}),
+ ("IA-06", "NEW: ES missing max_minis is an error. A micro cap does not fill it.", "futures", {"instrument": "ES", "risk": "200", "binding_room": "10000", "stop_ticks": "12", "max_micros": "50"}),
+ ("IA-07", "NEW: explicit micro cap 0 stays 0.", "futures", {"instrument": "MES", "risk": "200", "binding_room": "10000", "stop_ticks": "12", "max_minis": "NONE", "max_micros": "0"}),
+ ("IA-08", "NEW: NONE removes only the contract cap. Binding room (drawdown or daily loss) still clamps.", "futures", {"instrument": "MES", "risk": "200", "binding_room": "15", "stop_ticks": "12", "max_minis": "NONE", "max_micros": "NONE"}),
+ ("IA-09", "NEW: invalid instrument.", "futures", {"instrument": "ZZ", "risk": "200", "binding_room": "10000", "stop_ticks": "12", "max_minis": "5", "max_micros": "50"}),
+ ("IA-10", "NEW: blank instrument.", "futures", {"instrument": "", "risk": "200", "binding_room": "10000", "stop_ticks": "12", "max_minis": "5", "max_micros": "50"}),
+ ("IA-11", "NEW: tick_value that disagrees with the instrument is a mismatch.", "futures", {"instrument": "MES", "tick_value": "12.50", "risk": "200", "binding_room": "10000", "stop_ticks": "12", "max_minis": "NONE", "max_micros": "50"}),
+ ("IA-12", "NEW: tick_value that matches the instrument is accepted and cannot disagree.", "futures", {"instrument": "MES", "tick_value": "1.25", "risk": "200", "binding_room": "10000", "stop_ticks": "12", "max_minis": "1", "max_micros": "50"}),
+ ("IA-13", "NEW: MES uses the micro cap even when the mini cap is tighter.", "futures", {"instrument": "mes", "risk": "200", "binding_room": "10000", "stop_ticks": "12", "max_minis": "1", "max_micros": "50"}),
+ ("IA-14", "NEW: ES uses the mini cap even when the micro cap is tighter.", "futures", {"instrument": "ES", "risk": "200", "binding_room": "10000", "stop_ticks": "12", "max_minis": "5", "max_micros": "1"}),
  ("IV-48", "L-2: breach_on_touch as string", "drawdown", DDI("static", "50000", "2000", [], breach_on_touch="false")),
  ("IV-49", "L-3: invalid event after breach still rejected", "drawdown", DDI("static", "50000", "2000", [ev("47000"), {"kind": "bogus"}])),
 ]

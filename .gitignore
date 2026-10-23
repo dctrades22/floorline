@@ -1,0 +1,5 @@
+# Paid workbook. Build it locally and upload it to Gumroad. Never commit it.
+tracker/Floorline-Tracker.xlsx
+tracker/dist/
+__pycache__/
+*.pyc

@@ -14,8 +14,12 @@ no CDN, no web fonts, no dependencies. Open `index.html` directly from disk and 
 - Outputs floor, drawdown room, daily room, binding room (and which constraint binds), lock status, max contracts for the
   chosen instrument with a quick by-stop table, plus CLAMPED / CAPPED / BREACHED flags.
 - Contract specs (`data/contracts.json`) are labelled *verified indirectly* (CME pages are bot-blocked).
-- Micro/mini caps are per firm. When a firm only states a generic contract count, that count is applied to every
-  instrument (conservative); no 10:1 equivalence is assumed.
+- Tick value comes from the instrument. ES 12.50, MES 1.25, NQ 5.00, MNQ 0.50. It is not a separate input.
+- ES/NQ use the firm's mini cap. MES/MNQ (and the other micros) use the micro cap. A generic contract count, and only
+  a generic count, applies to every instrument. No 10:1 equivalence is assumed. Blank cap = incomplete. Explicit 0
+  stays 0. Type NONE to remove only the contract cap. Risk, trailing drawdown and the daily loss limit stay active.
+- The paid 10-account workbook is built from `tracker/` and is not part of the GitHub Pages site. Its instrument
+  list is ES, MES, NQ, MNQ. See `docs/DEPLOY-CHECKLIST.md`.
 
 ## Math
 `js/oracle.js` is a line-by-line port of `golden/oracle.py` on top of `js/decimal.js`, a small BigInt decimal with the
@@ -27,7 +31,7 @@ intraday trailing → `[mark(peak equity), mark(balance)]`. Percent daily limits
 
 ## Tests
 ```sh
-node test/run.js        # 49 golden cases, presets schema + semantic rules, contracts, data bundle freshness
+node test/run.js        # golden cases (legacy single-cap plus instrument-aware), presets, contracts, data bundle
 python3 golden/oracle.py --check   # QUANT's reference check
 ```
 Data is embedded into `js/data.js` (browsers block `fetch` on `file://`). After editing `data/*.json` run

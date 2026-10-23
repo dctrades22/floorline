@@ -11,15 +11,35 @@ import build_tracker as bt, sheet_logic as sl
 
 GOLD = {c["id"]: c for c in json.load(open(os.path.join(ROOT, "golden", "cases.json")))["cases"]}
 GMAP = {c["id"]: c for c in json.load(open(os.path.join(HERE, "golden_map.json")))["cases"]}
-COL = {"floor": "Y", "peak": "X", "locked": "Z", "breached": "AA", "equity": "AP", "drawdown_room": "AB",
-       "daily_room": "AC", "binding_room": "AD", "binding": "AE", "contracts": "AG", "capped": "AH",
-       "effective_risk": "AF", "risk_limited_by_room": "AI", "actual_risk": "AM"}
+COL = {"floor": "AC", "peak": "AB", "locked": "AD", "breached": "AE", "equity": "AT", "drawdown_room": "AF",
+       "daily_room": "AG", "binding_room": "AH", "binding": "AI", "contracts": "AK", "capped": "AL",
+       "effective_risk": "AJ", "risk_limited_by_room": "AM", "actual_risk": "AQ"}
+TICK_INST = {1.25: "MES", 12.5: "ES", 5.0: "NQ", 0.5: "MNQ"}
+MINI = {"ES", "NQ"}
+MICRO = {"MES", "MNQ"}
+
+def inst_for(si):
+    if "instrument" in si: return si["instrument"]
+    if "tv" not in si: return "MES"
+    return TICK_INST.get(round(float(si["tv"]), 2))
 
 def acc_row(cid, si):
+    inst = inst_for(si)
+    if inst is None: raise ValueError("unmapped tick for " + cid)
+    if "max_minis" in si or "max_micros" in si:
+        max_minis, max_micros = si.get("max_minis", "NONE"), si.get("max_micros", "NONE")
+    elif "maxc" in si:
+        u = str(inst).strip().upper()
+        if u in MINI: max_minis, max_micros = si["maxc"], "NONE"
+        elif u in MICRO: max_minis, max_micros = "NONE", si["maxc"]
+        else: max_minis, max_micros = si["maxc"], si["maxc"]
+    else:
+        max_minis, max_micros = "NONE", "NONE"
     a = {"A": cid, "B": "Manual", "D": si["type"], "E": si["start"], "F": si["dd"], "G": si.get("lock", "NONE"),
-         "H": si.get("touch", True), "I": si.get("dll", "NONE"), "J": si.get("maxc", "NONE"), "K": si["equity"]}
-    if "day_ref" in si: a["L"] = si["day_ref"]
-    if "risk" in si: a.update(M=si["risk"], N=si["ticks"], O=si["tv"])
+         "H": si.get("touch", True), "I": si.get("dll", "NONE"), "J": max_minis, "K": max_micros,
+         "L": inst, "M": si["equity"]}
+    if "day_ref" in si: a["N"] = si["day_ref"]
+    if "risk" in si: a.update(O=si["risk"], P=si["ticks"])
     return a
 
 def log_rows(cid, si):
@@ -33,68 +53,95 @@ def log_rows(cid, si):
 
 # ---- scenarios ----
 GOLDEN = []   # (cid, account, logs, fields)
+SKIPPED = []  # OLD single-cap rows whose tick is not ES/MES/NQ/MNQ; Python sheet_logic still checks them
 for cid, g in GMAP.items():
     if g["reproducible"] in ("yes", "partial") and sl.M[cid][2] is not None:
-        si = sl.M[cid][2]; GOLDEN.append((cid, acc_row(cid, si), log_rows(cid, si), g["checked_fields"]))
+        si = sl.M[cid][2]
+        if inst_for(si) is None:
+            SKIPPED.append(cid); continue
+        GOLDEN.append((cid, acc_row(cid, si), log_rows(cid, si), g["checked_fields"]))
 
-BASE = dict(type="static", start=50000, dd=2000, equity=49000, risk=300, ticks=16, tv=1.25)
-def S(cid, **kw): si = dict(BASE); si.update(kw); return acc_row(cid, si)
+BASE = dict(type="static", start=50000, dd=2000, equity=49000, risk=300, ticks=16, instrument="MES", max_minis="NONE", max_micros=50)
+def S(cid, **kw):
+    si = dict(BASE); si.update(kw)
+    if "maxc" in kw: si.pop("max_minis", None); si.pop("max_micros", None)
+    return acc_row(cid, si)
 STATUS = [  # (case id, account dict, logs, {column: expected})
- ("IV-36", S("IV-36", ticks=0), [], {"W": "OK", "AF": "INVALID", "AG": "INVALID"}),
- ("IV-38", {**S("IV-38"), "M": None}, [], {"W": "OK", "AF": "INCOMPLETE", "AG": "INCOMPLETE"}),
- ("IV-39", S("IV-39", type="eod_trailing", lock=-2500), [], {"W": "INVALID", "Y": "INVALID", "AG": "INVALID"}),
- ("IV-40", S("IV-40", lock=0), [], {"W": "INVALID", "Y": "INVALID"}),
- ("IV-41", S("IV-41", type="hybrid"), [], {"W": "INVALID", "Y": "INVALID"}),
- ("IV-43", S("IV-43", dll=1000), [], {"W": "INCOMPLETE", "AD": "INCOMPLETE", "AG": "INCOMPLETE"}),
- ("IV-44", {k: v for k, v in S("IV-44").items() if k != "D"}, [], {"W": "INCOMPLETE", "Y": "INCOMPLETE"}),
- ("IV-46", S("IV-46", maxc=2.9), [], {"W": "INVALID", "AG": "INVALID"}),
- ("IV-47", S("IV-47", ticks=0.5), [], {"W": "OK", "AG": "INVALID"}),
- ("IV-48", S("IV-48", touch="false"), [], {"W": "INVALID", "Y": "INVALID"}),
- ("X-INCOMPLETE-equity", {**S("X1"), "K": None}, [], {"W": "INCOMPLETE", "Y": "INCOMPLETE", "AD": "INCOMPLETE"}),
- ("X-INCOMPLETE-partial-preset", {"A": "X2", "B": "Apex Trader Funding | Intraday Trailing Evaluation | 50000 [P006]", "K": 50000}, [],
-     {"C": "partial", "W": "INCOMPLETE", "Y": "INCOMPLETE"}),
- ("X-INVALID-subcent-start", S("X3", start=50000.005), [], {"W": "INVALID"}),
+ ("IV-36", S("IV-36", ticks=0), [], {"AA": "OK", "AJ": "INVALID", "AK": "INVALID"}),
+ ("IV-38", {**S("IV-38"), "O": None}, [], {"AA": "OK", "AJ": "INCOMPLETE", "AK": "INCOMPLETE"}),
+ ("IV-39", S("IV-39", type="eod_trailing", lock=-2500), [], {"AA": "INVALID", "AC": "INVALID", "AK": "INVALID"}),
+ ("IV-40", S("IV-40", lock=0), [], {"AA": "INVALID", "AC": "INVALID"}),
+ ("IV-41", S("IV-41", type="hybrid"), [], {"AA": "INVALID", "AC": "INVALID"}),
+ ("IV-43", S("IV-43", dll=1000), [], {"AA": "INCOMPLETE", "AH": "INCOMPLETE", "AK": "INCOMPLETE"}),
+ ("IV-44", {k: v for k, v in S("IV-44").items() if k != "D"}, [], {"AA": "INCOMPLETE", "AC": "INCOMPLETE"}),
+ ("IV-46", S("IV-46", maxc=2.9), [], {"AA": "INVALID", "AK": "INVALID"}),
+ ("IV-47", S("IV-47", ticks=0.5), [], {"AA": "OK", "AK": "INVALID"}),
+ ("IV-48", S("IV-48", touch="false"), [], {"AA": "INVALID", "AC": "INVALID"}),
+ ("X-INCOMPLETE-equity", {**S("X1"), "M": None}, [], {"AA": "INCOMPLETE", "AC": "INCOMPLETE", "AH": "INCOMPLETE"}),
+ ("X-INCOMPLETE-partial-preset", {"A": "X2", "B": "Apex Trader Funding | Intraday Trailing Evaluation | 50000 [P006]", "M": 50000}, [],
+     {"C": "partial", "AA": "INCOMPLETE", "AC": "INCOMPLETE"}),
+ ("X-INVALID-subcent-start", S("X3", start=50000.005), [], {"AA": "INVALID"}),
  ("X-INVALID-dup-id", None, [], {}),  # filled below
  ("X-INVALID-log-high<low", S("X5"), [{"A": "X5", "B": datetime.date(2026, 10, 1), "C": 49500, "D": 49000, "E": 49200}],
-     {"W": "INVALID", "AG": "INVALID", "log:I": "INVALID"}),
+     {"AA": "INVALID", "AK": "INVALID", "log:I": "INVALID"}),
  ("X-INVALID-log-dup-date", S("X6"), [{"A": "X6", "B": datetime.date(2026, 10, 1), "C": 49500}, {"A": "X6", "B": datetime.date(2026, 10, 1), "C": 49600}],
-     {"W": "INVALID", "log:I": "INVALID"}),
+     {"AA": "INVALID", "log:I": "INVALID"}),
  ("X-BREACHED-via-log", S("X7", equity=49800), [{"A": "X7", "B": datetime.date(2026, 10, 1), "C": 49800, "D": 50100, "E": 47990}],
-     {"W": "OK", "AA": True, "AB": "BREACHED", "AD": "BREACHED", "AG": "BREACHED", "AM": "BREACHED", "log:I": "BREACHED", "Y": 48000}),
- ("X-BREACHED-touch-now", S("X8", equity=48000), [], {"AA": True, "AB": "BREACHED", "AG": "BREACHED"}),
- ("X-NOT-BREACHED-touch-false", S("X9", equity=48000, touch=False), [], {"AA": False, "AB": 0, "AG": 0}),
- ("X-OK-verified-preset", {"A": "X10", "B": "Topstep | Trading Combine | 50000 [P001]", "I": "NONE", "K": 50500, "M": 300, "N": 16, "O": 1.25}, [],
-     {"C": "verified", "W": "OK", "Y": 48000, "AD": 2500, "AG": 5, "AH": True}),
+     {"AA": "OK", "AE": True, "AF": "BREACHED", "AH": "BREACHED", "AK": "BREACHED", "AQ": "BREACHED", "log:I": "BREACHED", "AC": 48000}),
+ ("X-BREACHED-touch-now", S("X8", equity=48000), [], {"AE": True, "AF": "BREACHED", "AK": "BREACHED"}),
+ ("X-NOT-BREACHED-touch-false", S("X9", equity=48000, touch=False), [], {"AE": False, "AF": 0, "AK": 0}),
+ ("X-OK-verified-preset", {"A": "X10", "B": "Topstep | Trading Combine | 50000 [P001]", "I": "NONE", "L": "MES", "M": 50500, "O": 300, "P": 16}, [],
+     {"C": "verified", "AA": "OK", "Q": 1.25, "AC": 48000, "AH": 2500, "AK": 15, "AL": False, "Z": 50}),
 ]
 D1 = datetime.date(2026, 10, 1)
 STATUS += [
  # SPECTER repros
  ("P1 log INCOMPLETE -> account", S("P1", equity=49000), [{"A": "P1", "B": D1, "E": 47000}],
-     {"log:I": "INCOMPLETE", "W": "INCOMPLETE", "AD": "INCOMPLETE", "AG": "INCOMPLETE"}),
+     {"log:I": "INCOMPLETE", "AA": "INCOMPLETE", "AH": "INCOMPLETE", "AK": "INCOMPLETE"}),
  ("P2 orphan log row", [S("P2", equity=49000), S("P2b", equity=49500)], [{"A": "P2x", "B": D1, "C": 49000, "E": 47000}],
-     {"logid:P2x": "UNKNOWN_ACCOUNT", "W": "INCOMPLETE", "AG": "INCOMPLETE", "acc2:W": "INCOMPLETE", "acc2:AG": "INCOMPLETE",
+     {"logid:P2x": "UNKNOWN_ACCOUNT", "AA": "INCOMPLETE", "AK": "INCOMPLETE", "acc2:AA": "INCOMPLETE", "acc2:AK": "INCOMPLETE",
       "B14": "contains:unknown account ID"}, {"solo": True}),
- ("P2 orphan blank-ID row", S("P2c"), [{"B": D1, "C": 49000}], {"logid:None": "UNKNOWN_ACCOUNT", "W": "INCOMPLETE", "B14": "nonempty"}, {"solo": True}),
- ("P9 blank max contracts", {**S("P9", risk=100000, ticks=1, tv=1), "J": None}, [],
-     {"W": "INCOMPLETE", "AG": "INCOMPLETE", "AN": "contains:MAX CONTRACTS MISSING"}),
- # spec 8f4ff01 items
- ("M-1 explicit NONE cap", S("M1", risk=100000, ticks=1, tv=1, equity=49000), [], {"W": "OK", "AG": 1000}),
- ("L-1 tick 15.625 (ZN)", S("L1a", risk=500, ticks=8, tv=15.625), [], {"W": "OK", "AG": 4, "AM": 500}),
- ("L-1 tick 7 dp", S("L1b", tv=0.0000001), [], {"AG": "INVALID"}),
- ("L-2 equity 1e15", S("L2a", equity=1e15), [], {"W": "INVALID", "AG": "INVALID"}),
- ("L-2 equity 1e8 ok", S("L2b", start=100000000, dd=2000, equity=100000000), [], {"W": "OK"}),
- ("L-2 log close 1e9", S("L2c"), [{"A": "L2c", "B": D1, "C": 1000000000}], {"log:I": "INVALID", "W": "INVALID"}),
- ("L-3 none == NONE", S("L3a", type="eod_trailing", lock="none", maxc="None"), [], {"W": "OK", "Z": False}),
- ("L-3 log id case", S("L3B"), [{"A": "l3b", "B": D1, "C": 49500}], {"logid:l3b": "OK", "W": "OK"}),
- ("L-3 trailing space type", S("L3c", type="Static "), [], {"W": "INVALID"}),
- ("M-4 as-of missing", {"A": "M4a", "B": "Topstep | Trading Combine | 50000 [P001]", "I": "NONE", "K": 50500},
-     [], {"AN": "contains:AS-OF DATE MISSING"}),
- ("M-4 stale preset", {"A": "M4b", "B": "Topstep | Trading Combine | 50000 [P001]", "I": "NONE", "K": 50500},
-     [], {"AN": "contains:STALE PRESET", "W": "OK"}, {"asof": datetime.date(2026, 12, 1)}),
- ("M-4 fresh preset", {"A": "M4c", "B": "Topstep | Trading Combine | 50000 [P001]", "I": "NONE", "K": 50500},
-     [], {"AN": "lacks:STALE", "W": "OK"}, {"asof": datetime.date(2026, 11, 13)}),
+ ("P2 orphan blank-ID row", S("P2c"), [{"B": D1, "C": 49000}], {"logid:None": "UNKNOWN_ACCOUNT", "AA": "INCOMPLETE", "B14": "nonempty"}, {"solo": True}),
+ ("P9 blank max contracts", {**S("P9", instrument="MES", max_minis=5, risk=200, ticks=12), "K": None}, [],
+     {"AA": "INCOMPLETE", "AK": "INCOMPLETE", "AR": "contains:MAX CONTRACTS MISSING"}),
+ # OLD single max-contracts / manual tick cases, reclassified onto the active cap and the instrument lookup.
+ ("M-1 explicit NONE cap", S("M1", instrument="MNQ", max_minis="NONE", max_micros="NONE", risk=500, ticks=1, equity=49000), [],
+     {"AA": "OK", "AK": 1000, "Q": 0.5, "AL": False}),
+ ("L-1 OLD ZN tick not enterable", S("L1a", instrument="ZN", risk=500, ticks=8), [], {"AA": "INVALID", "AK": "INVALID"}),
+ ("L-1 tick 7 dp replaced by bad instrument", S("L1b", instrument="MES "), [], {"AA": "INVALID", "AK": "INVALID"}),
+ ("L-2 equity 1e15", S("L2a", equity=1e15), [], {"AA": "INVALID", "AK": "INVALID"}),
+ ("L-2 equity 1e8 ok", S("L2b", start=100000000, dd=2000, equity=100000000), [], {"AA": "OK"}),
+ ("L-2 log close 1e9", S("L2c"), [{"A": "L2c", "B": D1, "C": 1000000000}], {"log:I": "INVALID", "AA": "INVALID"}),
+ ("L-3 none == NONE", S("L3a", type="eod_trailing", lock="none", maxc="None"), [], {"AA": "OK", "AD": False}),
+ ("L-3 log id case", S("L3B"), [{"A": "l3b", "B": D1, "C": 49500}], {"logid:l3b": "OK", "AA": "OK"}),
+ ("L-3 trailing space type", S("L3c", type="Static "), [], {"AA": "INVALID"}),
+ ("M-4 as-of missing", {"A": "M4a", "B": "Topstep | Trading Combine | 50000 [P001]", "I": "NONE", "L": "ES", "M": 50500},
+     [], {"AR": "contains:AS-OF DATE MISSING"}),
+ ("M-4 stale preset", {"A": "M4b", "B": "Topstep | Trading Combine | 50000 [P001]", "I": "NONE", "L": "ES", "M": 50500},
+     [], {"AR": "contains:STALE PRESET", "AA": "OK"}, {"asof": datetime.date(2026, 12, 1)}),
+ ("M-4 fresh preset", {"A": "M4c", "B": "Topstep | Trading Combine | 50000 [P001]", "I": "NONE", "L": "ES", "M": 50500},
+     [], {"AR": "lacks:STALE", "AA": "OK"}, {"asof": datetime.date(2026, 11, 13)}),
 ]
-dup = S("DUP"); STATUS[[s[0] for s in STATUS].index("X-INVALID-dup-id")] = ("X-INVALID-dup-id", [dup, dict(dup)], [], {"W": "INVALID"})
+dup = S("DUP"); STATUS[[s[0] for s in STATUS].index("X-INVALID-dup-id")] = ("X-INVALID-dup-id", [dup, dict(dup)], [], {"AA": "INVALID"})
+STATUS += [
+ ("IA-05 missing micro cap", {**S("IA05", instrument="MES", max_minis=5, risk=200, ticks=12), "K": None}, [],
+     {"AA": "INCOMPLETE", "AK": "INCOMPLETE", "AR": "contains:MAX CONTRACTS MISSING", "Q": 1.25}),
+ ("IA-06 missing mini cap", {**S("IA06", instrument="ES", max_micros=50, risk=200, ticks=12), "J": None}, [],
+     {"AA": "INCOMPLETE", "AK": "INCOMPLETE", "AR": "contains:mini cap", "Q": 12.5}),
+ ("IA-07 zero micro cap", S("IA07", instrument="MES", max_minis="NONE", max_micros=0, risk=200, ticks=12), [],
+     {"AA": "OK", "AK": 0, "AL": True, "Q": 1.25, "AQ": 0}),
+ ("IA-08 NONE still daily-loss", S("IA08", instrument="MES", max_minis="NONE", max_micros="NONE", risk=10000, ticks=12, dll=1000, day_ref=49800, equity=49000), [],
+     {"AA": "OK", "AI": "daily_loss", "AH": 200, "AK": 13, "AL": False, "AM": True}),
+ ("IA-09 invalid instrument", S("IA09", instrument="ZZ"), [], {"AA": "INVALID", "AK": "INVALID", "Q": "INVALID"}),
+ ("IA-09b sheet rejects GC", S("IA09b", instrument="GC"), [], {"AA": "INVALID", "Q": "INVALID"}),
+ ("IA-10 blank instrument", {**S("IA10"), "L": None}, [],
+     {"AA": "INCOMPLETE", "AK": "INCOMPLETE", "AR": "contains:INSTRUMENT MISSING"}),
+ ("IA-BREACH size blocked", S("IAB", instrument="ES", max_minis=5, max_micros="NONE", equity=48000, risk=200, ticks=12), [],
+     {"AA": "OK", "AE": True, "AF": "BREACHED", "AK": "BREACHED", "AH": "BREACHED", "Q": 12.5}),
+ ("IA-TRAIL floor still moves", S("IAT", type="eod_trailing", lock=0, instrument="NQ", max_minis="NONE", max_micros="NONE", equity=51000),
+     [{"A": "IAT", "B": datetime.date(2026, 10, 1), "C": 54000}],
+     {"AA": "OK", "AC": 50000, "AD": True, "AK": 3, "Q": 5}),
+]
 
 def run_batches(items):
     """items: (name, account|[accounts], logs, expect[, opts]). opts: solo=True (own workbook, e.g. orphan rows poison
@@ -118,7 +165,7 @@ def run_batches(items):
         p = os.path.join(tmp, f"b{gi:02d}.xlsx")
         bt.build(p, [{k: v for k, v in a.items() if v is not None} for a in accs], logs, demo_asof=opts.get("asof"))
         wb = load_workbook(p); ws = wb["Accounts"]          # test-only probe: oracle 'equity' = CENT_DOWN(K)
-        for r in range(2, 12): ws[f"AP{r}"] = f"=IF(K{r}=\"\",\"\",INT(ROUND(K{r}*100,6))/100)"
+        for r in range(2, 12): ws[f"AT{r}"] = f"=IF(M{r}=\"\",\"\",INT(ROUND(M{r}*100,6))/100)"
         wb.save(p); files.append((p, chunk))
     out = os.path.join(tmp, "calc")
     subprocess.run(["soffice", "--headless", "--calc", "--convert-to", "xlsx", "--outdir", out] + [f for f, _ in files],
@@ -198,7 +245,9 @@ def main():
         grp = "repro" if cid.startswith(("P1", "P2", "P9")) else "fix" if cid[:3] in ("L-1", "L-2", "L-3", "M-4", "H-1", "H-2", "M-1") else "status"
         counts[grp] = [counts.get(grp, [0, 0])[0] + (not bad), counts.get(grp, [0, 0])[1] + 1]
         print(f"{cid:30} {grp:8} {'PASS' if not bad else 'FAIL ' + str(bad)}  ({len(want)} cells)")
-    print(f"\nGOLDEN yes/partial: {sum(1 for c in GOLDEN)} cases; STATUS scenarios: {len(STATUS)}")
+    print(f"\nGOLDEN yes/partial on sheet: {sum(1 for c in GOLDEN)} cases; STATUS scenarios: {len(STATUS)}")
+    print("RECLASSIFIED legacy single-cap, not sheet-enterable (arbitrary tick; Python sheet_logic still checks the invariant):",
+          ", ".join(SKIPPED) or "none")
     for g, (a, n) in counts.items(): print(f"GROUP {g:7} {a} / {n}")
     print(f"TOTAL PASS {passed} / {passed + failed}")
     if notes: print("note: breached cases require literal 'BREACHED' in drawdown_room (oracle 0.00):", ", ".join(notes))

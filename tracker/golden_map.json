@@ -1,9 +1,9 @@
 {
-  "spec": "tracker v0.1.0 / oracle 0.2.0",
+  "spec": "tracker v0.2.0 instrument caps / oracle 0.2.0",
   "generated_by": "tracker/sheet_logic.py",
   "counts": {
-    "yes": 25,
-    "partial": 13,
+    "yes": 33,
+    "partial": 19,
     "no": 11
   },
   "cases": [
@@ -314,7 +314,7 @@
     {
       "id": "FS-22",
       "reproducible": "yes",
-      "how": "equivalent: static S=50000 DD=2000 equity 49000 (binding room 1000); risk 300, stop ticks 16, tick value 1.25, max contracts 50",
+      "how": "OLD single-cap inner step: one max_contracts and a caller-supplied tick. NEW sheet derives the tick from ES/MES/NQ/MNQ and applies max_minis or max_micros, then this same formula. equivalent: static S=50000 DD=2000 equity 49000 (binding room 1000); risk 300, stop ticks 16, tick value 1.25, max contracts 50",
       "reason": "binding_room supplied via constructed account room",
       "checked_fields": [
         "contracts",
@@ -328,7 +328,7 @@
     {
       "id": "FS-23",
       "reproducible": "yes",
-      "how": "equivalent: static S=50000 DD=2000 equity 49000 (binding room 1000); risk 200, stop ticks 20, tick value 12.5, max contracts 5",
+      "how": "OLD single-cap inner step: one max_contracts and a caller-supplied tick. NEW sheet derives the tick from ES/MES/NQ/MNQ and applies max_minis or max_micros, then this same formula. equivalent: static S=50000 DD=2000 equity 49000 (binding room 1000); risk 200, stop ticks 20, tick value 12.5, max contracts 5",
       "reason": "binding_room supplied via constructed account room",
       "checked_fields": [
         "contracts",
@@ -342,7 +342,7 @@
     {
       "id": "FS-24",
       "reproducible": "yes",
-      "how": "equivalent: static S=50000 DD=2000 equity 50000 (binding room 2000); risk 1000, stop ticks 40, tick value 0.5, max contracts 30",
+      "how": "OLD single-cap inner step: one max_contracts and a caller-supplied tick. NEW sheet derives the tick from ES/MES/NQ/MNQ and applies max_minis or max_micros, then this same formula. equivalent: static S=50000 DD=2000 equity 50000 (binding room 2000); risk 1000, stop ticks 40, tick value 0.5, max contracts 30",
       "reason": "binding_room supplied via constructed account room",
       "checked_fields": [
         "contracts",
@@ -356,8 +356,8 @@
     {
       "id": "FS-25",
       "reproducible": "yes",
-      "how": "equivalent: static S=50000 DD=2000 equity 48350 (binding room 350); risk 999999, stop ticks 1, tick value 1, max contracts NONE",
-      "reason": "binding_room supplied via constructed account room",
+      "how": "OLD single-cap inner step: one max_contracts and a caller-supplied tick. NEW sheet derives the tick from ES/MES/NQ/MNQ and applies max_minis or max_micros, then this same formula. equivalent: static S=50000 DD=2000 equity 48350 (binding room 350); risk 999999, stop ticks 1, tick value 1, max contracts NONE",
+      "reason": "OLD tick 1 is not an ES/MES/NQ/MNQ tick, so the workbook cannot enter this row. The room-clamp invariant is still checked here and, on a real instrument, by IA-08.",
       "checked_fields": [
         "contracts",
         "capped",
@@ -370,7 +370,7 @@
     {
       "id": "FS-26",
       "reproducible": "yes",
-      "how": "equivalent: static S=50000 DD=2000 equity 48500 (binding room 500); risk 500, stop ticks 4, tick value 1.25, max contracts 0",
+      "how": "OLD single-cap inner step: one max_contracts and a caller-supplied tick. NEW sheet derives the tick from ES/MES/NQ/MNQ and applies max_minis or max_micros, then this same formula. equivalent: static S=50000 DD=2000 equity 48500 (binding room 500); risk 500, stop ticks 4, tick value 1.25, max contracts 0",
       "reason": "binding_room supplied via constructed account room",
       "checked_fields": [
         "contracts",
@@ -384,7 +384,7 @@
     {
       "id": "FS-27",
       "reproducible": "yes",
-      "how": "equivalent: static S=50000 DD=2000 equity 48500 (binding room 500); risk 0, stop ticks 4, tick value 1.25, max contracts NONE",
+      "how": "OLD single-cap inner step: one max_contracts and a caller-supplied tick. NEW sheet derives the tick from ES/MES/NQ/MNQ and applies max_minis or max_micros, then this same formula. equivalent: static S=50000 DD=2000 equity 48500 (binding room 500); risk 0, stop ticks 4, tick value 1.25, max contracts NONE",
       "reason": "binding_room supplied via constructed account room",
       "checked_fields": [
         "contracts",
@@ -398,8 +398,8 @@
     {
       "id": "FS-28",
       "reproducible": "partial",
-      "how": "equivalent: static S=50000 DD=2000 equity 48010 (binding room 10); risk 0.996, stop ticks 1, tick value 0.995, max contracts NONE",
-      "reason": "risk 0.996 is sub-cent: money validation would reject it; logic matches when allowed. effective_risk shown 0.99",
+      "how": "OLD single-cap inner step: one max_contracts and a caller-supplied tick. NEW sheet derives the tick from ES/MES/NQ/MNQ and applies max_minis or max_micros, then this same formula. equivalent: static S=50000 DD=2000 equity 48010 (binding room 10); risk 0.996, stop ticks 1, tick value 0.995, max contracts NONE",
+      "reason": "OLD sub-cent tick 0.995 is not an instrument tick. Money validation would reject the risk too. Inner invariant kept; the workbook does not accept this tick.",
       "checked_fields": [
         "contracts",
         "capped",
@@ -514,7 +514,7 @@
     {
       "id": "IV-46",
       "reproducible": "partial",
-      "how": "max contracts 2.9 -> 'INVALID' (integer >= 0 or NONE)",
+      "how": "OLD fractional max_contracts 2.9 -> INVALID. NEW: a fractional active cap (the mini cap on ES/NQ, the micro cap on MES/MNQ) is INVALID the same way",
       "reason": "sheet shows text status (INVALID/INCOMPLETE), not the oracle's error code/message; equivalence is categorical only (INVALID_INPUT/INVALID_RULE_CONFIGURATION -> INVALID, missing -> INCOMPLETE)"
     },
     {
@@ -522,6 +522,154 @@
       "reproducible": "partial",
       "how": "stop ticks 0.5 -> 'INVALID' (integer >= 1)",
       "reason": "sheet shows text status (INVALID/INCOMPLETE), not the oracle's error code/message; equivalence is categorical only (INVALID_INPUT/INVALID_RULE_CONFIGURATION -> INVALID, missing -> INCOMPLETE)"
+    },
+    {
+      "id": "IA-01",
+      "reproducible": "yes",
+      "how": "NEW instrument-aware: MES risk 200 ticks 12 max_minis 1 max_micros 50 room 10000",
+      "reason": "tick and active cap are derived; inner INT formula is the legacy one",
+      "checked_fields": [
+        "contracts",
+        "capped",
+        "effective_risk",
+        "risk_limited_by_room",
+        "actual_risk"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "IA-02",
+      "reproducible": "yes",
+      "how": "NEW instrument-aware: ES risk 200 ticks 12 max_minis 5 max_micros 1 room 10000",
+      "reason": "tick and active cap are derived; inner INT formula is the legacy one",
+      "checked_fields": [
+        "contracts",
+        "capped",
+        "effective_risk",
+        "risk_limited_by_room",
+        "actual_risk"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "IA-03",
+      "reproducible": "yes",
+      "how": "NEW instrument-aware: NQ risk 200 ticks 8 max_minis 10 max_micros NONE room 10000",
+      "reason": "tick and active cap are derived; inner INT formula is the legacy one",
+      "checked_fields": [
+        "contracts",
+        "capped",
+        "effective_risk",
+        "risk_limited_by_room",
+        "actual_risk"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "IA-04",
+      "reproducible": "yes",
+      "how": "NEW instrument-aware: MNQ risk 200 ticks 8 max_minis NONE max_micros 100 room 10000",
+      "reason": "tick and active cap are derived; inner INT formula is the legacy one",
+      "checked_fields": [
+        "contracts",
+        "capped",
+        "effective_risk",
+        "risk_limited_by_room",
+        "actual_risk"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "IA-05",
+      "reproducible": "partial",
+      "how": "MES missing max_micros -> INCOMPLETE. A mini cap does not satisfy a micro instrument.",
+      "reason": "NEW instrument-aware status. Sheet text is INCOMPLETE or INVALID; the oracle's error code is not copied onto the sheet."
+    },
+    {
+      "id": "IA-06",
+      "reproducible": "partial",
+      "how": "ES missing max_minis -> INCOMPLETE. A micro cap does not satisfy a mini instrument.",
+      "reason": "NEW instrument-aware status. Sheet text is INCOMPLETE or INVALID; the oracle's error code is not copied onto the sheet."
+    },
+    {
+      "id": "IA-07",
+      "reproducible": "yes",
+      "how": "NEW instrument-aware: MES risk 200 ticks 12 max_minis NONE max_micros 0 room 10000",
+      "reason": "tick and active cap are derived; inner INT formula is the legacy one",
+      "checked_fields": [
+        "contracts",
+        "capped",
+        "effective_risk",
+        "risk_limited_by_room",
+        "actual_risk"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "IA-08",
+      "reproducible": "yes",
+      "how": "NEW instrument-aware: MES risk 200 ticks 12 max_minis NONE max_micros NONE room 15",
+      "reason": "tick and active cap are derived; inner INT formula is the legacy one",
+      "checked_fields": [
+        "contracts",
+        "capped",
+        "effective_risk",
+        "risk_limited_by_room",
+        "actual_risk"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "IA-09",
+      "reproducible": "partial",
+      "how": "Instrument other than ES, MES, NQ, MNQ -> INVALID on the sheet.",
+      "reason": "NEW instrument-aware status. Sheet text is INCOMPLETE or INVALID; the oracle's error code is not copied onto the sheet."
+    },
+    {
+      "id": "IA-10",
+      "reproducible": "partial",
+      "how": "Blank instrument -> INCOMPLETE.",
+      "reason": "NEW instrument-aware status. Sheet text is INCOMPLETE or INVALID; the oracle's error code is not copied onto the sheet."
+    },
+    {
+      "id": "IA-11",
+      "reproducible": "partial",
+      "how": "Oracle rejects a tick_value that disagrees with the instrument. The sheet has no tick input, so a mismatch cannot be typed.",
+      "reason": "NEW instrument-aware status. Sheet text is INCOMPLETE or INVALID; the oracle's error code is not copied onto the sheet."
+    },
+    {
+      "id": "IA-12",
+      "reproducible": "partial",
+      "how": "Oracle accepts a tick_value equal to the instrument table. The sheet derives that value.",
+      "reason": "NEW instrument-aware status. Sheet text is INCOMPLETE or INVALID; the oracle's error code is not copied onto the sheet."
+    },
+    {
+      "id": "IA-13",
+      "reproducible": "yes",
+      "how": "NEW instrument-aware: MES risk 200 ticks 12 max_minis 1 max_micros 50 room 10000",
+      "reason": "tick and active cap are derived; inner INT formula is the legacy one",
+      "checked_fields": [
+        "contracts",
+        "capped",
+        "effective_risk",
+        "risk_limited_by_room",
+        "actual_risk"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "IA-14",
+      "reproducible": "yes",
+      "how": "NEW instrument-aware: ES risk 200 ticks 12 max_minis 5 max_micros 1 room 10000",
+      "reason": "tick and active cap are derived; inner INT formula is the legacy one",
+      "checked_fields": [
+        "contracts",
+        "capped",
+        "effective_risk",
+        "risk_limited_by_room",
+        "actual_risk"
+      ],
+      "sheet_logic_match": true
     },
     {
       "id": "IV-48",

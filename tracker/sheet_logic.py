@@ -47,7 +47,32 @@ def risk(a, dd_room):
     return {"binding_room": min(dd_room, dr), "daily_room": dr, "drawdown_room": dd_room,
             "binding": "daily_loss" if dr < dd_room else "drawdown"}
 
+# NEW instrument table. The workbook dropdown is the first four. The free calculator also
+# knows the other symbols; the class rule is the same (mini cap vs micro cap).
+TICK = {"ES": 12.5, "MES": 1.25, "NQ": 5.0, "MNQ": 0.5}
+MINI_SYMS = {"ES", "NQ"}
+MICRO_SYMS = {"MES", "MNQ"}
+
+def norm_inst(s):
+    return s.strip().upper() if isinstance(s, str) else ""
+
+def active_cap_of(a):
+    inst = norm_inst(a.get("instrument", ""))
+    if inst == "": return ""
+    if inst in MINI_SYMS: return a.get("max_minis", "")
+    if inst in MICRO_SYMS: return a.get("max_micros", "")
+    return "INVALID"
+
 def size(a, binding):
+    """Inner contract count. OLD: pass tv + maxc. NEW: pass instrument + max_minis + max_micros
+    and this resolves the tick and the active cap, then uses the same formula."""
+    if a.get("instrument"):
+        inst = norm_inst(a["instrument"])
+        if inst not in TICK: raise ValueError("invalid instrument " + inst)
+        cap = a.get("max_minis") if inst in MINI_SYMS else a.get("max_micros")
+        if cap == "" or cap is None: raise ValueError("missing cap")
+        m = "NONE" if isinstance(cap, str) and cap.strip().upper() == "NONE" else cap
+        a = {**a, "tv": TICK[inst], "maxc": m}
     m = a.get("maxc", "NONE"); eff = min(a["risk"], binding)
     raw = INT(ROUND(eff / (a["ticks"] * a["tv"]), 9))
     n = raw if m == "NONE" else min(raw, m)
@@ -97,12 +122,39 @@ M = {
 }
 def fs(cid, room, risk, ticks, tv, maxc="NONE", extra=None):
     eq = 48000 + room
-    M[cid] = (Y, f"equivalent: static S=50000 DD=2000 equity {eq} (binding room {room}); risk {risk}, stop ticks {ticks}, tick value {tv}, max contracts {maxc}",
+    note = ("OLD single-cap inner step: one max_contracts and a caller-supplied tick. "
+            "NEW sheet derives the tick from ES/MES/NQ/MNQ and applies max_minis or max_micros, then this same formula. ")
+    M[cid] = (Y, note + f"equivalent: static S=50000 DD=2000 equity {eq} (binding room {room}); risk {risk}, stop ticks {ticks}, tick value {tv}, max contracts {maxc}",
               ST(50000, 2000, eq, risk=risk, ticks=ticks, tv=tv, maxc=maxc), FSF, extra or "binding_room supplied via constructed account room")
 fs("FS-22", 1000, 300, 16, 1.25, 50); fs("FS-23", 1000, 200, 20, 12.50, 5); fs("FS-24", 2000, 1000, 40, 0.50, 30)
-fs("FS-25", 350, 999999, 1, 1); fs("FS-26", 500, 500, 4, 1.25, 0); fs("FS-27", 500, 0, 4, 1.25)
-fs("FS-28", 10, 0.996, 1, 0.995, extra="risk 0.996 is sub-cent: money validation would reject it; logic matches when allowed. effective_risk shown 0.99")
+fs("FS-25", 350, 999999, 1, 1, extra="OLD tick 1 is not an ES/MES/NQ/MNQ tick, so the workbook cannot enter this row. The room-clamp invariant is still checked here and, on a real instrument, by IA-08.")
+fs("FS-26", 500, 500, 4, 1.25, 0); fs("FS-27", 500, 0, 4, 1.25)
+fs("FS-28", 10, 0.996, 1, 0.995, extra="OLD sub-cent tick 0.995 is not an instrument tick. Money validation would reject the risk too. Inner invariant kept; the workbook does not accept this tick.")
 M["FS-28"] = (P,) + M["FS-28"][1:]
+
+def IA(cid, inst, risk, ticks, minis, micros, room=10000, rep=Y, fields=FSF, reason=None):
+    eq = 48000 + room
+    M[cid] = (rep, f"NEW instrument-aware: {inst} risk {risk} ticks {ticks} max_minis {minis} max_micros {micros} room {room}",
+              {"type": "static", "start": 50000, "dd": 2000, "equity": eq, "instrument": inst,
+               "max_minis": minis, "max_micros": micros, "risk": risk, "ticks": ticks},
+              fields, reason or "tick and active cap are derived; inner INT formula is the legacy one")
+IA("IA-01", "MES", 200, 12, 1, 50)
+IA("IA-02", "ES", 200, 12, 5, 1)
+IA("IA-03", "NQ", 200, 8, 10, "NONE")
+IA("IA-04", "MNQ", 200, 8, "NONE", 100)
+IA("IA-07", "MES", 200, 12, "NONE", 0)
+IA("IA-08", "MES", 200, 12, "NONE", "NONE", room=15)
+IA("IA-13", "MES", 200, 12, 1, 50)
+IA("IA-14", "ES", 200, 12, 5, 1)
+for cid, how in {
+    "IA-05": "MES missing max_micros -> INCOMPLETE. A mini cap does not satisfy a micro instrument.",
+    "IA-06": "ES missing max_minis -> INCOMPLETE. A micro cap does not satisfy a mini instrument.",
+    "IA-09": "Instrument other than ES, MES, NQ, MNQ -> INVALID on the sheet.",
+    "IA-10": "Blank instrument -> INCOMPLETE.",
+    "IA-11": "Oracle rejects a tick_value that disagrees with the instrument. The sheet has no tick input, so a mismatch cannot be typed.",
+    "IA-12": "Oracle accepts a tick_value equal to the instrument table. The sheet derives that value.",
+}.items():
+    M[cid] = (P, how, None, None, "NEW instrument-aware status. Sheet text is INCOMPLETE or INVALID; the oracle's error code is not copied onto the sheet.")
 for c in ["CS-29", "CS-30", "CS-31", "CS-32", "CS-33", "CS-34", "IV-35", "IV-37", "IV-45"]:
     M[c] = (N, "n/a", None, None, "crypto perp sizing (qty, step_size rounding, side) is out of tracker scope (futures-only product)")
 TXT = {
@@ -113,7 +165,7 @@ TXT = {
  "IV-41": "type restricted by dropdown; any other text -> 'INVALID'",
  "IV-43": "DLL set but Day Reference blank -> 'INCOMPLETE'",
  "IV-44": "type blank with Manual preset -> 'INCOMPLETE'",
- "IV-46": "max contracts 2.9 -> 'INVALID' (integer >= 0 or NONE)",
+ "IV-46": "OLD fractional max_contracts 2.9 -> INVALID. NEW: a fractional active cap (the mini cap on ES/NQ, the micro cap on MES/MNQ) is INVALID the same way",
  "IV-47": "stop ticks 0.5 -> 'INVALID' (integer >= 1)",
  "IV-48": "breach_on_touch dropdown TRUE/FALSE; text 'false' -> 'INVALID'",
 }
@@ -133,8 +185,8 @@ def build():
             ent["checked_fields"] = fields; ent["sheet_logic_match"] = not mism
             if mism: errs.append((cid, mism)); ent["mismatch"] = mism
         cases.append(ent)
-    assert len(cases) == 49 and set(M) == set(GOLD)
-    return {"spec": "tracker v0.1.0 / oracle 0.2.0", "generated_by": "tracker/sheet_logic.py",
+    assert len(cases) == len(GOLD) and set(M) == set(GOLD)
+    return {"spec": "tracker v0.2.0 instrument caps / oracle 0.2.0", "generated_by": "tracker/sheet_logic.py",
             "counts": {k: sum(c["reproducible"] == k for c in cases) for k in (Y, P, N)}, "cases": cases}, errs
 
 # --- status model (FORMULAS.md v0.1.1 §3.1, §3.3) and scenario checks for SPECTER-TRACKER-REVIEW fixes ---
@@ -155,12 +207,24 @@ def log_row_status(r, ids):
 
 def tick_ok(tv): return num(tv) and 0 < tv <= 100000 and ROUND(tv * 1e6, 3) == INT(ROUND(tv * 1e6, 3))
 
+def cap_bad(v):
+    if v == "" or v is None: return False
+    if isinstance(v, str) and eq_ci(v, "NONE"): return False
+    if num(v): return v < 0 or v != INT(v)
+    return True
+
 def w_status(a, accts, log):
-    """a: dict with effective fields P..V, K, L (strings for tokens)."""
+    """Account param check. Blank instrument or blank active cap -> INCOMPLETE.
+    ES/NQ require max_minis; MES/MNQ require max_micros. The other cap may be blank.
+    Explicit 0 is present. NONE is the only unrestricted contract cap."""
     if a.get("id", "") == "" and a.get("preset", "") == "": return ""
-    req = [a.get(k, "") for k in ("id", "preset", "type", "start", "dd", "lock", "touch", "dll", "maxc", "equity")]
-    if any(v == "" for v in req) or (not eq_ci(a["dll"], "NONE") and a.get("day_ref", "") == ""): return "INCOMPLETE"
-    lock_none = eq_ci(a["lock"], "NONE"); maxc_none = eq_ci(a["maxc"], "NONE"); dll_none = eq_ci(a["dll"], "NONE")
+    cap = active_cap_of(a)
+    inst = a.get("instrument", "")
+    req = [a.get(k, "") for k in ("id", "preset", "type", "start", "dd", "lock", "touch", "dll", "equity")]
+    if any(v == "" for v in req) or inst == "" or cap == "" or (not eq_ci(str(a.get("dll", "")), "NONE") and a.get("day_ref", "") == ""):
+        return "INCOMPLETE"
+    lock_none = eq_ci(a["lock"], "NONE"); dll_none = eq_ci(a["dll"], "NONE")
+    known = any(eq_ci(inst, s) for s in ("ES", "MES", "NQ", "MNQ"))
     inval = (sum(eq_ci(a["id"], b["id"]) for b in accts) > 1
              or not any(eq_ci(a["type"], t) for t in ("static", "eod_trailing", "intraday_trailing"))
              or not money_ok(a["start"]) or not money_ok(a["dd"])
@@ -170,7 +234,8 @@ def w_status(a, accts, log):
              or (num(a["lock"]) and abs(a["lock"]) > MAXM)
              or a["touch"] not in (True, False)
              or (not dll_none and not money_ok(a["dll"]))
-             or (False if maxc_none else (a["maxc"] < 0 or a["maxc"] != INT(a["maxc"]) if num(a["maxc"]) else True))  # guard 2
+             or cap_bad(a.get("max_minis", "")) or cap_bad(a.get("max_micros", ""))                     # guard 2
+             or not known
              or not money_ok(a["equity"])
              or (not dll_none and not money_ok(a["day_ref"])))
     if inval: return "INVALID"
@@ -185,7 +250,8 @@ def locked_z(a, peak):   # guard 3: no arithmetic on NONE
     return num(a["lock"]) and not eq_ci(a["type"], "static") and ROUND(peak - a["dd"] - (a["start"] + (a["lock"] if num(a["lock"]) else 0)), 6) >= 0
 
 def scenarios():
-    base = dict(id="P1", preset="Manual", type="static", start=50000, dd=2000, lock="NONE", touch=True, dll="NONE", maxc="NONE", equity=49000, day_ref="")
+    base = dict(id="P1", preset="Manual", type="static", start=50000, dd=2000, lock="NONE", touch=True, dll="NONE",
+                instrument="MES", max_minis="NONE", max_micros="NONE", equity=49000, day_ref="")
     A = lambda **k: {**base, **k}
     other = A(id="P2")
     T = []
@@ -199,15 +265,21 @@ def scenarios():
     t("H-2 orphan -> P2 INCOMPLETE", w_status(other, [A(), other], log2), "INCOMPLETE")
     t("H-2 blank ID with data", log_row_status({"acct": "", "eod": 49000}, ["P1"]), "UNKNOWN_ACCOUNT")
     t("H-2 empty row ignored", log_row_status({}, ["P1"]), "")
-    # M-1: blank cap -> INCOMPLETE; explicit NONE -> OK; numeric cap OK
-    t("M-1 blank cap", w_status(A(maxc=""), [A()], []), "INCOMPLETE")
-    t("M-1 NONE cap", w_status(A(maxc="NONE"), [A()], []), "OK")
-    t("M-1 numeric cap", w_status(A(maxc=5), [A()], []), "OK")
-    t("M-1 fractional cap", w_status(A(maxc=2.5), [A()], []), "INVALID")
+    # M-1 reclassified: the old single maxc field is now the active cap (micro on MES, mini on ES/NQ).
+    # Blank required cap -> INCOMPLETE. Explicit NONE -> OK. Explicit 0 stays present. Fractional -> INVALID.
+    t("M-1 blank active cap", w_status(A(max_micros=""), [A()], []), "INCOMPLETE")
+    t("M-1 NONE cap", w_status(A(max_micros="NONE"), [A()], []), "OK")
+    t("M-1 numeric cap", w_status(A(max_micros=5), [A()], []), "OK")
+    t("M-1 explicit zero", w_status(A(max_micros=0), [A()], []), "OK")
+    t("M-1 fractional cap", w_status(A(max_micros=2.5), [A()], []), "INVALID")
+    t("M-1 blank instrument", w_status(A(instrument=""), [A()], []), "INCOMPLETE")
+    t("M-1 invalid instrument", w_status(A(instrument="ZZ"), [A()], []), "INVALID")
+    t("M-1 ES missing mini", w_status(A(instrument="ES", max_minis="", max_micros=50), [A()], []), "INCOMPLETE")
+    t("M-1 ES blank micro ok", w_status(A(instrument="ES", max_minis=5, max_micros=""), [A()], []), "OK")
     # BUILDER guards: NONE lock does not error; lock below floor INVALID; Locked FALSE on NONE
     t("guard1 NONE lock eod ok", w_status(A(type="eod_trailing"), [A()], []), "OK")
     t("guard1 lock below floor", w_status(A(type="eod_trailing", lock=-2500), [A()], []), "INVALID")
-    t("guard2 text cap", w_status(A(maxc="five"), [A()], []), "INVALID")
+    t("guard2 text cap", w_status(A(max_micros="five"), [A()], []), "INVALID")
     t("guard3 Locked on NONE", locked_z(A(type="eod_trailing"), 60000), False)
     t("guard3 Locked numeric", locked_z(A(type="eod_trailing", lock=0), 52000), True)
     # L-1: fractional tick values
@@ -215,7 +287,13 @@ def scenarios():
     t("L-1 tick 3.125", tick_ok(3.125), True)
     t("L-1 tick 0.995", tick_ok(0.995), True)
     t("L-1 tick 7 dp", tick_ok(0.0000001), False)
-    t("L-1 sizing ZN", size({"risk": 500, "ticks": 8, "tv": 15.625, "maxc": "NONE"}, 1000)["contracts"], 4)
+    t("L-1 OLD inner ZN 15.625", size({"risk": 500, "ticks": 8, "tv": 15.625, "maxc": "NONE"}, 1000)["contracts"], 4)
+    t("IA-01 MES 13", size({"instrument": "MES", "risk": 200, "ticks": 12, "max_minis": 1, "max_micros": 50}, 10000)["contracts"], 13)
+    t("IA-02 ES 1", size({"instrument": "ES", "risk": 200, "ticks": 12, "max_minis": 5, "max_micros": 1}, 10000)["contracts"], 1)
+    t("IA-03 NQ 5", size({"instrument": "NQ", "risk": 200, "ticks": 8, "max_minis": 10, "max_micros": "NONE"}, 10000)["contracts"], 5)
+    t("IA-04 MNQ 50", size({"instrument": "MNQ", "risk": 200, "ticks": 8, "max_minis": "NONE", "max_micros": 100}, 10000)["contracts"], 50)
+    t("IA-07 zero", size({"instrument": "MES", "risk": 200, "ticks": 12, "max_minis": "NONE", "max_micros": 0}, 10000)["contracts"], 0)
+    t("IA-08 room still binds", size({"instrument": "MES", "risk": 200, "ticks": 12, "max_minis": "NONE", "max_micros": "NONE"}, 15)["contracts"], 1)
     # L-2: equity bound
     t("L-2 equity 1e15", w_status(A(equity=1e15), [A()], []), "INVALID")
     t("L-2 equity 0", w_status(A(equity=0), [A()], []), "INVALID")
@@ -224,7 +302,7 @@ def scenarios():
     # L-3: case-insensitive
     t("L-3 dup IDs ignoring case", w_status(A(id="p16"), [A(id="p16"), A(id="P16")], []), "INVALID")
     t("L-3 log p16 matches P16", log_row_status({"acct": "p16", "date": "d", "eod": 49000}, ["P16"]), "OK")
-    t("L-3 none == NONE", w_status(A(lock="none", maxc="None"), [A()], []), "OK")
+    t("L-3 none == NONE", w_status(A(lock="none", max_minis="none", max_micros="None"), [A()], []), "OK")
     t("L-3 trailing space invalid", w_status(A(type="Static "), [A()], []), "INVALID")
     return T
 

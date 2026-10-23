@@ -63,10 +63,23 @@ Examples: RR-18 daily binds 350.00; RR-19 drawdown binds; RR-20 no DLL; RR-21 ti
 
 ## 7. Futures sizing
 `risk_per_contract = stop_ticks × tick_value`; `contracts = floor(risk / risk_per_contract)`; result < 1 → 0;
-`contracts = min(contracts, max_contracts)` if given (`capped=true`).
-H-2: `binding_room` is a **required** input; `effective_risk = min(risk, binding_room)` is what is sized (`risk_limited_by_room` flags clamping). Fail closed.
-Inputs: risk >= 0, binding_room >= 0, stop_ticks integer > 0, tick_value > 0, max_contracts integer >= 0 (L-1; else `INVALID_INPUT`). Tick values: `data/contracts.json`.
-Mini/micro equivalence is per-firm (no generic 10:1 assumed). Examples: FS-22 MES 15; FS-23 ES → 0; FS-24 MNQ cap 30; FS-25 clamp to room 350; FS-26 max 0; FS-27 risk 0; FS-28 actual_risk 0.99 ≤ 0.996.
+then `contracts = min(contracts, active_cap)` when a cap is in force (`capped=true`).
+H-2: `binding_room` is a **required** input; `effective_risk = min(risk, binding_room)` is what is sized (`risk_limited_by_room` flags clamping). Fail closed. A contract cap of NONE does not turn this off. Drawdown room and daily-loss room still bind.
+
+**Instrument path** (input contains `instrument`). Tick value is derived, never typed:
+
+| instrument | class | tick value | cap used |
+|---|---|---|---|
+| ES | mini | 12.50 | `max_minis` |
+| NQ | mini | 5.00 | `max_minis` |
+| MES | micro | 1.25 | `max_micros` |
+| MNQ | micro | 0.50 | `max_micros` |
+
+The free calculator also prices GC/MGC, CL/MCL and 6E/M6E from `data/contracts.json` with the same class rule (symbol starts with M, or is in the micro set → micro cap). The paid workbook dropdown is only ES, MES, NQ, MNQ. A blank instrument or a missing cap for that class is an error (the sheet says INCOMPLETE). An unknown symbol is INVALID. An explicit 0 cap stays 0. `NONE` is the only way to remove the contract cap. If `tick_value` is also supplied it must equal the table or the call is `tick_value mismatch`.
+
+**Legacy single-cap path** (no `instrument` key). The caller supplies `tick_value` and one optional `max_contracts`. FS-22..FS-28 and the old futures invalid cases stay on this path so the floor-division, zero-cap, room-clamp and sub-cent invariants remain tested. They are not the workbook's input shape anymore: the sheet cannot accept an arbitrary tick.
+
+Examples on the new path: IA-01 MES $200 / 12 ticks / 50 micros → 13; IA-02 ES $200 / 12 / 5 minis → 1; IA-03 NQ $200 / 8 / 10 minis → 5; IA-04 MNQ $200 / 8 / 100 micros → 50. Legacy examples still hold: FS-22 15; FS-23 → 0; FS-24 cap 30; FS-25 clamp to room 350; FS-26 max 0; FS-27 risk 0; FS-28 actual_risk 0.99 ≤ 0.996.
 
 ## 8. Crypto perp sizing
 `qty = effective_risk / |entry - stop|`; entry == stop → `INVALID_INPUT`; entry, stop > 0. `step_size` is **required** (M-2);

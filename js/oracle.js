@@ -89,7 +89,17 @@
     return [Dec.min(risk, room), Dec.cmp(risk, room) > 0];
   }
 
-  function sizeFutures(inp) {
+  // OLD single-cap: caller supplies tick_value and one optional max_contracts.
+  // NEW (instrument present): tick is derived. ES/NQ use max_minis; micros use max_micros.
+  // NONE removes only the contract cap. Explicit 0 stays 0. A disagreeing tick_value is a mismatch.
+  var TICKS = { ES: "12.50", MES: "1.25", NQ: "5.00", MNQ: "0.50", GC: "10.00", MGC: "1.00", CL: "10.00", MCL: "1.00", "6E": "6.25", M6E: "1.25" };
+  var MICROS = { MES: 1, MNQ: 1, MGC: 1, MCL: 1, M6E: 1 };
+  function capToken(v, name) {
+    if (v === null || v === undefined) bad("missing " + name);
+    if (typeof v === "string" && v.trim().toLowerCase() === "none") return null;
+    return Dec.toNumber(Dec.toIntegral(dec(v, name, { nonneg: true, integer: true }), "DOWN"));
+  }
+  function sizeFuturesLegacy(inp) {
     var r = effRisk(inp), risk = r[0];
     var ticks = dec(need(inp, "stop_ticks"), "stop_ticks", { positive: true, integer: true });
     var tv = dec(need(inp, "tick_value"), "tick_value", { positive: true });
@@ -101,6 +111,35 @@
     if (capped) n = mc;
     return { effective_risk: rDown(risk), risk_limited_by_room: r[1], risk_per_contract: Dec.toFixed(per),
       contracts: n, capped: capped, actual_risk: rDown(Dec.mul(per, Dec.fromInt(n))) };
+  }
+  function sizeFuturesInstrument(inp) {
+    var raw = need(inp, "instrument");
+    if (typeof raw !== "string" || raw.trim() === "") bad("missing instrument");
+    var sym = raw.trim().toUpperCase();
+    if (!has(TICKS, sym)) bad("invalid instrument");
+    var tv = dec(TICKS[sym], "tick_value", { positive: true });
+    if (has(inp, "tick_value") && inp.tick_value !== null) {
+      var given = dec(inp.tick_value, "tick_value", { positive: true });
+      if (Dec.cmp(given, tv) !== 0) bad("tick_value mismatch");
+    }
+    var klass = MICROS[sym] ? "micro" : "mini";
+    var key = klass === "micro" ? "max_micros" : "max_minis";
+    var other = key === "max_micros" ? "max_minis" : "max_micros";
+    if (has(inp, other) && inp[other] !== null) capToken(inp[other], other);
+    if (!has(inp, key)) bad("missing " + key);
+    var cap = capToken(inp[key], key);
+    var legacy = { risk: need(inp, "risk"), binding_room: need(inp, "binding_room"), stop_ticks: need(inp, "stop_ticks"), tick_value: TICKS[sym] };
+    if (cap !== null) legacy.max_contracts = String(cap);
+    var out = sizeFuturesLegacy(legacy);
+    out.instrument = sym;
+    out.tick_value = TICKS[sym];
+    out.cap_class = klass;
+    out.active_cap = cap === null ? "NONE" : cap;
+    return out;
+  }
+  function sizeFutures(inp) {
+    if (isDict(inp) && has(inp, "instrument")) return sizeFuturesInstrument(inp);
+    return sizeFuturesLegacy(inp);
   }
 
   function sizeCrypto(inp) {
@@ -130,6 +169,6 @@
       return { ok: false, error: "INVALID_INPUT", message: "malformed input: " + ((e && e.name) || "Error") };
     }
   }
-  var api = { evaluate: evaluate, SPEC_VERSION: "0.2.0" };
+  var api = { evaluate: evaluate, SPEC_VERSION: "0.2.0", TICKS: TICKS, MICROS: MICROS };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.Oracle = api;
 })(this);

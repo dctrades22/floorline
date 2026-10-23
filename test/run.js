@@ -18,7 +18,15 @@ for (const c of cases) {
   else { fail++; console.log("MISMATCH", c.id, JSON.stringify(got), JSON.stringify(c.expected)); }
 }
 console.log(`GOLDEN ${pass === cases.length ? "PASS" : "FAIL"} ${pass}/${cases.length}`);
-if (cases.length !== 49) { fail++; console.log("expected 49 golden cases"); }
+if (cases.length !== 63) { fail++; console.log("expected 63 golden cases, got " + cases.length); }
+const required = { "IA-01": 13, "IA-02": 1, "IA-03": 5, "IA-04": 50 };
+for (const id of Object.keys(required)) {
+  const c = cases.find(x => x.id === id);
+  const got = c && Oracle.evaluate("futures", c.input);
+  if (!c || !got || got.contracts !== required[id]) {
+    fail++; console.log("REQUIRED FAIL", id, got && got.contracts);
+  } else console.log(`REQUIRED ${id} PASS contracts=${got.contracts} tick=${got.tick_value} class=${got.cap_class} cap=${got.active_cap}`);
+}
 
 const presets = read("data/presets.json");
 const errs = validate(presets, read("data/presets.schema.json"));
@@ -33,7 +41,9 @@ if (be.length < 2) { fail++; console.log("VALIDATOR SELF-TEST FAIL"); } else con
 
 const contracts = read("data/contracts.json").contracts;
 const badC = contracts.filter(c => !/^[0-9]+(\.[0-9]+)?$/.test(c.tick_value_usd) || !c.source_url || !c.status);
-console.log(`CONTRACTS ${badC.length ? "FAIL" : "PASS"} ${contracts.length}`); fail += badC.length;
+const drift = contracts.filter(c => Oracle.TICKS[c.symbol] !== c.tick_value_usd);
+drift.forEach(c => console.log("TICK DRIFT", c.symbol, Oracle.TICKS[c.symbol], c.tick_value_usd));
+console.log(`CONTRACTS ${badC.length || drift.length ? "FAIL" : "PASS"} ${contracts.length}`); fail += badC.length + drift.length;
 
 const { render } = require("../tools/build-data.js");
 const fresh = render() === fs.readFileSync(path.join(ROOT, "js/data.js"), "utf8");

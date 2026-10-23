@@ -167,19 +167,26 @@
     return v("dll");
   }
 
-  // Instrument cap: per-firm, no generic 10:1. Fail closed: if only a generic count is stated, apply it to every instrument.
+  // Instrument cap: ES/NQ and other minis use max minis; MES/MNQ and other micros use max micros.
+  // A generic contract count, and only that, applies to every instrument. Blank is incomplete.
+  // NONE is the only unrestricted contract cap. 0 stays 0. Risk, drawdown and daily loss stay active.
   var capInfo = "";
+  function capClass(sym) { return MICRO[sym] ? "micro" : "mini"; }
   function deriveCap() {
     var p = state.preset, sym = v("inst"); capInfo = "";
-    if (!p || state.custom || p.status === "custom_only") return;
+    if (sym === "CRYPTO") { field("cap").classList.remove("flag"); return; }
+    if (!p || state.custom || p.status === "custom_only") {
+      capInfo = v("cap") === "" ? "enter a number, 0, or NONE" : "";
+      field("cap").classList.toggle("flag", v("cap") === "");
+      return;
+    }
     var m = p.max_contracts, cap = null;
-    if (sym === "CRYPTO") { cap = null; }
-    else if (MICRO[sym] && m.micros) { cap = m.micros; capInfo = "firm cap: " + m.micros + " micros"; }
-    else if (!MICRO[sym] && m.minis) { cap = m.minis; capInfo = "firm cap: " + m.minis + " minis"; }
-    else if (m.contracts) { cap = m.contracts; capInfo = "firm cap: " + m.contracts + " contracts" + (MICRO[sym] ? " (micro counting not stated; applied as-is)" : ""); }
-    else capInfo = "firm contract cap not stated";
-    $("cap").value = cap || "";
-    field("cap").classList.toggle("flag", !cap && sym !== "CRYPTO");
+    if (MICRO[sym] && m.micros) { cap = m.micros; capInfo = "firm micro cap " + m.micros; }
+    else if (!MICRO[sym] && m.minis) { cap = m.minis; capInfo = "firm mini cap " + m.minis; }
+    else if (!m.minis && !m.micros && m.contracts) { cap = m.contracts; capInfo = "firm cap " + m.contracts + " (generic count, this instrument)"; }
+    else capInfo = "firm " + capClass(sym) + " cap not stated";
+    $("cap").value = cap == null ? "" : String(cap);
+    field("cap").classList.toggle("flag", cap == null);
   }
 
   function toCustom() {
@@ -229,9 +236,13 @@
     if (!err) {
       if (crypto) {
         r3 = Oracle.evaluate("crypto", { risk: v("risk") || "0", binding_room: r2.binding_room, entry: v("entry"), stop: v("stopPx"), step_size: v("step") });
+      } else if (!ci) {
+        err = { error: "INVALID", message: "Unknown instrument." };
+      } else if (v("cap") === "") {
+        err = { error: "INCOMPLETE", message: "Enter the max contracts for this instrument, or NONE for no contract cap. 0 means zero contracts. Risk, drawdown and the daily loss limit still apply." };
       } else {
-        var base = { risk: v("risk") || "0", binding_room: r2.binding_room, tick_value: ci.tick_value_usd };
-        if (v("cap") !== "") base.max_contracts = v("cap");
+        var base = { risk: v("risk") || "0", binding_room: r2.binding_room, instrument: sym };
+        base[MICRO[sym] ? "max_micros" : "max_minis"] = /^none$/i.test(v("cap")) ? "NONE" : v("cap");
         r3 = Oracle.evaluate("futures", Object.assign({ stop_ticks: v("ticks") }, base));
         var t0 = parseInt(v("ticks"), 10) || 8;
         var stops = [Math.max(1, Math.round(t0 / 2)), t0, t0 * 2, t0 * 3, t0 * 4].filter(function (x, i, a) { return a.indexOf(x) === i; });
