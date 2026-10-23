@@ -28,7 +28,7 @@ def build_epoch():
     raw = os.environ.get("SOURCE_DATE_EPOCH")
     if not raw:
         return BUILD_EPOCH
-        return datetime.datetime.fromtimestamp(int(raw), datetime.timezone.utc).replace(tzinfo=None)
+    return datetime.datetime.fromtimestamp(int(raw), datetime.timezone.utc).replace(tzinfo=None)
 
 def freeze_xlsx(path, epoch=None):
     """Rewrite zip entry times and core.xml created/modified to a fixed UTC instant."""
