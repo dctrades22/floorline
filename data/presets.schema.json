@@ -182,6 +182,7 @@
             "basis",
             "reset",
             "enforcement",
+            "boundary",
             "optional"
           ],
           "properties": {
@@ -235,6 +236,17 @@
               "enum": [
                 "hard",
                 "soft",
+                null
+              ]
+            },
+            "boundary": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "reach",
+                "exceed",
                 null
               ]
             },

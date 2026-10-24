@@ -157,6 +157,16 @@
     }
     return v("ddAmt");
   }
+  function dllEnforcement() {
+    var p = state.preset, dl = p && !state.custom ? p.daily_loss : null;
+    var e = dl && dl.enforcement;
+    return e === "hard" || e === "soft" ? e : null;
+  }
+  function dllBoundary() {
+    var p = state.preset, dl = p && !state.custom ? p.daily_loss : null;
+    var b = dl && dl.boundary;
+    return b === "reach" || b === "exceed" ? b : null;
+  }
   function dllAmount() {
     var p = state.preset, dl = p && !state.custom ? p.daily_loss : null;
     if (dl && (dl.kind === "pct" || dl.kind === "pct_of_start" || dl.kind === "pct_choice")) {
@@ -167,19 +177,26 @@
     return v("dll");
   }
 
-  // Instrument cap: per-firm, no generic 10:1. Fail closed: if only a generic count is stated, apply it to every instrument.
+  // Instrument cap: ES/NQ and other minis use max minis; MES/MNQ and other micros use max micros.
+  // A generic contract count, and only that, applies to every instrument. Blank is incomplete.
+  // NONE is the only unrestricted contract cap. 0 stays 0. Risk, drawdown and daily loss stay active.
   var capInfo = "";
+  function capClass(sym) { return MICRO[sym] ? "micro" : "mini"; }
   function deriveCap() {
     var p = state.preset, sym = v("inst"); capInfo = "";
-    if (!p || state.custom || p.status === "custom_only") return;
+    if (sym === "CRYPTO") { field("cap").classList.remove("flag"); return; }
+    if (!p || state.custom || p.status === "custom_only") {
+      capInfo = v("cap") === "" ? "enter a number, 0, or NONE" : "";
+      field("cap").classList.toggle("flag", v("cap") === "");
+      return;
+    }
     var m = p.max_contracts, cap = null;
-    if (sym === "CRYPTO") { cap = null; }
-    else if (MICRO[sym] && m.micros) { cap = m.micros; capInfo = "firm cap: " + m.micros + " micros"; }
-    else if (!MICRO[sym] && m.minis) { cap = m.minis; capInfo = "firm cap: " + m.minis + " minis"; }
-    else if (m.contracts) { cap = m.contracts; capInfo = "firm cap: " + m.contracts + " contracts" + (MICRO[sym] ? " (micro counting not stated; applied as-is)" : ""); }
-    else capInfo = "firm contract cap not stated";
-    $("cap").value = cap || "";
-    field("cap").classList.toggle("flag", !cap && sym !== "CRYPTO");
+    if (MICRO[sym] && m.micros) { cap = m.micros; capInfo = "firm micro cap " + m.micros; }
+    else if (!MICRO[sym] && m.minis) { cap = m.minis; capInfo = "firm mini cap " + m.minis; }
+    else if (!m.minis && !m.micros && m.contracts) { cap = m.contracts; capInfo = "firm cap " + m.contracts + " (generic count, this instrument)"; }
+    else capInfo = "firm " + capClass(sym) + " cap not stated";
+    $("cap").value = cap == null ? "" : String(cap);
+    field("cap").classList.toggle("flag", cap == null);
   }
 
   function toCustom() {
@@ -206,9 +223,11 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-fut]"), function (e) { e.hidden = crypto; });
     field("cap").hidden = crypto;
     var ci = C.filter(function (c) { return c.symbol === sym; })[0];
+    var spec = !ci ? "" : ci.status === "flagged" ? "flagged" : ci.status === "verified" ? "verified on the CME rulebook" : "verified indirectly";
     $("instNote").innerHTML = ci ? esc(ci.symbol) + ": tick " + esc(ci.tick_size) + " = $" + esc(ci.tick_value_usd) +
-      ' · <span class="ind">' + (ci.status === "flagged" ? "flagged: " : "") + 'verified indirectly</span> (CME page bot-blocked; read from an index copy of the <a href="' + esc(ci.source_url) +
-      '" target="_blank" rel="noopener noreferrer">cited page</a>, ' + esc(ci.checked_date) + "). Confirm on cmegroup.com." + (capInfo ? " · " + esc(capInfo) : "")
+      ' · <span class="ind">' + spec + '</span> (<a href="' + esc(ci.source_url) +
+      '" target="_blank" rel="noopener noreferrer">source</a>, ' + esc(ci.checked_date) + ")." +
+      (ci.status === "verified" ? "" : " Confirm on cmegroup.com.") + (capInfo ? " · " + esc(capInfo) : "")
       : "Crypto perp: quantity floored to your exchange's step. Fees, slippage, leverage and margin not modeled.";
 
     var err = null, out = {};
@@ -223,15 +242,23 @@
     var r2 = null, r3 = null, quick = [];
     if (!err) {
       var rr = { drawdown_room: r1.drawdown_room };
-      if (dllS) { rr.daily_loss_limit = dllS; rr.day_pnl = v("pnl") || "0"; }
+      if (dllS) {
+        rr.daily_loss_limit = dllS; rr.day_pnl = v("pnl") || "0";
+        var enf = dllEnforcement(); if (enf) rr.dll_enforcement = enf;
+        var boundary = dllBoundary(); if (boundary) rr.dll_boundary = boundary;
+      }
       r2 = Oracle.evaluate("risk_room", rr); if (!r2.ok) err = r2;
     }
     if (!err) {
       if (crypto) {
         r3 = Oracle.evaluate("crypto", { risk: v("risk") || "0", binding_room: r2.binding_room, entry: v("entry"), stop: v("stopPx"), step_size: v("step") });
+      } else if (!ci) {
+        err = { error: "INVALID", message: "Unknown instrument." };
+      } else if (v("cap") === "") {
+        err = { error: "INCOMPLETE", message: "Enter the max contracts for this instrument, or NONE for no contract cap. 0 means zero contracts. Risk, drawdown and the daily loss limit still apply." };
       } else {
-        var base = { risk: v("risk") || "0", binding_room: r2.binding_room, tick_value: ci.tick_value_usd };
-        if (v("cap") !== "") base.max_contracts = v("cap");
+        var base = { risk: v("risk") || "0", binding_room: r2.binding_room, instrument: sym };
+        base[MICRO[sym] ? "max_micros" : "max_minis"] = /^none$/i.test(v("cap")) ? "NONE" : v("cap");
         r3 = Oracle.evaluate("futures", Object.assign({ stop_ticks: v("ticks") }, base));
         var t0 = parseInt(v("ticks"), 10) || 8;
         var stops = [Math.max(1, Math.round(t0 / 2)), t0, t0 * 2, t0 * 3, t0 * 4].filter(function (x, i, a) { return a.indexOf(x) === i; });
@@ -271,19 +298,38 @@
       else if (v("lockOff") !== "") { lb.textContent = "TRAILING · locks at " + money(Dec.toFixed(Dec.add(D(v("start")), D(v("lockOff"))))); lb.className = "pill"; }
       else { lb.textContent = "TRAILING · no lock"; lb.className = "pill"; }
     } else { $("floor").textContent = "—"; shown.floor = null; $("lockBadge").textContent = ""; $("lockBadge").className = "pill"; }
+    // Incomplete or invalid inputs outrank a floor hit and every daily status.
+    var block = err ? null : (r1 && r1.ok ? (function () {
+      var word = Oracle.accountStatus(!!r1.breached, r2 && r2.ok ? r2.daily_status : null);
+      return word === "OK" ? null : word;
+    })() : null);
+    var dllUnc = !!(dllS && !dllEnforcement());
+    var bdUnc = !!(dllS && !dllBoundary());
     if (r2 && r2.ok) {
       $("ddRoom").textContent = money(r2.drawdown_room);
       $("dRoom").textContent = r2.daily_room == null ? (field("dll").classList.contains("flag") ? "not entered" : "no DLL") : money(r2.daily_room);
       tween($("bRoom"), r2.binding_room, "broom");
       $("bindBy").textContent = r2.binding === "daily_loss" ? "daily loss" : "drawdown";
       var ratio = parseFloat(r2.binding_room) / parseFloat(v("ddAmt") || "1");
-      level = r1.breached || ratio <= 0.25 ? "red" : ratio <= 0.5 ? "amber" : "green";
+      level = r1.breached || block || ratio <= 0.25 ? "red" : ratio <= 0.5 ? "amber" : "green";
     } else { ["ddRoom", "dRoom", "bRoom"].forEach(function (i) { $(i).textContent = "—"; }); $("bindBy").textContent = ""; shown.broom = null; }
     out.setAttribute("data-level", err && err.error !== "INCOMPLETE" ? "red" : level);
 
-    // size
+    // size. Floor BREACHED and any daily block replace the contract count. A numeric 0 is only a size.
     var flags = [];
-    if (r3 && r3.ok) {
+    $("contracts").classList.remove("statusWord");
+    if (block) {
+      $("sizeLbl").textContent = crypto ? "Max quantity" : (ci ? "Max contracts · " + ci.symbol : "Max contracts");
+      $("contracts").textContent = block;
+      $("contracts").classList.add("statusWord");
+      $("sizeDetail").textContent = "max contracts 0";
+      if (r1 && r1.breached) flags.push(["BREACHED", "drawdown floor hit"]);
+      else if (block === "BREACHED") flags.push(["BREACHED", "this confirmed hard rule counts the daily limit as a breach"]);
+      else if (block === "DAILY LIMIT REACHED") flags.push(["DAILY LIMIT REACHED", "no daily loss room left. Confirmed soft does not breach at exact zero. Confirmed hard breaches at exact zero only when the boundary is reach."]);
+      else if (block === "DAILY LIMIT EXCEEDED") flags.push(["DAILY LIMIT EXCEEDED", "over the daily loss limit; this confirmed soft rule does not call it a breach"]);
+      else if (block === "RULE CONFIRMATION REQUIRED") flags.push(["RULE CONFIRMATION REQUIRED", "daily room is exactly zero or below zero, and enforcement or the reach/exceed boundary is not confirmed. Max contracts 0. Not a safe clearance."]);
+      else flags.push([block, "trading blocked"]);
+    } else if (r3 && r3.ok) {
       if (crypto) {
         $("sizeLbl").textContent = "Max quantity · " + r3.side; $("contracts").textContent = r3.qty;
         $("sizeDetail").innerHTML = "risk used <b>" + money(r3.actual_risk) + "</b> of " + money(r3.effective_risk);
@@ -297,18 +343,49 @@
       $("contracts").textContent = err && err.error !== "INCOMPLETE" ? "0" : r3 && !r3.ok ? "0" : "—";
       $("sizeDetail").textContent = r3 && !r3.ok ? r3.message : "";
     }
-    if (r1 && r1.ok && r1.breached) flags.unshift(["BREACHED", "account is past the floor"]);
+    if (dllUnc) flags.push(["DLL RULE UNCONFIRMED", "A daily loss limit is on, but hard or soft is not from a verified preset or a typed confirmation. Do not read a blank rule as soft. Sizing is unchanged while daily room is above zero."]);
+    if (bdUnc) flags.push(["DLL BOUNDARY UNCONFIRMED", "A daily loss limit is on, but reach or exceed is not from a verified preset. Exact zero is not a safe clearance. Sizing is unchanged while daily room is above zero."]);
     $("flags").innerHTML = flags.map(function (f) { return '<span class="flagchip"><b>' + f[0] + "</b> " + esc(f[1]) + "</span>"; }).join("");
+    markUnconfirmed(dllUnc, bdUnc);
 
     var tb = $("quick").querySelector("tbody");
     $("quick").hidden = crypto || !quick.length;
     $("quickCap").textContent = ci ? ci.symbol + " contracts at your risk, by stop" : "";
     tb.innerHTML = quick.map(function (q) {
       var r = q[1], cur = String(q[0]) === v("ticks");
-      return "<tr" + (cur ? ' class="cur"' : "") + "><td>" + q[0] + " t</td><td>" + (r.ok ? money(r.risk_per_contract) : "—") + "</td><td>" + (r.ok ? r.contracts + (r.capped ? "<sup>cap</sup>" : "") : "0") + "</td><td>" + (r.ok ? money(r.actual_risk) : "—") + "</td></tr>";
+      var n = block ? esc(block) : (r.ok ? r.contracts + (r.capped ? "<sup>cap</sup>" : "") : "0");
+      return "<tr" + (cur ? ' class="cur"' : "") + "><td>" + q[0] + " t</td><td>" + (!block && r.ok ? money(r.risk_per_contract) : "—") + "</td><td>" + n + "</td><td>" + (!block && r.ok ? money(r.actual_risk) : "—") + "</td></tr>";
     }).join("");
 
     gauge(r1, r2, level);
+  }
+
+  function markUnconfirmed(ruleOn, boundaryOn) {
+    var meta = $("presetMeta");
+    if (!meta) return;
+    Array.prototype.forEach.call(meta.querySelectorAll(".dll-unconfirmed"), function (note) { note.remove(); });
+    var b = meta.querySelector(".badge");
+    if (b && b.getAttribute("data-base")) {
+      b.className = b.getAttribute("data-base-class");
+      b.textContent = b.getAttribute("data-base");
+    }
+    if ((!ruleOn && !boundaryOn) || !b) return;
+    if (!b.getAttribute("data-base")) {
+      b.setAttribute("data-base", b.textContent);
+      b.setAttribute("data-base-class", b.className);
+    }
+    if ((" " + b.getAttribute("data-base-class") + " ").indexOf(" verified ") >= 0) {
+      b.className = "badge partial";
+      b.textContent = "not fully verified";
+    }
+    function chip(text) {
+      var span = document.createElement("span");
+      span.className = "badge partial dll-unconfirmed";
+      span.textContent = text;
+      meta.appendChild(span);
+    }
+    if (ruleOn) chip("DLL RULE UNCONFIRMED");
+    if (boundaryOn) chip("DLL BOUNDARY UNCONFIRMED");
   }
 
   function gauge(r1, r2, level) {

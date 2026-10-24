@@ -537,6 +537,9 @@
         "binding": "daily_loss",
         "binding_room": "350.00",
         "daily_room": "350.00",
+        "daily_status": "OK",
+        "dll_boundary": "unconfirmed",
+        "dll_rule": "unconfirmed",
         "drawdown_room": "1800.00",
         "ok": true
       },
@@ -554,6 +557,9 @@
         "binding": "drawdown",
         "binding_room": "400.00",
         "daily_room": "1000.00",
+        "daily_status": "OK",
+        "dll_boundary": "unconfirmed",
+        "dll_rule": "unconfirmed",
         "drawdown_room": "400.00",
         "ok": true
       },
@@ -571,6 +577,9 @@
         "binding": "drawdown",
         "binding_room": "1234.56",
         "daily_room": null,
+        "daily_status": null,
+        "dll_boundary": null,
+        "dll_rule": null,
         "drawdown_room": "1234.56",
         "ok": true
       },
@@ -586,6 +595,9 @@
         "binding": "drawdown",
         "binding_room": "500.00",
         "daily_room": "500.00",
+        "daily_status": "OK",
+        "dll_boundary": "unconfirmed",
+        "dll_rule": "unconfirmed",
         "drawdown_room": "500.00",
         "ok": true
       },
@@ -598,7 +610,7 @@
       "kind": "risk_room"
     },
     {
-      "description": "futures MES basic",
+      "description": "OLD single-cap (kept): MES-equivalent tick 1.25 and one max_contracts 50. NEW path derives the tick from the instrument and picks max_minis or max_micros. Inner floor-division invariant unchanged.",
       "expected": {
         "actual_risk": "300.00",
         "capped": false,
@@ -619,7 +631,7 @@
       "kind": "futures"
     },
     {
-      "description": "futures ES: below one contract -> 0",
+      "description": "OLD single-cap (kept): ES-equivalent tick 12.50 and one max_contracts 5, below one contract -> 0. NEW path derives tick 12.50 from ES.",
       "expected": {
         "actual_risk": "0.00",
         "capped": false,
@@ -640,7 +652,7 @@
       "kind": "futures"
     },
     {
-      "description": "futures MNQ capped by max contracts",
+      "description": "OLD single-cap (kept): MNQ-equivalent tick 0.50 and one max_contracts 30. NEW path uses max_micros for MNQ.",
       "expected": {
         "actual_risk": "600.00",
         "capped": true,
@@ -661,7 +673,7 @@
       "kind": "futures"
     },
     {
-      "description": "H-2: risk above binding room is clamped",
+      "description": "OLD single-cap (kept): H-2 risk above binding room is clamped. Arbitrary tick 1 is not an instrument tick; the sheet no longer accepts it. Room clamp stays in force on the new path.",
       "expected": {
         "actual_risk": "350.00",
         "capped": false,
@@ -681,7 +693,7 @@
       "kind": "futures"
     },
     {
-      "description": "max_contracts 0 -> 0",
+      "description": "OLD single-cap (kept): max_contracts 0 -> 0. NEW path: an explicit 0 cap stays 0.",
       "expected": {
         "actual_risk": "0.00",
         "capped": true,
@@ -702,7 +714,7 @@
       "kind": "futures"
     },
     {
-      "description": "risk 0 -> 0",
+      "description": "OLD single-cap (kept): risk 0 -> 0 with no max_contracts. NEW path: NONE removes only the contract cap; risk 0 is still 0.",
       "expected": {
         "actual_risk": "0.00",
         "capped": false,
@@ -722,7 +734,7 @@
       "kind": "futures"
     },
     {
-      "description": "M-7: actual_risk never above risk",
+      "description": "OLD single-cap (kept): M-7 actual_risk never above risk. Sub-cent tick 0.995 is not an instrument tick.",
       "expected": {
         "actual_risk": "0.99",
         "capped": false,
@@ -879,7 +891,7 @@
       "kind": "crypto"
     },
     {
-      "description": "invalid: futures stop_ticks = 0",
+      "description": "OLD single-cap (kept): invalid futures stop_ticks = 0. Still invalid on the instrument path.",
       "expected": {
         "error": "INVALID_INPUT",
         "message": "stop_ticks must be > 0",
@@ -911,7 +923,7 @@
       "kind": "crypto"
     },
     {
-      "description": "invalid: sizing without binding_room (H-2)",
+      "description": "OLD single-cap (kept): sizing without binding_room (H-2). Still required when an instrument is set; risk, drawdown and daily loss stay active.",
       "expected": {
         "error": "INVALID_INPUT",
         "message": "missing binding_room",
@@ -1042,7 +1054,7 @@
       "kind": "crypto"
     },
     {
-      "description": "L-1: fractional max_contracts",
+      "description": "OLD single-cap (kept): fractional max_contracts. NEW path rejects a fractional active cap the same way.",
       "expected": {
         "error": "INVALID_INPUT",
         "message": "max_contracts must be an integer",
@@ -1059,7 +1071,7 @@
       "kind": "futures"
     },
     {
-      "description": "L-1: fractional stop_ticks",
+      "description": "OLD single-cap (kept): fractional stop_ticks. Still invalid on the instrument path.",
       "expected": {
         "error": "INVALID_INPUT",
         "message": "stop_ticks must be an integer",
@@ -1073,6 +1085,873 @@
         "tick_value": "1.25"
       },
       "kind": "futures"
+    },
+    {
+      "description": "NEW instrument-aware: MES $200, 12-tick stop, 50 micro cap -> 13. Mini cap is not used.",
+      "expected": {
+        "active_cap": 50,
+        "actual_risk": "195.00",
+        "cap_class": "micro",
+        "capped": false,
+        "contracts": 13,
+        "effective_risk": "200.00",
+        "instrument": "MES",
+        "ok": true,
+        "risk_limited_by_room": false,
+        "risk_per_contract": "15.00",
+        "tick_value": "1.25"
+      },
+      "id": "IA-01",
+      "input": {
+        "binding_room": "10000",
+        "instrument": "MES",
+        "max_micros": "50",
+        "max_minis": "1",
+        "risk": "200",
+        "stop_ticks": "12"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "NEW instrument-aware: ES $200, 12 ticks, 5 mini cap -> 1. Micro cap is not used.",
+      "expected": {
+        "active_cap": 5,
+        "actual_risk": "150.00",
+        "cap_class": "mini",
+        "capped": false,
+        "contracts": 1,
+        "effective_risk": "200.00",
+        "instrument": "ES",
+        "ok": true,
+        "risk_limited_by_room": false,
+        "risk_per_contract": "150.00",
+        "tick_value": "12.50"
+      },
+      "id": "IA-02",
+      "input": {
+        "binding_room": "10000",
+        "instrument": "ES",
+        "max_micros": "1",
+        "max_minis": "5",
+        "risk": "200",
+        "stop_ticks": "12"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "NEW instrument-aware: NQ $200, 8 ticks, 10 mini cap -> 5.",
+      "expected": {
+        "active_cap": 10,
+        "actual_risk": "200.00",
+        "cap_class": "mini",
+        "capped": false,
+        "contracts": 5,
+        "effective_risk": "200.00",
+        "instrument": "NQ",
+        "ok": true,
+        "risk_limited_by_room": false,
+        "risk_per_contract": "40.00",
+        "tick_value": "5.00"
+      },
+      "id": "IA-03",
+      "input": {
+        "binding_room": "10000",
+        "instrument": "NQ",
+        "max_micros": "NONE",
+        "max_minis": "10",
+        "risk": "200",
+        "stop_ticks": "8"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "NEW instrument-aware: MNQ $200, 8 ticks, 100 micro cap -> 50.",
+      "expected": {
+        "active_cap": 100,
+        "actual_risk": "200.00",
+        "cap_class": "micro",
+        "capped": false,
+        "contracts": 50,
+        "effective_risk": "200.00",
+        "instrument": "MNQ",
+        "ok": true,
+        "risk_limited_by_room": false,
+        "risk_per_contract": "4.00",
+        "tick_value": "0.50"
+      },
+      "id": "IA-04",
+      "input": {
+        "binding_room": "10000",
+        "instrument": "MNQ",
+        "max_micros": "100",
+        "max_minis": "NONE",
+        "risk": "200",
+        "stop_ticks": "8"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "NEW: MES missing max_micros is an error. A mini cap does not fill it.",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "missing max_micros",
+        "ok": false
+      },
+      "id": "IA-05",
+      "input": {
+        "binding_room": "10000",
+        "instrument": "MES",
+        "max_minis": "5",
+        "risk": "200",
+        "stop_ticks": "12"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "NEW: ES missing max_minis is an error. A micro cap does not fill it.",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "missing max_minis",
+        "ok": false
+      },
+      "id": "IA-06",
+      "input": {
+        "binding_room": "10000",
+        "instrument": "ES",
+        "max_micros": "50",
+        "risk": "200",
+        "stop_ticks": "12"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "NEW: explicit micro cap 0 stays 0.",
+      "expected": {
+        "active_cap": 0,
+        "actual_risk": "0.00",
+        "cap_class": "micro",
+        "capped": true,
+        "contracts": 0,
+        "effective_risk": "200.00",
+        "instrument": "MES",
+        "ok": true,
+        "risk_limited_by_room": false,
+        "risk_per_contract": "15.00",
+        "tick_value": "1.25"
+      },
+      "id": "IA-07",
+      "input": {
+        "binding_room": "10000",
+        "instrument": "MES",
+        "max_micros": "0",
+        "max_minis": "NONE",
+        "risk": "200",
+        "stop_ticks": "12"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "NEW: NONE removes only the contract cap. Binding room (drawdown or daily loss) still clamps.",
+      "expected": {
+        "active_cap": "NONE",
+        "actual_risk": "15.00",
+        "cap_class": "micro",
+        "capped": false,
+        "contracts": 1,
+        "effective_risk": "15.00",
+        "instrument": "MES",
+        "ok": true,
+        "risk_limited_by_room": true,
+        "risk_per_contract": "15.00",
+        "tick_value": "1.25"
+      },
+      "id": "IA-08",
+      "input": {
+        "binding_room": "15",
+        "instrument": "MES",
+        "max_micros": "NONE",
+        "max_minis": "NONE",
+        "risk": "200",
+        "stop_ticks": "12"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "NEW: invalid instrument.",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "invalid instrument",
+        "ok": false
+      },
+      "id": "IA-09",
+      "input": {
+        "binding_room": "10000",
+        "instrument": "ZZ",
+        "max_micros": "50",
+        "max_minis": "5",
+        "risk": "200",
+        "stop_ticks": "12"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "NEW: blank instrument.",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "missing instrument",
+        "ok": false
+      },
+      "id": "IA-10",
+      "input": {
+        "binding_room": "10000",
+        "instrument": "",
+        "max_micros": "50",
+        "max_minis": "5",
+        "risk": "200",
+        "stop_ticks": "12"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "NEW: tick_value that disagrees with the instrument is a mismatch.",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "tick_value mismatch",
+        "ok": false
+      },
+      "id": "IA-11",
+      "input": {
+        "binding_room": "10000",
+        "instrument": "MES",
+        "max_micros": "50",
+        "max_minis": "NONE",
+        "risk": "200",
+        "stop_ticks": "12",
+        "tick_value": "12.50"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "NEW: tick_value that matches the instrument is accepted and cannot disagree.",
+      "expected": {
+        "active_cap": 50,
+        "actual_risk": "195.00",
+        "cap_class": "micro",
+        "capped": false,
+        "contracts": 13,
+        "effective_risk": "200.00",
+        "instrument": "MES",
+        "ok": true,
+        "risk_limited_by_room": false,
+        "risk_per_contract": "15.00",
+        "tick_value": "1.25"
+      },
+      "id": "IA-12",
+      "input": {
+        "binding_room": "10000",
+        "instrument": "MES",
+        "max_micros": "50",
+        "max_minis": "1",
+        "risk": "200",
+        "stop_ticks": "12",
+        "tick_value": "1.25"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "NEW: MES uses the micro cap even when the mini cap is tighter.",
+      "expected": {
+        "active_cap": 50,
+        "actual_risk": "195.00",
+        "cap_class": "micro",
+        "capped": false,
+        "contracts": 13,
+        "effective_risk": "200.00",
+        "instrument": "MES",
+        "ok": true,
+        "risk_limited_by_room": false,
+        "risk_per_contract": "15.00",
+        "tick_value": "1.25"
+      },
+      "id": "IA-13",
+      "input": {
+        "binding_room": "10000",
+        "instrument": "mes",
+        "max_micros": "50",
+        "max_minis": "1",
+        "risk": "200",
+        "stop_ticks": "12"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "NEW: ES uses the mini cap even when the micro cap is tighter.",
+      "expected": {
+        "active_cap": 5,
+        "actual_risk": "150.00",
+        "cap_class": "mini",
+        "capped": false,
+        "contracts": 1,
+        "effective_risk": "200.00",
+        "instrument": "ES",
+        "ok": true,
+        "risk_limited_by_room": false,
+        "risk_per_contract": "150.00",
+        "tick_value": "12.50"
+      },
+      "id": "IA-14",
+      "input": {
+        "binding_room": "10000",
+        "instrument": "ES",
+        "max_micros": "1",
+        "max_minis": "5",
+        "risk": "200",
+        "stop_ticks": "12"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "daily capacity $0.01 left sizes normally. Status OK. Enforcement omitted stays unconfirmed and does not change the count.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.01",
+        "daily_room": "0.01",
+        "daily_status": "OK",
+        "dll_boundary": "unconfirmed",
+        "dll_rule": "unconfirmed",
+        "drawdown_room": "1000.01",
+        "ok": true
+      },
+      "id": "DL-01",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-999.99",
+        "drawdown_room": "1000.01"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "daily capacity exactly 0 with enforcement and boundary omitted is RULE CONFIRMATION REQUIRED. Not a safe clearance.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "0.00",
+        "daily_status": "RULE CONFIRMATION REQUIRED",
+        "dll_boundary": "unconfirmed",
+        "dll_rule": "unconfirmed",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-02",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "daily capacity -50 with enforcement unconfirmed is RULE CONFIRMATION REQUIRED. Not soft and not a breach.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-50.00",
+        "daily_status": "RULE CONFIRMATION REQUIRED",
+        "dll_boundary": "unconfirmed",
+        "dll_rule": "unconfirmed",
+        "drawdown_room": "950.00",
+        "ok": true
+      },
+      "id": "DL-03",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1050",
+        "drawdown_room": "950"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "daily capacity -50 with hard enforcement is BREACHED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-50.00",
+        "daily_status": "BREACHED",
+        "dll_boundary": "unconfirmed",
+        "dll_rule": "hard",
+        "drawdown_room": "950.00",
+        "ok": true
+      },
+      "id": "DL-04",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1050",
+        "dll_enforcement": "hard",
+        "drawdown_room": "950"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "one cent past the daily limit, enforcement unconfirmed, is RULE CONFIRMATION REQUIRED. Floor-to-cent does not collapse this to zero.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-0.01",
+        "daily_status": "RULE CONFIRMATION REQUIRED",
+        "dll_boundary": "unconfirmed",
+        "dll_rule": "unconfirmed",
+        "drawdown_room": "999.99",
+        "ok": true
+      },
+      "id": "DL-05",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000.01",
+        "drawdown_room": "999.99"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "one cent past the daily limit, hard enforcement, is BREACHED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-0.01",
+        "daily_status": "BREACHED",
+        "dll_boundary": "unconfirmed",
+        "dll_rule": "hard",
+        "drawdown_room": "999.99",
+        "ok": true
+      },
+      "id": "DL-06",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000.01",
+        "dll_enforcement": "hard",
+        "drawdown_room": "999.99"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "explicit soft enforcement on a negative capacity is DAILY LIMIT EXCEEDED, not BREACHED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-50.00",
+        "daily_status": "DAILY LIMIT EXCEEDED",
+        "dll_boundary": "unconfirmed",
+        "dll_rule": "soft",
+        "drawdown_room": "950.00",
+        "ok": true
+      },
+      "id": "DL-07",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1050",
+        "dll_enforcement": "soft",
+        "drawdown_room": "950"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "hard enforcement with capacity still positive stays OK and sizes from that room.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "350.00",
+        "daily_room": "350.00",
+        "daily_status": "OK",
+        "dll_boundary": "unconfirmed",
+        "dll_rule": "hard",
+        "drawdown_room": "1800.00",
+        "ok": true
+      },
+      "id": "DL-08",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-650",
+        "dll_enforcement": "hard",
+        "drawdown_room": "1800"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "binding room 0 sizes 0 contracts. A numeric 0 is not a daily-limit status.",
+      "expected": {
+        "active_cap": 50,
+        "actual_risk": "0.00",
+        "cap_class": "micro",
+        "capped": false,
+        "contracts": 0,
+        "effective_risk": "0.00",
+        "instrument": "MES",
+        "ok": true,
+        "risk_limited_by_room": true,
+        "risk_per_contract": "15.00",
+        "tick_value": "1.25"
+      },
+      "id": "DL-09",
+      "input": {
+        "binding_room": "0",
+        "instrument": "MES",
+        "max_micros": "50",
+        "max_minis": "NONE",
+        "risk": "200",
+        "stop_ticks": "12"
+      },
+      "kind": "futures"
+    },
+    {
+      "description": "dll_enforcement other than hard or soft is INVALID_INPUT.",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "dll_enforcement must be hard or soft",
+        "ok": false
+      },
+      "id": "DL-10",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1050",
+        "dll_enforcement": "nope",
+        "drawdown_room": "950"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "a fraction of a cent below zero floors to -0.01, so unconfirmed enforcement is RULE CONFIRMATION REQUIRED and not reported as zero.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-0.01",
+        "daily_status": "RULE CONFIRMATION REQUIRED",
+        "dll_boundary": "unconfirmed",
+        "dll_rule": "unconfirmed",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-11",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000.004",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "enforcement token HARD is case-insensitive and means hard.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-50.00",
+        "daily_status": "BREACHED",
+        "dll_boundary": "unconfirmed",
+        "dll_rule": "hard",
+        "drawdown_room": "950.00",
+        "ok": true
+      },
+      "id": "DL-12",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1050",
+        "dll_enforcement": "HARD",
+        "drawdown_room": "950"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "daily capacity $0.01 with hard enforcement stays OK. The hard token does not change a positive room.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.01",
+        "daily_room": "0.01",
+        "daily_status": "OK",
+        "dll_boundary": "unconfirmed",
+        "dll_rule": "hard",
+        "drawdown_room": "1000.01",
+        "ok": true
+      },
+      "id": "DL-14",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-999.99",
+        "dll_enforcement": "hard",
+        "drawdown_room": "1000.01"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "daily capacity $0.01 with soft enforcement stays OK.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.01",
+        "daily_room": "0.01",
+        "daily_status": "OK",
+        "dll_boundary": "unconfirmed",
+        "dll_rule": "soft",
+        "drawdown_room": "1000.01",
+        "ok": true
+      },
+      "id": "DL-15",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-999.99",
+        "dll_enforcement": "soft",
+        "drawdown_room": "1000.01"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "daily capacity exactly 0 with hard enforcement and boundary omitted is RULE CONFIRMATION REQUIRED, not BREACHED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "0.00",
+        "daily_status": "RULE CONFIRMATION REQUIRED",
+        "dll_boundary": "unconfirmed",
+        "dll_rule": "hard",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-16",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "dll_enforcement": "hard",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "daily capacity exactly 0 with soft enforcement and boundary omitted is RULE CONFIRMATION REQUIRED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "0.00",
+        "daily_status": "RULE CONFIRMATION REQUIRED",
+        "dll_boundary": "unconfirmed",
+        "dll_rule": "soft",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-17",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "dll_enforcement": "soft",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "one cent past the daily limit with soft enforcement is DAILY LIMIT EXCEEDED. Boundary is ignored below zero.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-0.01",
+        "daily_status": "DAILY LIMIT EXCEEDED",
+        "dll_boundary": "unconfirmed",
+        "dll_rule": "soft",
+        "drawdown_room": "999.99",
+        "ok": true
+      },
+      "id": "DL-18",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000.01",
+        "dll_enforcement": "soft",
+        "drawdown_room": "999.99"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "exactly 0 with hard and reach is BREACHED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "0.00",
+        "daily_status": "BREACHED",
+        "dll_boundary": "reach",
+        "dll_rule": "hard",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-19",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "dll_boundary": "reach",
+        "dll_enforcement": "hard",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "exactly 0 with hard and exceed is DAILY LIMIT REACHED, not BREACHED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "0.00",
+        "daily_status": "DAILY LIMIT REACHED",
+        "dll_boundary": "exceed",
+        "dll_rule": "hard",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-20",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "dll_boundary": "exceed",
+        "dll_enforcement": "hard",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "exactly 0 with soft and reach is DAILY LIMIT REACHED. Soft never breaches.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "0.00",
+        "daily_status": "DAILY LIMIT REACHED",
+        "dll_boundary": "reach",
+        "dll_rule": "soft",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-21",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "dll_boundary": "reach",
+        "dll_enforcement": "soft",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "exactly 0 with soft and exceed is DAILY LIMIT REACHED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "0.00",
+        "daily_status": "DAILY LIMIT REACHED",
+        "dll_boundary": "exceed",
+        "dll_rule": "soft",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-22",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "dll_boundary": "exceed",
+        "dll_enforcement": "soft",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "dll_boundary other than reach or exceed is INVALID_INPUT.",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "dll_boundary must be reach or exceed",
+        "ok": false
+      },
+      "id": "DL-23",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "dll_boundary": "touch",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "boundary token REACH is case-insensitive. With hard, exactly 0 is BREACHED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "0.00",
+        "daily_status": "BREACHED",
+        "dll_boundary": "reach",
+        "dll_rule": "hard",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-24",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "dll_boundary": "REACH",
+        "dll_enforcement": "HARD",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "one cent below zero with hard and exceed stays BREACHED. Boundary does not change a negative room.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-0.01",
+        "daily_status": "BREACHED",
+        "dll_boundary": "exceed",
+        "dll_rule": "hard",
+        "drawdown_room": "999.99",
+        "ok": true
+      },
+      "id": "DL-25",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000.01",
+        "dll_boundary": "exceed",
+        "dll_enforcement": "hard",
+        "drawdown_room": "999.99"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "one cent below zero with soft and reach stays DAILY LIMIT EXCEEDED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-0.01",
+        "daily_status": "DAILY LIMIT EXCEEDED",
+        "dll_boundary": "reach",
+        "dll_rule": "soft",
+        "drawdown_room": "999.99",
+        "ok": true
+      },
+      "id": "DL-26",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000.01",
+        "dll_boundary": "reach",
+        "dll_enforcement": "soft",
+        "drawdown_room": "999.99"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "exactly 0 with boundary exceed and enforcement omitted is RULE CONFIRMATION REQUIRED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "0.00",
+        "daily_status": "RULE CONFIRMATION REQUIRED",
+        "dll_boundary": "exceed",
+        "dll_rule": "unconfirmed",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-27",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "dll_boundary": "exceed",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
     },
     {
       "description": "L-2: breach_on_touch as string",

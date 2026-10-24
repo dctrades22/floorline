@@ -1,6 +1,10 @@
-# Floorline Multi-Account Tracker — workbook spec v0.1.1 (QUANT, 2026-10-14)
+# Floorline Multi-Account Tracker — workbook spec v0.2.0 (instrument caps)
 
-v0.1.1 = fix loop for docs/SPECTER-TRACKER-REVIEW.md @ 1e8d45e (H-1, H-2, M-1, BUILDER's 3 AND() guards, L-1..L-3).
+v0.2.0 adds instrument-aware contract caps. v0.1.1 = fix loop for docs/SPECTER-TRACKER-REVIEW.md @ 1e8d45e (H-1, H-2, M-1, BUILDER's 3 AND() guards, L-1..L-3).
+
+**v0.2.0 rules.** Every account row has an Instrument dropdown: ES, MES, NQ, MNQ (data validation from `Contracts!J2:J5`). Tick value is a formula, not an input: ES 12.50, MES 1.25, NQ 5.00, MNQ 0.50. A typed mismatch is impossible. Blank instrument → INCOMPLETE. Any other symbol → INVALID. ES/NQ use the mini cap (`max_minis`). MES/MNQ use the micro cap (`max_micros`). The other cap may be blank. A blank required cap → INCOMPLETE. Explicit 0 stays 0. `NONE` is the only unrestricted contract cap. Risk, trailing drawdown and the daily loss limit stay active when the contract cap is NONE.
+
+Column letters below are v0.2.0. v0.1.1's single "max contracts" input and the typed tick-value column are gone. Legacy golden cases that pass one `max_contracts` and an arbitrary tick still exercise the inner `INT(ROUND(eff/(ticks*tv),9))` step in `sheet_logic.py`. The workbook only enters the four instruments.
 
 Maps oracle v0.2.0 (`docs/MATH.md`, `golden/oracle.py`) onto plain cell formulas. Spec only; BUILDER builds the .xlsx / Google Sheet.
 Futures only (crypto perp sizing is out of scope). Reference implementation of every formula below in float:
@@ -26,7 +30,7 @@ Spreadsheets use IEEE doubles; the oracle uses Decimal. Rules that keep results 
   Lock: `ROUND(peak - DD - (S + X), 6) >= 0`. 1e-6 tolerance absorbs double error (~1e-11 at 1e6 magnitudes) and is far below one cent.
 - **Rounding at output only, conservative direction:**
   - `CENT_UP(x) := -INT(ROUND(-x*100, 6))/100` (ceiling to cents, correct for negatives; `INT` = floor in both apps). Used for floors.
-  - `CENT_DOWN(x) := INT(ROUND(x*100, 6))/100` for x ≥ 0 (toward zero). Used for rooms, effective risk, actual risk, displayed equity.
+  - `CENT_DOWN(x) := INT(ROUND(x*100, 6))/100`. `INT` floors, so for x ≥ 0 this is toward zero and matches the oracle's ROUND_DOWN. For a negative daily capacity it floors toward −∞ and matches ROUND_FLOOR, so −0.004 becomes −0.01 and cannot hide an exceed. Used for rooms, effective risk, actual risk, displayed equity, and the signed daily capacity.
   - `ROUND(x*100, 6)` before `INT` prevents e.g. 0.29*100 = 28.999999999999996 → 28.
 - Contracts: `INT(ROUND(eff_risk / (ticks*tv), 9))` — the inner ROUND guards exact multiples (300/(16*1.25) = 15 exactly).
 - Comparisons use **raw** (unrounded) floor helper columns; displayed values are rounded. Same as oracle.
@@ -51,18 +55,20 @@ Rows: every `verified` + `partial` preset (custom_only excluded) + final row `Ma
 | G | lock_token | number (offset, may be 0), `NONE`, or blank = unstated / payout-lock (user must fill) |
 | H | breach_on_touch | TRUE / FALSE / blank (user must fill) |
 | I | dll_token | USD, `NONE`, or blank = optional, % based or unstated (user must enter $ or NONE) |
-| J | max_contracts | minis (or "contracts") or blank |
-| K | max_micros | informational |
+| J | max_minis | minis, or the generic contract count when that is all the firm stated, or blank |
+| K | max_micros | micros, or the same generic count, or blank |
 | L | needs_user | `;`-list of fields the user must fill (`all` for Manual) |
 | M–O | source_url, checked_date, source_page_date | provenance shown on Accounts |
 | P | preset_id | Pnnn |
+| Q | dll_enforcement | `hard`, `soft`, or blank. Appended; A–P are unchanged. Blank means the rule is unconfirmed. It is not soft and it is not hard |
+| R | dll_boundary | `reach`, `exceed`, or blank. Independent of column Q. Blank means the equality rule is unconfirmed |
 
 Percent DLLs are **not** auto-converted (reset basis differs per firm, MATH §6); user enters the $ amount from the firm dashboard.
 MFP `breach_on_touch_after_lock` is not modeled; flagged in needs_user.
 
 ### 2.2 Accounts tab (rows 2–11; max 10 accounts; row 1 headers)
-Inputs (white, unlocked) A–O; calculated (grey, locked) P–AN. `$B2` drives lookups. `OK` gating: all calc columns start with
-`IF($W2<>"OK", $W2, …)` so INVALID/INCOMPLETE propagate as text.
+Inputs (white, unlocked): A, B, D–P, AS (DLL enforcement), and AV (DLL boundary). Calculated (grey, locked): C, Q–AR, AU. AT is unused and hidden (the test harness writes an equity-cent probe there; it is not a product formula). `$B2` drives lookups. `OK` gating: floor and room columns start with
+`IF($AA2<>"OK", $AA2, …)`. Sizing columns start with the sizing check `AO`. INVALID/INCOMPLETE propagate as text.
 
 | col | name | type | rule / formula |
 |---|---|---|---|
@@ -75,37 +81,61 @@ Inputs (white, unlocked) A–O; calculated (grey, locked) P–AN. `$B2` drives l
 | G | Lock offset override | number (≤2 dp, may be ≤0) or `NONE` | optional |
 | H | Breach on touch override | dropdown TRUE/FALSE | optional |
 | I | DLL $ override | number >0 ≤2 dp or `NONE` | optional |
-| J | Max contracts override | integer ≥0 or `NONE` | M-1: effective V **blank → INCOMPLETE**; only the explicit text `NONE` removes the cap (enter in units traded; preset is minis) |
-| K | Current equity incl. unrealized | number ≤2 dp | required |
-| L | Day reference balance | number ≤2 dp | required iff DLL ≠ NONE (firm's reset reference, see Presets basis) |
-| M | Risk $ per trade | number ≥0 ≤2 dp | required for sizing |
-| N | Stop ticks | integer ≥1 | required for sizing |
-| O | Tick value $ | number, ≤6 dp, 0 < tv ≤ 100,000 (L-1; see Contracts tab) | required for sizing |
-| P | Type (eff.) | calc | `=IF(D2<>"",D2,PV(C))` |
-| Q | Start (eff.) | calc | `=IF(E2<>"",E2,IF(PV(D)<>"",VALUE(PV(D)),""))` |
-| R | DD (eff.) | calc | `=IF(F2<>"",F2,IF(PV(E)<>"",VALUE(PV(E)),IF(AND(PV(F)<>"",ISNUMBER(Q2)),VALUE(PV(F))/100*Q2,"")))` |
-| S | Lock (eff.) | calc | `=IF(G2<>"",G2,IF(PV(G)="NONE","NONE",IF(PV(G)<>"",VALUE(PV(G)),"")))` |
-| T | Touch (eff.) | calc | `=IF(H2<>"",H2,IF(PV(H)="TRUE",TRUE,IF(PV(H)="FALSE",FALSE,"")))` |
-| U | DLL (eff.) | calc | `=IF(I2<>"",I2,IF(PV(I)="NONE","NONE",IF(PV(I)<>"",VALUE(PV(I)),"")))` |
-| V | Max contracts (eff.) | calc | `=IF(J2<>"",J2,IF(PV(J)<>"",VALUE(PV(J)),""))` |
-| W | Param check | calc | see §3.1 → `OK` / `INVALID` / `INCOMPLETE` / `""` (empty row) |
-| X | Peak | calc | §3.2 |
-| Y | Floor (display) | calc | `=IF($W2<>"OK",$W2,CENT_UP(AJ2))` |
-| Z | Locked | calc | `=IF($W2<>"OK",$W2,AND(ISNUMBER(S2),P2<>"static",ROUND(X2-R2-(Q2+IF(ISNUMBER(S2),S2,0)),6)>=0))` (BUILDER guard 3: AND does not short-circuit, so `Q2+S2` with S2="NONE" would raise #VALUE!) |
-| AA | Breached | calc | `=IF($W2<>"OK",$W2,OR(COUNTIFS('Daily Log'!$A$2:$A$1001,A2,'Daily Log'!$I$2:$I$1001,"BREACHED")>0,HIT(K2,AJ2)))` |
-| AB | DD room | calc | `=IF($W2<>"OK",$W2,IF(AA2,"BREACHED",CENT_DOWN(MAX(0,K2-AJ2))))` |
-| AC | Daily room | calc | `=IF($W2<>"OK",$W2,IF(AA2,"BREACHED",IF(U2="NONE","NONE",CENT_DOWN(MAX(0,U2-MAX(0,-(K2-L2)))))))` |
-| AD | Binding room | calc | `=IF($W2<>"OK",$W2,IF(AA2,"BREACHED",IF(AC2="NONE",AB2,MIN(AB2,AC2))))` |
-| AE | Binding | calc | `=IF($W2<>"OK",$W2,IF(AA2,"BREACHED",IF(AND(AC2<>"NONE",AC2<AB2),"daily_loss","drawdown")))` (tie → drawdown) |
-| AF | Effective risk | calc | `=IF(AK2<>"OK",AK2,IF(AA2,"BREACHED",CENT_DOWN(MIN(M2,AD2))))` |
-| AG | Contracts | calc | `=IF(AK2<>"OK",AK2,IF(AA2,"BREACHED",IF(V2="NONE",AL2,MIN(AL2,V2))))` (V blank cannot reach here: W = INCOMPLETE) |
-| AH | Capped flag | calc | `=IF(AK2<>"OK",AK2,AND(V2<>"NONE",AL2>V2))` |
-| AI | Room-limited flag | calc | `=IF(AK2<>"OK",AK2,M2>AD2)` |
-| AJ | Floor raw (hidden) | calc | §3.2 |
-| AK | Sizing check (hidden) | calc | `=IF($W2<>"OK",$W2,IF(OR(M2="",N2="",O2=""),"INCOMPLETE",IF(OR(NOT(ISNUMBER(M2)),M2<0,NOT(ISNUMBER(N2)),N2<1,N2<>INT(N2),NOT(ISNUMBER(O2)),O2<=0,O2>100000,ROUND(O2*1000000,3)<>INT(ROUND(O2*1000000,3)),M2>100000000),"INVALID","OK")))` |
-| AL | Contracts raw (hidden) | calc | `=IF(AK2<>"OK","",INT(ROUND(MIN(M2,AD2)/(N2*O2),9)))` |
-| AM | Actual risk | calc | `=IF(AK2<>"OK",AK2,IF(AA2,"BREACHED",CENT_DOWN(AG2*N2*O2)))` |
-| AN | Flags | calc | `=TEXTJOIN("; ",TRUE,IF(C2="partial","PARTIAL PRESET: verify "&PV(L),""),IF(C2="manual","MANUAL: all params user-entered",""),IF(OR(AND(D2<>"",PV(C)<>""),AND(E2<>"",PV(D)<>""),AND(F2<>"",PV(E)<>""),AND(G2<>"",PV(G)<>""),AND(H2<>"",PV(H)<>""),AND(I2<>"",PV(I)<>""),AND(J2<>"",PV(J)<>"")),"OVERRIDES PRESET",""),"source: "&PV(M)&" checked "&PV(N))` |
+| J | Max minis override | integer ≥0 or `NONE` | blank → preset `max_minis`. 0 is a cap of zero. `NONE` removes the mini cap only |
+| K | Max micros override | integer ≥0 or `NONE` | blank → preset `max_micros`. Same 0 / NONE rules |
+| L | Instrument | dropdown ES, MES, NQ, MNQ | required. Blank → INCOMPLETE. Anything else → INVALID |
+| M | Current equity incl. unrealized | number ≤2 dp | required |
+| N | Day reference balance | number ≤2 dp | required iff DLL ≠ NONE |
+| O | Risk $ per trade | number ≥0 ≤2 dp | required for sizing. Still capped by the binding room when the contract cap is NONE |
+| P | Stop ticks | integer ≥1 | required for sizing |
+| Q | Tick value $ | calc | `INDEX/MATCH` of L against `Contracts!J2:K5`. Not an input |
+| R | Type (eff.) | calc | `=IF(D2<>"",D2,PV(C))` |
+| S | Start (eff.) | calc | `=IF(E2<>"",E2,IF(PV(D)<>"",VALUE(PV(D)),""))` |
+| T | DD (eff.) | calc | `=IF(F2<>"",F2,IF(PV(E)<>"",VALUE(PV(E)),IF(AND(PV(F)<>"",ISNUMBER(S2)),VALUE(PV(F))/100*S2,"")))` |
+| U | Lock (eff.) | calc | `=IF(G2<>"",G2,IF(PV(G)="NONE","NONE",IF(PV(G)<>"",VALUE(PV(G)),"")))` |
+| V | Touch (eff.) | calc | `=IF(H2<>"",H2,IF(PV(H)="TRUE",TRUE,IF(PV(H)="FALSE",FALSE,"")))` |
+| W | DLL (eff.) | calc | `=IF(I2<>"",I2,IF(PV(I)="NONE","NONE",IF(PV(I)<>"",VALUE(PV(I)),"")))` |
+| X | Max minis (eff.) | calc | override J, else preset J, else blank. `NONE` stays `NONE`. 0 stays 0 |
+| Y | Max micros (eff.) | calc | override K, else preset K, else blank |
+| Z | Active cap | calc | ES/NQ → X; MES/MNQ → Y; else `INVALID`. Blank active cap → AA is INCOMPLETE |
+| AA | Param check | calc | see §3.1 → `OK` / `INVALID` / `INCOMPLETE` / `""` |
+| AB | Peak | calc | §3.2 |
+| AC | Floor (display) | calc | `=IF($AA2<>"OK",$AA2,CENT_UP(AN2))` |
+| AD | Locked | calc | guard 3: `AND(ISNUMBER(U2),R2<>"static",ROUND(AB2-T2-(S2+IF(ISNUMBER(U2),U2,0)),6)>=0)` |
+| AE | Breached | calc | `TRUE` for a floor hit, for signed daily capacity < 0 with confirmed `hard`, or for capacity exactly 0 with confirmed `hard` and `reach`. `FALSE` when that is not a breach, including exactly 0 with `exceed` and exactly 0 with confirmed `soft` (soft never breaches). The text `UNCONFIRMED` when capacity is < 0 and enforcement is not hard or soft, and when capacity is exactly 0 and enforcement or boundary is unconfirmed. `UNCONFIRMED` is not a safe clearance |
+| AF | DD room | calc | `BREACHED` only when the floor was hit, else `CENT_DOWN(MAX(0,M2-AN2))`. A hard daily exceed does not replace this number |
+| AG | Daily room | calc | `BREACHED` only when the floor was hit. `NONE` when DLL is NONE. Otherwise the signed capacity (0 or negative allowed). Not removed by a contract-cap NONE |
+| AH | Binding room | calc | `MIN(DD room, max(0, daily room))` (daily omitted when NONE). Never negative. Tie → drawdown |
+| AI | Binding | calc | `BREACHED` when the floor was hit, else `daily_loss` iff signed daily room < DD room. This names the tighter room. The trade block is AK |
+| AJ | Effective risk | calc | the trade-status word when one is in force, else `CENT_DOWN(MIN(risk, binding room))` |
+| AK | Contracts | calc | the trade-status word when one is in force, else `IF(Z="NONE", raw, MIN(raw, Z))`. Z blank never reaches here (AA = INCOMPLETE). A numeric 0 is a size, not a daily-limit status |
+| AL | Capped flag | calc | `AND(Z<>"NONE", raw>Z)`. Explicit 0 with a positive raw is capped |
+| AM | Room-limited flag | calc | `risk > binding room` |
+| AN | Floor raw (hidden) | calc | §3.2 |
+| AO | Sizing check (hidden) | calc | risk, stop ticks and derived tick present and valid, else INCOMPLETE/INVALID |
+| AP | Contracts raw (hidden) | calc | 0 when the floor is hit or a daily status is in force, else `INT(ROUND(MIN(risk, binding)/(ticks*tick),9))` |
+| AQ | Actual risk | calc | the trade-status word when one is in force, else `CENT_DOWN(contracts*ticks*tick)` |
+| AR | Flags | calc | `DLL RULE UNCONFIRMED` when a numeric DLL is on and effective enforcement is not hard or soft, then `DLL BOUNDARY UNCONFIRMED` when effective boundary is not reach or exceed. Both show while capacity is > 0. Then partial preset, manual, overrides (including AS and AV), INSTRUMENT MISSING, MAX CONTRACTS MISSING, as-of, stale, source |
+| AS | DLL enforcement | input | `hard`, `soft`, or blank. Dropdown, unlocked, blank allowed. Blank uses Presets column Q. A blank result is unconfirmed. It is not soft. A bad token is INVALID |
+| AU | Trade status (hidden) | calc | blank when the row is not OK or capacity is > 0. Floor wins. Below zero ignores boundary: `BREACHED` for hard, `DAILY LIMIT EXCEEDED` for soft, `RULE CONFIRMATION REQUIRED` when enforcement is not hard or soft. Exactly zero: `BREACHED` for hard + reach; `DAILY LIMIT REACHED` for hard + exceed, soft + exceed, and soft + reach (soft never breaches); `RULE CONFIRMATION REQUIRED` when enforcement or boundary is unconfirmed |
+| AV | DLL boundary | input | `reach`, `exceed`, or blank. Dropdown, unlocked, blank allowed. Blank uses Presets column R. A blank result is unconfirmed. Independent of AS. A bad token is INVALID |
+
+### 2.2a Trade-status precedence
+Checked in this order. Earlier words replace later ones. `INVALID` and `INCOMPLETE` stay different.
+
+1. Empty row (no ID and no preset) → blank.
+2. `INCOMPLETE` — a required input is missing, including a blank instrument, a blank cap for that instrument, a DLL with no day reference, an incomplete log row, or any unknown-account log row.
+3. `INVALID` — a value or rule is illegal, including a bad instrument, a bad cap, a bad enforcement token, a bad boundary token, or an invalid log row.
+4. Drawdown floor hit → `BREACHED`, max contracts 0. Outranks every daily status, including a hard daily breach and either unconfirmed flag. AE is true. AF and AG show `BREACHED`. Flags still show `DLL RULE UNCONFIRMED` or `DLL BOUNDARY UNCONFIRMED` when that classification is blank.
+5. Confirmed hard daily breach → `BREACHED`, max contracts 0. AE is true. This is signed capacity < 0 with enforcement `hard` (boundary ignored), or capacity exactly 0 with enforcement `hard` and boundary `reach`. AG stays the number (negative, or 0), so this is distinguishable from a floor hit.
+6. `RULE CONFIRMATION REQUIRED`, max contracts 0, when the breach status is unknown. That is capacity < 0 with enforcement not `hard` or `soft`, or capacity exactly 0 with enforcement or boundary unconfirmed. AE is the text `UNCONFIRMED`. That is not a safe clearance and not a soft exceed. Flags name which classification is blank.
+7. Signed daily capacity < 0 and enforcement is `soft` → `DAILY LIMIT EXCEEDED`, max contracts 0. Boundary does not change this. AE stays false. The confirmed rule does not call this a breach. Soft never breaches.
+8. Signed daily capacity = 0 and both classifications are confirmed, and the pair is not hard + reach → `DAILY LIMIT REACHED`, max contracts 0. AE stays false. The three pairs are hard + exceed, soft + exceed, and soft + reach.
+9. Otherwise `OK` and a numeric contract count. Capacity > 0 still passes through risk, the stop, the tick, and the active cap. The count may be 0. If the DLL is on and either classification is unconfirmed, Flags shows that flag and the count does not change. A preset with either classification blank is not fully verified.
+
+No status permits trading when daily capacity is ≤ 0. AK shows the word in those cases, and AP is 0.
+
+Daily Log peak/floor reads Accounts type/start/DD/lock/touch from **R, S, T, U, V** (v0.1.1 was P–T).
 
 Note on AD/AF: sizing uses the cent-rounded-down binding room (more conservative than the oracle's raw room; identical for cent inputs).
 
@@ -125,7 +155,7 @@ Note on AD/AF: sizing uses the cent-rounded-down binding room (more conservative
 Validation: `D2>=MAX(C2,E2)` and `E2<=MIN(C2,D2)` when present, else row INVALID.
 
 ### 2.4 Checklist tab (static text, per account; checkbox column B, Account dropdown C)
-1. Preset matches the plan purchased (firm, plan, size, purchase date — older purchases may have legacy rules). 2. Opened `source_url`; rule text still matches; `checked_date` within 30 days. 3. All `needs_user` / PARTIAL flags resolved. 4. Lock offset confirmed (0 = start, X = start+X, NONE). 5. Touch rule confirmed ("hit/touch" = TRUE, "below" = FALSE). 6. DLL entered in $ for today's reset (% plans: firm dashboard value). 7. Day reference balance = firm's reset reference (incl./excl. unrealized per firm). 8. Max contracts entered in the units you trade (micros vs minis). 9. Today's Daily Log row entered incl. intraday low. 10. Tick value matches Contracts tab for the instrument. 11. Firm dashboard floor equals tracker floor; if not, the firm's number wins.
+1. Preset matches the plan purchased (firm, plan, size, purchase date — older purchases may have legacy rules). 2. Opened `source_url`; rule text still matches; `checked_date` within 30 days. 3. All `needs_user` / PARTIAL flags resolved. 4. Lock offset confirmed (0 = start, X = start+X, NONE). 5. Touch rule confirmed ("hit/touch" = TRUE, "below" = FALSE). 6. DLL entered in $ for today's reset (% plans: firm dashboard value). 7. Day reference balance = firm's reset reference (incl./excl. unrealized per firm). 8. Mini cap and micro cap confirmed. ES/NQ use max minis; MES/MNQ use max micros. Blank required cap is incomplete. NONE removes only the contract cap. 0 means zero contracts. 9. Today's Daily Log row entered incl. intraday low. 10. Instrument is ES, MES, NQ or MNQ. Tick value is calculated (ES 12.50, MES 1.25, NQ 5.00, MNQ 0.50) and is not typed. 11. Firm dashboard floor equals tracker floor; if not, the firm's number wins.
 
 ### 2.5 Disclaimer tab (static text, shown first on open)
 - Not financial, trading, or investment advice; educational calculation tool only.
@@ -135,7 +165,11 @@ Validation: `D2>=MAX(C2,E2)` and `E2<=MIN(C2,D2)` when present, else row INVALID
 - Spreadsheet floating-point arithmetic; values are rounded to cents conservatively.
 
 ## 3. Formulas
-### 3.1 Param check `W2` (precedence: empty → INCOMPLETE → INVALID → OK)
+### 3.1 Param check `AA2` (precedence: empty → INCOMPLETE → INVALID → OK)
+
+v0.2.0 required inputs add instrument `L` and active cap `Z`. ES/NQ require a mini cap; MES/MNQ require a micro cap. The other cap may be blank. Both caps, when present, must be an integer ≥ 0 or `NONE` (explicit 0 is valid). Instrument text outside ES/MES/NQ/MNQ, or a tick lookup that is not a number, is INVALID. The v0.1.1 formula below is the same precedence with the old letters; `build_tracker.account_formulas` is the v0.2.0 text.
+
+### 3.1a v0.1.1 param check (historical letters) `W2`
 ```
 =IF(AND(A2="",B2=""),"",
  IF(OR(A2="",B2="",P2="",Q2="",R2="",S2="",T2="",U2="",V2="",K2="",AND(U2<>"NONE",L2="")),"INCOMPLETE",
@@ -172,7 +206,9 @@ Consequences, all intended and documented on the How-to tab: account IDs must be
 already counts `p16` and `P16` as duplicates → INVALID); a log row `p16` matches account `P16`; tokens `none`/`None` equal `NONE`;
 type `STATIC` equals `static`. Leading/trailing spaces are **not** ignored (`"Static "` → INVALID; no TRIM, by design).
 
-### 3.2 Accounts peak `X2` and floor raw `AJ2`
+### 3.2 Accounts peak and floor raw
+
+v0.2.0 peak is `AB` and floor raw is `AN`. Equity is `M`, start is `S`, drawdown is `T`, lock is `U`, type is `R`. The formulas below are the v0.1.1 letters kept so the old golden commentary stays readable. `build_tracker.account_formulas` is the formula that is actually written.
 ```
 X2  =IF($W2<>"OK",$W2,
       IF(P2="static",Q2,
@@ -204,11 +240,11 @@ shows `UNKNOWN_ACCOUNT` (red). Because the row's owner is unknowable, **every** 
 `Accounts!B14` shows the banner `=IF(COUNTIFS('Daily Log'!$I$2:$I$1001,"UNKNOWN_ACCOUNT")>0,COUNTIFS('Daily Log'!$I$2:$I$1001,"UNKNOWN_ACCOUNT")&" Daily Log row(s) with unknown account ID - fix before trading","")`.
 **H-1.** An INCOMPLETE row (e.g. low entered, close blank) makes its account INCOMPLETE; no room or contracts are shown.
 Log money fields obey the same L-2 range (`0 < x ≤ 1e8`, ≤2 dp) → else row INVALID.
-Breach is terminal: once any row is BREACHED, `Accounts!AA` stays TRUE; later rows are still shown but do not clear it.
+Breach is terminal: once any log row is BREACHED, `Accounts!AE` stays TRUE from that floor hit; later rows are still shown but do not clear it. A hard daily-loss exceed also sets AE without a log row.
 
 ## 4. Invalid-input convention
 - Calculated cells show exactly one of: number/boolean (OK), `INVALID` (bad value or rule configuration), `INCOMPLETE` (required input
-  missing, incl. partial-preset nulls and blank max contracts, an INCOMPLETE log row, or any orphan log row), `UNKNOWN_ACCOUNT` (log row only), `BREACHED` (rooms, sizing), `NONE` (no DLL / no cap), or `""` (unused row). Never a number when not OK.
+  missing, incl. partial-preset nulls and blank max contracts, an INCOMPLETE log row, or any orphan log row), `UNKNOWN_ACCOUNT` (log row only), `BREACHED` (floor hit, or a confirmed hard daily breach on the size columns), `RULE CONFIRMATION REQUIRED`, `DAILY LIMIT REACHED`, `DAILY LIMIT EXCEEDED`, `UNCONFIRMED` (breached flag only, when the daily breach status is unknown), `NONE` (no DLL / no cap), or `""` (unused row). CONTRACTS is never a tradable number when daily capacity is ≤ 0.
 - Propagation: every dependent formula begins with the upstream status test (`$W2`, `AK2`, `AA2`, `I2`); `IFERROR(…,"INVALID")` wraps
   each Accounts formula as a final guard (e.g. text in a numeric field).
 - Data validation (reject input, both apps): money ≤2 dp and `0 < x ≤ 100000000` (custom rule `=ROUND(x*100,6)=INT(ROUND(x*100,6))`; never `ROUND(x*100,0)=x*100`, which rejects 0.29 in float), stop ticks whole number ≥1, tick value decimal `0 < x ≤ 100000` with ≤6 dp (`=ROUND(x*1000000,3)=INT(ROUND(x*1000000,3))`),
@@ -219,8 +255,9 @@ Breach is terminal: once any row is BREACHED, `Accounts!AA` stays TRUE; later ro
   preset `checked_date` > 30 days old (compare to a user-entered "As of" date in `Accounts!B13`; no TODAY()) → amber.
 
 ## 5. Golden mapping
-`tracker/golden_map.json` (49 cases): yes 25 / partial 13 / no 11. Every yes/partial case with sheet inputs is evaluated by
+`tracker/golden_map.json` (75 cases): yes 43 / partial 21 / no 11. Every yes/partial case with sheet inputs is evaluated by
 `tracker/sheet_logic.py` (float, same formulas) and must match `golden/cases.json` on the listed fields; `--check` enforces it.
+FS-25 and FS-28 stay in that Python check. Their ticks (1 and 0.995) are not ES/MES/NQ/MNQ ticks, so the workbook test does not enter them.
 
 ## 6. Limits
 See README section of the QUANT report; summarized: intraday order not encodable (DD-11); sub-cent inputs rejected (DD-17, FS-28);

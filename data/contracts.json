@@ -8,10 +8,10 @@
       "exchange": "CME Group",
       "tick_size": "0.25",
       "tick_value_usd": "1.25",
-      "source_url": "https://www.cmegroup.com/articles/faqs/micro-e-mini-equity-index-futures-frequently-asked-questions.html",
-      "checked_date": "2026-10-14",
-      "status": "verified_indirect",
-      "note": "Direct fetch of the cmegroup.com page returned HTTP 403/500 (bot-blocked); values read from the search-index copy of the cited CME Group page. Re-verify in a browser before release. CME FAQ table: 0.25 index points = $1.25; contract page: $5 x index, 0.25 tick."
+      "source_url": "https://www.cmegroup.com/rulebook/CME/IV/350/353/353.pdf",
+      "checked_date": "2026-10-23",
+      "status": "verified",
+      "note": "CME Rulebook Chapter 353, fetched 2026-10-23. Rule 35301: each contract is valued at $5.00 times the S&P 500. Rule 35302.C: minimum price increment 0.25 Index points, equal to $1.25 per contract (outright). Calendar-spread tick 0.05 = $0.25 is not used. curl to the PDF returned HTTP 403; the same URL was retrieved and this rule text was read."
     },
     {
       "symbol": "MNQ",
@@ -19,10 +19,10 @@
       "exchange": "CME Group",
       "tick_size": "0.25",
       "tick_value_usd": "0.50",
-      "source_url": "https://www.cmegroup.com/articles/faqs/micro-e-mini-equity-index-futures-frequently-asked-questions.html",
-      "checked_date": "2026-10-14",
-      "status": "verified_indirect",
-      "note": "Direct fetch of the cmegroup.com page returned HTTP 403/500 (bot-blocked); values read from the search-index copy of the cited CME Group page. Re-verify in a browser before release. CME FAQ table: 0.25 index points = $0.50."
+      "source_url": "https://www.cmegroup.com/rulebook/CME/IV/350/361.pdf",
+      "checked_date": "2026-10-23",
+      "status": "verified",
+      "note": "CME Rulebook Chapter 361, fetched 2026-10-23. Rule 36101: each contract is valued at $2.00 times the Nasdaq-100. Rule 36102.C: minimum price increment 0.25 Index points, equal to $0.50 per contract (outright). Calendar-spread tick 0.05 = $0.10 is not used. Chapter path 361/361.pdf returned 404; 361.pdf was retrieved. curl to the PDF returned HTTP 403; the same URL was retrieved and this rule text was read."
     },
     {
       "symbol": "ES",
@@ -30,10 +30,10 @@
       "exchange": "CME Group",
       "tick_size": "0.25",
       "tick_value_usd": "12.50",
-      "source_url": "https://www.cmegroup.com/markets/equities/sp/e-mini-sandp500.contractSpecs.html",
-      "checked_date": "2026-10-14",
-      "status": "flagged",
-      "note": "Direct fetch of the cmegroup.com page returned HTTP 403/500 (bot-blocked); values read from the search-index copy of the cited CME Group page. Re-verify in a browser before release. CME excerpt seen did not show the tick/multiplier text; 0.25 x $50 = $12.50 confirmed only by third-party (barchart). FLAG: needs direct check of CME page."
+      "source_url": "https://www.cmegroup.com/rulebook/CME/IV/350/358/358.pdf",
+      "checked_date": "2026-10-23",
+      "status": "verified",
+      "note": "CME Rulebook Chapter 358, fetched 2026-10-23. Rule 35801: each contract is valued at $50.00 times the S&P 500. Rule 35802.C: minimum price increment 0.25 Index points, equal to $12.50 per contract (outright). Calendar-spread tick 0.05 = $2.50 is not used. The HTML contractSpecs page did not include this table. curl to the PDF returned HTTP 403; the same URL was retrieved and this rule text was read."
     },
     {
       "symbol": "NQ",
@@ -41,10 +41,10 @@
       "exchange": "CME Group",
       "tick_size": "0.25",
       "tick_value_usd": "5.00",
-      "source_url": "https://www.cmegroup.com/trading/equity-index/files/emini-nasdaq-100-futures-options.pdf",
-      "checked_date": "2026-10-14",
-      "status": "verified_indirect",
-      "note": "Direct fetch of the cmegroup.com page returned HTTP 403/500 (bot-blocked); values read from the search-index copy of the cited CME Group page. Re-verify in a browser before release. CME fact sheet: outrights 0.25 index points = $5.00; contract page: $20 x index."
+      "source_url": "https://www.cmegroup.com/rulebook/CME/IV/350/359/359.pdf",
+      "checked_date": "2026-10-23",
+      "status": "verified",
+      "note": "CME Rulebook Chapter 359, fetched 2026-10-23. Rule 35901: each contract is valued at $20.00 times the Nasdaq-100. Rule 35902.C: minimum price increment 0.25 Index points, equal to $5.00 per contract (outright). Calendar-spread tick 0.05 = $1.00 is not used. curl to the PDF returned HTTP 403; the same URL was retrieved and this rule text was read."
     },
     {
       "symbol": "GC",

@@ -2,7 +2,8 @@
 
 All arithmetic is defined by `golden/oracle.py` (stdlib, `decimal.Decimal`, prec 50). Golden vectors: `golden/cases.json`,
 verify with `python3 golden/oracle.py --check`. Units: account currency (USD) unless noted. Intermediate values are unrounded; rounding happens **only at output**, always in the conservative direction (M-7):
-`floor` → ROUND_CEILING to cents; `drawdown_room`, `daily_room`, `binding_room`, `effective_risk`, `actual_risk`, `equity` → ROUND_DOWN to cents;
+`floor` → ROUND_CEILING to cents; `drawdown_room`, `binding_room`, `effective_risk`, `actual_risk`, `equity` → ROUND_DOWN to cents;
+`daily_room` → ROUND_FLOOR to cents (identical to ROUND_DOWN for every value ≥ 0; a negative fraction of a cent stays negative);
 `peak` → HALF_UP (informational only). Contract counts and crypto qty use ROUND_FLOOR. Numbers are decimal strings or ints; floats/bools rejected.
 
 ## 1. Common inputs
@@ -49,24 +50,45 @@ conservative order: for trailing types, the adverse extreme is evaluated against
 raises the peak (long: O, L, H, C; i.e. assume the low came first). Ambiguity resolution is the caller's job and must be documented.
 
 ## 6. Remaining room and binding constraint
-- `drawdown_room = max(0, E - F)` (0 when breached).
+- `drawdown_room = max(0, E - F)` (0 when breached). Floor breach is `drawdown().breached`. It is not decided inside `risk_room`.
 - `day_pnl` (M-6) = current equity incl. unrealized P&L − the firm's daily reference value at the last reset (preset `daily_loss.basis`/`reset`).
   Transfers/withdrawals that move the reference (Vest) must be folded into the reference by the caller.
-- `day_loss = max(0, -day_pnl)`; `daily_room = max(0, DLL - day_loss)` when a $ DLL exists, else null.
-- `binding_room = min(drawdown_room, daily_room)`; `binding = "daily_loss"` iff `daily_room < drawdown_room`, ties → "drawdown".
+- `day_loss = max(0, -day_pnl)`. Signed daily capacity is `DLL - day_loss` when a $ DLL exists, else there is no daily room.
+  `daily_room` is that capacity, ROUND_FLOOR to the cent. It is not clamped at zero. A fraction of a cent below zero becomes `-0.01`, not `0.00`.
+- `binding_room = min(drawdown_room, max(0, daily_room))`. Sizing never sees a negative room. `binding = "daily_loss"` iff `daily_room < drawdown_room`, ties → "drawdown". `binding` names the tighter room. It is not permission to trade.
+- `daily_status` when a DLL exists. `dll_enforcement` and `dll_boundary` are independent. `reach` means room exactly 0 is the firm's trigger. `exceed` means only a room below 0 is the trigger. Omitted boundary is `unconfirmed`, the same way omitted enforcement is.
+  - capacity > 0 → `OK`. Size normally, subject to risk, the stop, the contract cap, and the drawdown room. If enforcement is omitted, `dll_rule` is `unconfirmed` and the page and the sheet flag `DLL RULE UNCONFIRMED`. If boundary is omitted, `dll_boundary` is `unconfirmed` and they flag `DLL BOUNDARY UNCONFIRMED`. The count does not change. Either flag means the preset is not fully verified.
+  - capacity = 0 and enforcement is `hard` and boundary is `reach` → `BREACHED`. Max contracts 0. The breached flag is true.
+  - capacity = 0 and both are confirmed, and the pair is hard + `exceed`, soft + `exceed`, or soft + `reach` → `DAILY LIMIT REACHED`. Max contracts 0. The breached flag stays false. Soft never breaches, including soft + reach.
+  - capacity = 0 and enforcement or boundary is omitted → `RULE CONFIRMATION REQUIRED`. Max contracts 0. The breached flag is `UNCONFIRMED`. That is not a safe clearance. A confirmed `exceed` does not make an unconfirmed enforcement safe at exact zero.
+  - capacity < 0 ignores boundary. `hard` → `BREACHED`. `soft` → `DAILY LIMIT EXCEEDED`, breached flag false. Enforcement omitted → `RULE CONFIRMATION REQUIRED`, breached flag `UNCONFIRMED`. Blank is not soft.
+- No status permits trading when daily capacity is ≤ 0. A numeric contract count of 0 with `daily_status = OK` means the stop does not fit in a still-positive room, or the cap is 0. That is not a daily-limit status.
 - Percentage DLLs (Breakout, Vest, MyFundedPerps) must be converted to $ at the firm's reset instant
   (DLL_$ = rate × reset basis) before calling; reset basis/time is firm-specific (see presets notes).
-- `daily_loss.enforcement` in presets: `hard` = breach/fail; `soft` = forced flat for the session, not a violation (Topstep).
-  Either way the sizing room is the same; status reporting differs.
+- `daily_loss.enforcement` in presets: `hard` = breach/fail; `soft` = forced flat for the session, not a violation (Topstep). `daily_loss.boundary`: `reach` = touching the daily floor is the trigger; `exceed` = only going through it is. A preset value counts as confirmed only when `docs/PRESET-SOURCES.md` quotes a current official page for it. Both tokens are case-insensitive. Any other token is `INVALID_INPUT`. Omitted means unconfirmed, on a custom rule and on a preset whose page does not support that classification. The two fields do not default to each other.
 - Missing `day_pnl` when a DLL is given → INVALID_INPUT.
-Examples: RR-18 daily binds 350.00; RR-19 drawdown binds; RR-20 no DLL; RR-21 tie → "drawdown".
+- Precedence, applied by the workbook and the page (the oracle functions stay separate): (1) empty row is blank; (2) `INCOMPLETE` (missing required input, including a blank instrument or cap, a DLL with no day reference, an incomplete log row, or any unknown-account log row); (3) `INVALID` (bad value, bad instrument, bad enforcement token, bad boundary token, or an invalid log row); (4) drawdown floor hit → `BREACHED`, max contracts 0, and this outranks every daily status; (5) confirmed hard daily breach → `BREACHED`, max contracts 0 (capacity < 0 with hard, or capacity exactly 0 with hard and reach); (6) `RULE CONFIRMATION REQUIRED` when capacity < 0 and enforcement is unconfirmed, or capacity is exactly 0 and enforcement or boundary is unconfirmed; (7) capacity < 0 and enforcement soft → `DAILY LIMIT EXCEEDED`, max contracts 0; (8) capacity exactly 0 with a confirmed pair that is not hard + reach → `DAILY LIMIT REACHED`, max contracts 0; (9) otherwise a numeric size. `INVALID` and `INCOMPLETE` stay different words. On the sheet, DD room and daily room show the word `BREACHED` only when the floor was hit. A hard daily breach leaves the daily room number visible so the two breach causes can be told apart. The breached flag is true for a floor hit and for a confirmed hard daily breach. It is the text `UNCONFIRMED` when the daily breach status is unknown. It is false for a confirmed soft exceed and for `DAILY LIMIT REACHED`.
+Examples: RR-18 daily binds 350.00 and status OK, with both classifications unconfirmed; RR-19 drawdown binds; RR-20 no DLL (`daily_status` null); RR-21 tie → "drawdown". DL-01 is $0.01 left (OK, both unconfirmed). DL-02 is exactly 0 with both omitted (`RULE CONFIRMATION REQUIRED`). DL-03 is −50 with enforcement unconfirmed. DL-04 is the same loss with `hard` (`BREACHED`). DL-16 is exactly 0 with hard and boundary omitted (`RULE CONFIRMATION REQUIRED`). DL-19 is exactly 0 with hard + reach (`BREACHED`). DL-20 is exactly 0 with hard + exceed (`DAILY LIMIT REACHED`). DL-21 is exactly 0 with soft + reach (`DAILY LIMIT REACHED`). DL-25 is one cent below zero with hard + exceed and stays `BREACHED`.
 
 ## 7. Futures sizing
 `risk_per_contract = stop_ticks × tick_value`; `contracts = floor(risk / risk_per_contract)`; result < 1 → 0;
-`contracts = min(contracts, max_contracts)` if given (`capped=true`).
-H-2: `binding_room` is a **required** input; `effective_risk = min(risk, binding_room)` is what is sized (`risk_limited_by_room` flags clamping). Fail closed.
-Inputs: risk >= 0, binding_room >= 0, stop_ticks integer > 0, tick_value > 0, max_contracts integer >= 0 (L-1; else `INVALID_INPUT`). Tick values: `data/contracts.json`.
-Mini/micro equivalence is per-firm (no generic 10:1 assumed). Examples: FS-22 MES 15; FS-23 ES → 0; FS-24 MNQ cap 30; FS-25 clamp to room 350; FS-26 max 0; FS-27 risk 0; FS-28 actual_risk 0.99 ≤ 0.996.
+then `contracts = min(contracts, active_cap)` when a cap is in force (`capped=true`).
+H-2: `binding_room` is a **required** input; `effective_risk = min(risk, binding_room)` is what is sized (`risk_limited_by_room` flags clamping). Fail closed. A contract cap of NONE does not turn this off. Drawdown room and daily-loss room still bind.
+
+**Instrument path** (input contains `instrument`). Tick value is derived, never typed:
+
+| instrument | class | tick value | cap used |
+|---|---|---|---|
+| ES | mini | 12.50 | `max_minis` |
+| NQ | mini | 5.00 | `max_minis` |
+| MES | micro | 1.25 | `max_micros` |
+| MNQ | micro | 0.50 | `max_micros` |
+
+The free calculator also prices GC/MGC, CL/MCL and 6E/M6E from `data/contracts.json` with the same class rule (symbol starts with M, or is in the micro set → micro cap). The paid workbook dropdown is only ES, MES, NQ, MNQ. A blank instrument or a missing cap for that class is an error (the sheet says INCOMPLETE). An unknown symbol is INVALID. An explicit 0 cap stays 0. `NONE` is the only way to remove the contract cap. If `tick_value` is also supplied it must equal the table or the call is `tick_value mismatch`.
+
+**Legacy single-cap path** (no `instrument` key). The caller supplies `tick_value` and one optional `max_contracts`. FS-22..FS-28 and the old futures invalid cases stay on this path so the floor-division, zero-cap, room-clamp and sub-cent invariants remain tested. They are not the workbook's input shape anymore: the sheet cannot accept an arbitrary tick.
+
+Examples on the new path: IA-01 MES $200 / 12 ticks / 50 micros → 13; IA-02 ES $200 / 12 / 5 minis → 1; IA-03 NQ $200 / 8 / 10 minis → 5; IA-04 MNQ $200 / 8 / 100 micros → 50. Legacy examples still hold: FS-22 15; FS-23 → 0; FS-24 cap 30; FS-25 clamp to room 350; FS-26 max 0; FS-27 risk 0; FS-28 actual_risk 0.99 ≤ 0.996.
 
 ## 8. Crypto perp sizing
 `qty = effective_risk / |entry - stop|`; entry == stop → `INVALID_INPUT`; entry, stop > 0. `step_size` is **required** (M-2);
@@ -88,5 +110,5 @@ session/DST boundaries (EOD event timing is the caller's responsibility), commis
 ## 11. Presets contract (M-3, M-5)
 `data/presets.json` follows `data/presets.schema.json` (no unknown keys; all numbers as decimal strings). Each row carries explicit
 `breach_on_touch` (and `breach_on_touch_after_lock` for MFP), `lock.kind` ∈ none|offset|payout_lock_to_start|unstated,
-`daily_loss.kind` ∈ none|fixed_usd|pct|pct_of_start|pct_choice|unstated with `enforcement` hard|soft. `custom_only` rows carry no numbers.
+`daily_loss.kind` ∈ none|fixed_usd|pct|pct_of_start|pct_choice|unstated with `enforcement` hard|soft|null and `boundary` reach|exceed|null. `custom_only` rows carry no numbers.
 `verified` rows may not have any `unstated` kind or null `breach_on_touch`. `python3 golden/oracle.py --check` validates presets too.
