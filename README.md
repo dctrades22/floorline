@@ -18,11 +18,14 @@ no CDN, no web fonts, no dependencies. Open `index.html` directly from disk and 
 - ES/NQ use the firm's mini cap. MES/MNQ (and the other micros) use the micro cap. A generic contract count, and only
   a generic count, applies to every instrument. No 10:1 equivalence is assumed. Blank cap = incomplete. Explicit 0
   stays 0. Type NONE to remove only the contract cap. Risk, trailing drawdown and the daily loss limit stay active.
-  Daily capacity above zero sizes normally. Exactly zero shows DAILY LIMIT REACHED and max contracts 0. Below zero shows
-  BREACHED when the confirmed rule is `hard`, DAILY LIMIT EXCEEDED when it is `soft`, and RULE CONFIRMATION REQUIRED
-  when hard/soft is not confirmed. A blank rule is not soft. The page flags DLL RULE UNCONFIRMED while that limit is
-  on, including while room is still above zero. A drawdown floor hit is BREACHED and outranks the daily status.
-  None of those statuses can be traded.
+  Daily capacity above zero sizes normally. Exactly zero is BREACHED only when the confirmed rule is hard and the
+  boundary is reach. Confirmed exceed, and confirmed soft even with reach, shows DAILY LIMIT REACHED. Soft never
+  breaches. Exactly zero with hard/soft or reach/exceed unconfirmed shows RULE CONFIRMATION REQUIRED and does not
+  read as safe. Below zero ignores the boundary: BREACHED when hard, DAILY LIMIT EXCEEDED when soft, and
+  RULE CONFIRMATION REQUIRED when hard/soft is not confirmed. A blank rule is not soft. The page flags
+  DLL RULE UNCONFIRMED and DLL BOUNDARY UNCONFIRMED independently while that limit is on, including while room is
+  still above zero. A preset with either flag is not fully verified. A drawdown floor hit is BREACHED and outranks
+  the daily status. None of those statuses can be traded.
 - The paid 10-account workbook is built from `tracker/` and is not part of the GitHub Pages site. Its instrument
   list is ES, MES, NQ, MNQ. See `docs/DEPLOY-CHECKLIST.md`.
 

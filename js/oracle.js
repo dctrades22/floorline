@@ -21,13 +21,28 @@
     if (s !== "hard" && s !== "soft") bad("dll_enforcement must be hard or soft");
     return s;
   }
+  function dllBoundary(inp) {
+    if (!has(inp, "dll_boundary") || inp.dll_boundary === null) return null;
+    var v = inp.dll_boundary;
+    if (typeof v !== "string") bad("dll_boundary must be reach or exceed");
+    var s = v.trim().toLowerCase();
+    if (s !== "reach" && s !== "exceed") bad("dll_boundary must be reach or exceed");
+    return s;
+  }
   function dllRule(enf) { return enf === "hard" || enf === "soft" ? enf : "unconfirmed"; }
-  function dailyStatus(capacity, enf) {
+  function boundaryRule(boundary) { return boundary === "reach" || boundary === "exceed" ? boundary : "unconfirmed"; }
+  // >0 OK. <0 ignores boundary. ==0: hard+reach BREACHED; confirmed exceed, or soft+reach, DAILY LIMIT REACHED.
+  // Soft never breaches. Either classification omitted at exactly 0 is RULE CONFIRMATION REQUIRED.
+  function dailyStatus(capacity, enf, boundary) {
     if (Dec.cmp(capacity, Dec.ZERO) > 0) return "OK";
-    if (Dec.cmp(capacity, Dec.ZERO) === 0) return "DAILY LIMIT REACHED";
-    if (enf === "hard") return "BREACHED";
-    if (enf === "soft") return "DAILY LIMIT EXCEEDED";
-    return "RULE CONFIRMATION REQUIRED";
+    if (Dec.cmp(capacity, Dec.ZERO) < 0) {
+      if (enf === "hard") return "BREACHED";
+      if (enf === "soft") return "DAILY LIMIT EXCEEDED";
+      return "RULE CONFIRMATION REQUIRED";
+    }
+    if ((enf !== "hard" && enf !== "soft") || (boundary !== "reach" && boundary !== "exceed")) return "RULE CONFIRMATION REQUIRED";
+    if (enf === "hard" && boundary === "reach") return "BREACHED";
+    return "DAILY LIMIT REACHED";
   }
   // After empty / INCOMPLETE / INVALID. Floor outranks every daily word.
   function accountStatus(floorBreached, dailyStatusWord) {
@@ -95,25 +110,29 @@
       equity: rDown(equity), drawdown_room: rDown(room) };
   }
 
-  // Signed daily capacity. >0 OK (dll_rule may still be unconfirmed). ==0 DAILY LIMIT REACHED
-  // for hard, soft, and unconfirmed. <0 is BREACHED only when dll_enforcement is hard,
-  // DAILY LIMIT EXCEEDED when it is soft, and RULE CONFIRMATION REQUIRED when it is omitted.
-  // Omitted enforcement is not soft and not hard. Capacity is ROUND_FLOOR to the cent.
-  // binding_room is max(0, capacity) so sizing never sees a negative room.
+  // Signed daily capacity. >0 OK (dll_rule or dll_boundary may still be unconfirmed).
+  // ==0 is BREACHED only for confirmed hard + reach. Soft never breaches, so soft + reach is
+  // DAILY LIMIT REACHED. Confirmed exceed at exactly 0 is DAILY LIMIT REACHED.
+  // Either classification omitted at exactly 0 is RULE CONFIRMATION REQUIRED.
+  // <0 ignores boundary: BREACHED only when dll_enforcement is hard, DAILY LIMIT EXCEEDED when
+  // soft, RULE CONFIRMATION REQUIRED when omitted. Omitted enforcement is not soft and not hard.
+  // Capacity is ROUND_FLOOR to the cent. binding_room is max(0, capacity).
   // A drawdown-floor breach is drawdown(), not this function. accountStatus applies floor first.
   function riskRoom(inp) {
     var ddRoom = dec(need(inp, "drawdown_room"), "drawdown_room", { nonneg: true });
     var dl = get(inp, "daily_loss_limit");
-    if (dl === null) return { drawdown_room: rDown(ddRoom), daily_room: null, binding_room: rDown(ddRoom), binding: "drawdown", daily_status: null, dll_rule: null };
+    if (dl === null) return { drawdown_room: rDown(ddRoom), daily_room: null, binding_room: rDown(ddRoom), binding: "drawdown", daily_status: null, dll_rule: null, dll_boundary: null };
     dl = dec(dl, "daily_loss_limit", { positive: true });
     var dayPnl = dec(need(inp, "day_pnl"), "day_pnl");
     var enf = dllEnforcement(inp);
+    var boundary = dllBoundary(inp);
     var raw = Dec.sub(dl, Dec.max(Dec.ZERO, Dec.neg(dayPnl)));
     var dQ = Dec.quantize(raw, CENT, "FLOOR");
     var sized = Dec.max(Dec.ZERO, dQ);
     var roomStr = Dec.isZero(dQ) ? "0.00" : Dec.toFixed(dQ);
     return { drawdown_room: rDown(ddRoom), daily_room: roomStr, binding_room: rDown(Dec.min(ddRoom, sized)),
-      binding: Dec.cmp(dQ, ddRoom) < 0 ? "daily_loss" : "drawdown", daily_status: dailyStatus(dQ, enf), dll_rule: dllRule(enf) };
+      binding: Dec.cmp(dQ, ddRoom) < 0 ? "daily_loss" : "drawdown", daily_status: dailyStatus(dQ, enf, boundary),
+      dll_rule: dllRule(enf), dll_boundary: boundaryRule(boundary) };
   }
 
   function effRisk(inp) {

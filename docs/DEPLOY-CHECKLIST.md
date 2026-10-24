@@ -28,7 +28,7 @@ Excel 2019 or Microsoft 365 is still required before Gumroad (the file uses `MAX
 
 Spot-check: MES $200 / 12 ticks / 50 micros = 13; ES $200 / 12 / 5 minis = 1; NQ $200 / 8 / 10 minis = 5; MNQ $200 / 8 / 100 micros = 50. Blank instrument is INCOMPLETE. A blank cap for that class is INCOMPLETE. Cap 0 sizes 0. NONE still respects the daily loss limit and the floor.
 
-Daily loss, static 50,000 / 2,000 so the floor is 48,000 (these equities are not a floor hit). DLL 1,000, day reference 50,000, MES, 12 ticks: equity 49,000.01 → daily room 0.01 and a numeric contract count (OK) for blank, soft, and hard. Blank also flags DLL RULE UNCONFIRMED. Equity 49,000 → CONTRACTS `DAILY LIMIT REACHED`, breached flag false, for blank, soft, and hard. Equity 48,950 with enforcement blank → `RULE CONFIRMATION REQUIRED`, breached flag `UNCONFIRMED`, daily room −50. The same 48,950 with `soft` → `DAILY LIMIT EXCEEDED`, breached flag false. With `hard` → `BREACHED`, breached flag true, daily room still −50. Equity 48,000 → `BREACHED` from the floor, and the room columns say BREACHED, including when the daily rule is unconfirmed. A numeric 0 is not a daily-limit status. Row-by-row inputs are in `docs/EXCEL-SPOT-CHECK.md`. Enforcement sources are in `docs/PRESET-SOURCES.md`.
+Daily loss, static 50,000 / 2,000 so the floor is 48,000 (these equities are not a floor hit). DLL 1,000, day reference 50,000, MES, 12 ticks. Equity 49,000.01 → daily room 0.01 and a numeric contract count (OK). A blank DLL enforcement (AS) flags DLL RULE UNCONFIRMED. A blank DLL boundary (AV) flags DLL BOUNDARY UNCONFIRMED. Equity 49,000 is exactly zero: hard + reach → CONTRACTS `BREACHED` and AE TRUE; hard + exceed, soft + exceed, and soft + reach → `DAILY LIMIT REACHED` and AE FALSE (soft never breaches); either classification blank → `RULE CONFIRMATION REQUIRED` and AE `UNCONFIRMED`. Equity 48,999.99 is one cent through: boundary does not change it. Blank enforcement → `RULE CONFIRMATION REQUIRED`. Soft → `DAILY LIMIT EXCEEDED`. Hard → `BREACHED`. Equity 48,000 → `BREACHED` from the floor, and the room columns say BREACHED, including when a daily classification is unconfirmed. A numeric 0 is not a daily-limit status. Row-by-row inputs are in `docs/EXCEL-SPOT-CHECK.md`. Sources are in `docs/PRESET-SOURCES.md`.
 
 Tick values: `docs/CME-TICKS.md`. ES, MES, NQ and MNQ were read from the CME Rulebook on 2026-10-23. ES is no longer flagged.
 
@@ -42,9 +42,10 @@ Full quotes and UNCONFIRMED items: `docs/GUMROAD-FILE-REPLACE.md` (pages read 20
 
 Do not assume buyers are emailed when the file is replaced. The fetched help pages do not say that. Library shows up-to-date files. Emails and Workflows are a separate step. Workflow triggers listed that day do not include "file replaced."
 
-1. Archive the current Gumroad file locally, named with the date.
+0. Before any Gumroad replacement, download the file that is currently distributed (the buyer's Library, or a receipt). Record its SHA-256 and keep that exact file as the rollback copy. Do not upload a replacement until that download is stored. A workbook rebuilt from this git repo, including the copy of `main`, is not that distributed file. The live Gumroad bytes are not visible from this repository.
+1. Archive that downloaded file locally, named with the date and the SHA-256.
 2. Replace the xlsx on the Content tab of the product (or the version buyers own). Publish.
-3. Download from a receipt or the Library and match the SHA-256.
+3. Download from a receipt or the Library and match the SHA-256 of the file you intended to ship.
 4. Send an Email to Customers about the Instrument column, the calculated tick, and the separate caps. Resend a receipt only if a buyer needs the mail again.
 5. Old filled workbooks do not pick up the new formulas.
 

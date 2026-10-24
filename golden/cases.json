@@ -538,6 +538,7 @@
         "binding_room": "350.00",
         "daily_room": "350.00",
         "daily_status": "OK",
+        "dll_boundary": "unconfirmed",
         "dll_rule": "unconfirmed",
         "drawdown_room": "1800.00",
         "ok": true
@@ -557,6 +558,7 @@
         "binding_room": "400.00",
         "daily_room": "1000.00",
         "daily_status": "OK",
+        "dll_boundary": "unconfirmed",
         "dll_rule": "unconfirmed",
         "drawdown_room": "400.00",
         "ok": true
@@ -576,6 +578,7 @@
         "binding_room": "1234.56",
         "daily_room": null,
         "daily_status": null,
+        "dll_boundary": null,
         "dll_rule": null,
         "drawdown_room": "1234.56",
         "ok": true
@@ -593,6 +596,7 @@
         "binding_room": "500.00",
         "daily_room": "500.00",
         "daily_status": "OK",
+        "dll_boundary": "unconfirmed",
         "dll_rule": "unconfirmed",
         "drawdown_room": "500.00",
         "ok": true
@@ -1413,6 +1417,7 @@
         "binding_room": "0.01",
         "daily_room": "0.01",
         "daily_status": "OK",
+        "dll_boundary": "unconfirmed",
         "dll_rule": "unconfirmed",
         "drawdown_room": "1000.01",
         "ok": true
@@ -1426,12 +1431,13 @@
       "kind": "risk_room"
     },
     {
-      "description": "daily capacity exactly 0 is DAILY LIMIT REACHED. binding_room 0. Not a breach. Unconfirmed does not change that word.",
+      "description": "daily capacity exactly 0 with enforcement and boundary omitted is RULE CONFIRMATION REQUIRED. Not a safe clearance.",
       "expected": {
         "binding": "daily_loss",
         "binding_room": "0.00",
         "daily_room": "0.00",
-        "daily_status": "DAILY LIMIT REACHED",
+        "daily_status": "RULE CONFIRMATION REQUIRED",
+        "dll_boundary": "unconfirmed",
         "dll_rule": "unconfirmed",
         "drawdown_room": "1000.00",
         "ok": true
@@ -1451,6 +1457,7 @@
         "binding_room": "0.00",
         "daily_room": "-50.00",
         "daily_status": "RULE CONFIRMATION REQUIRED",
+        "dll_boundary": "unconfirmed",
         "dll_rule": "unconfirmed",
         "drawdown_room": "950.00",
         "ok": true
@@ -1470,6 +1477,7 @@
         "binding_room": "0.00",
         "daily_room": "-50.00",
         "daily_status": "BREACHED",
+        "dll_boundary": "unconfirmed",
         "dll_rule": "hard",
         "drawdown_room": "950.00",
         "ok": true
@@ -1490,6 +1498,7 @@
         "binding_room": "0.00",
         "daily_room": "-0.01",
         "daily_status": "RULE CONFIRMATION REQUIRED",
+        "dll_boundary": "unconfirmed",
         "dll_rule": "unconfirmed",
         "drawdown_room": "999.99",
         "ok": true
@@ -1509,6 +1518,7 @@
         "binding_room": "0.00",
         "daily_room": "-0.01",
         "daily_status": "BREACHED",
+        "dll_boundary": "unconfirmed",
         "dll_rule": "hard",
         "drawdown_room": "999.99",
         "ok": true
@@ -1529,6 +1539,7 @@
         "binding_room": "0.00",
         "daily_room": "-50.00",
         "daily_status": "DAILY LIMIT EXCEEDED",
+        "dll_boundary": "unconfirmed",
         "dll_rule": "soft",
         "drawdown_room": "950.00",
         "ok": true
@@ -1549,6 +1560,7 @@
         "binding_room": "350.00",
         "daily_room": "350.00",
         "daily_status": "OK",
+        "dll_boundary": "unconfirmed",
         "dll_rule": "hard",
         "drawdown_room": "1800.00",
         "ok": true
@@ -1611,6 +1623,7 @@
         "binding_room": "0.00",
         "daily_room": "-0.01",
         "daily_status": "RULE CONFIRMATION REQUIRED",
+        "dll_boundary": "unconfirmed",
         "dll_rule": "unconfirmed",
         "drawdown_room": "1000.00",
         "ok": true
@@ -1630,6 +1643,7 @@
         "binding_room": "0.00",
         "daily_room": "-50.00",
         "daily_status": "BREACHED",
+        "dll_boundary": "unconfirmed",
         "dll_rule": "hard",
         "drawdown_room": "950.00",
         "ok": true
@@ -1650,6 +1664,7 @@
         "binding_room": "0.01",
         "daily_room": "0.01",
         "daily_status": "OK",
+        "dll_boundary": "unconfirmed",
         "dll_rule": "hard",
         "drawdown_room": "1000.01",
         "ok": true
@@ -1670,6 +1685,7 @@
         "binding_room": "0.01",
         "daily_room": "0.01",
         "daily_status": "OK",
+        "dll_boundary": "unconfirmed",
         "dll_rule": "soft",
         "drawdown_room": "1000.01",
         "ok": true
@@ -1684,12 +1700,13 @@
       "kind": "risk_room"
     },
     {
-      "description": "daily capacity exactly 0 with hard enforcement is DAILY LIMIT REACHED, not BREACHED.",
+      "description": "daily capacity exactly 0 with hard enforcement and boundary omitted is RULE CONFIRMATION REQUIRED, not BREACHED.",
       "expected": {
         "binding": "daily_loss",
         "binding_room": "0.00",
         "daily_room": "0.00",
-        "daily_status": "DAILY LIMIT REACHED",
+        "daily_status": "RULE CONFIRMATION REQUIRED",
+        "dll_boundary": "unconfirmed",
         "dll_rule": "hard",
         "drawdown_room": "1000.00",
         "ok": true
@@ -1704,12 +1721,13 @@
       "kind": "risk_room"
     },
     {
-      "description": "daily capacity exactly 0 with soft enforcement is DAILY LIMIT REACHED.",
+      "description": "daily capacity exactly 0 with soft enforcement and boundary omitted is RULE CONFIRMATION REQUIRED.",
       "expected": {
         "binding": "daily_loss",
         "binding_room": "0.00",
         "daily_room": "0.00",
-        "daily_status": "DAILY LIMIT REACHED",
+        "daily_status": "RULE CONFIRMATION REQUIRED",
+        "dll_boundary": "unconfirmed",
         "dll_rule": "soft",
         "drawdown_room": "1000.00",
         "ok": true
@@ -1724,12 +1742,13 @@
       "kind": "risk_room"
     },
     {
-      "description": "one cent past the daily limit with soft enforcement is DAILY LIMIT EXCEEDED.",
+      "description": "one cent past the daily limit with soft enforcement is DAILY LIMIT EXCEEDED. Boundary is ignored below zero.",
       "expected": {
         "binding": "daily_loss",
         "binding_room": "0.00",
         "daily_room": "-0.01",
         "daily_status": "DAILY LIMIT EXCEEDED",
+        "dll_boundary": "unconfirmed",
         "dll_rule": "soft",
         "drawdown_room": "999.99",
         "ok": true
@@ -1740,6 +1759,197 @@
         "day_pnl": "-1000.01",
         "dll_enforcement": "soft",
         "drawdown_room": "999.99"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "exactly 0 with hard and reach is BREACHED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "0.00",
+        "daily_status": "BREACHED",
+        "dll_boundary": "reach",
+        "dll_rule": "hard",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-19",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "dll_boundary": "reach",
+        "dll_enforcement": "hard",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "exactly 0 with hard and exceed is DAILY LIMIT REACHED, not BREACHED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "0.00",
+        "daily_status": "DAILY LIMIT REACHED",
+        "dll_boundary": "exceed",
+        "dll_rule": "hard",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-20",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "dll_boundary": "exceed",
+        "dll_enforcement": "hard",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "exactly 0 with soft and reach is DAILY LIMIT REACHED. Soft never breaches.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "0.00",
+        "daily_status": "DAILY LIMIT REACHED",
+        "dll_boundary": "reach",
+        "dll_rule": "soft",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-21",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "dll_boundary": "reach",
+        "dll_enforcement": "soft",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "exactly 0 with soft and exceed is DAILY LIMIT REACHED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "0.00",
+        "daily_status": "DAILY LIMIT REACHED",
+        "dll_boundary": "exceed",
+        "dll_rule": "soft",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-22",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "dll_boundary": "exceed",
+        "dll_enforcement": "soft",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "dll_boundary other than reach or exceed is INVALID_INPUT.",
+      "expected": {
+        "error": "INVALID_INPUT",
+        "message": "dll_boundary must be reach or exceed",
+        "ok": false
+      },
+      "id": "DL-23",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "dll_boundary": "touch",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "boundary token REACH is case-insensitive. With hard, exactly 0 is BREACHED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "0.00",
+        "daily_status": "BREACHED",
+        "dll_boundary": "reach",
+        "dll_rule": "hard",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-24",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "dll_boundary": "REACH",
+        "dll_enforcement": "HARD",
+        "drawdown_room": "1000"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "one cent below zero with hard and exceed stays BREACHED. Boundary does not change a negative room.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-0.01",
+        "daily_status": "BREACHED",
+        "dll_boundary": "exceed",
+        "dll_rule": "hard",
+        "drawdown_room": "999.99",
+        "ok": true
+      },
+      "id": "DL-25",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000.01",
+        "dll_boundary": "exceed",
+        "dll_enforcement": "hard",
+        "drawdown_room": "999.99"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "one cent below zero with soft and reach stays DAILY LIMIT EXCEEDED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "-0.01",
+        "daily_status": "DAILY LIMIT EXCEEDED",
+        "dll_boundary": "reach",
+        "dll_rule": "soft",
+        "drawdown_room": "999.99",
+        "ok": true
+      },
+      "id": "DL-26",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000.01",
+        "dll_boundary": "reach",
+        "dll_enforcement": "soft",
+        "drawdown_room": "999.99"
+      },
+      "kind": "risk_room"
+    },
+    {
+      "description": "exactly 0 with boundary exceed and enforcement omitted is RULE CONFIRMATION REQUIRED.",
+      "expected": {
+        "binding": "daily_loss",
+        "binding_room": "0.00",
+        "daily_room": "0.00",
+        "daily_status": "RULE CONFIRMATION REQUIRED",
+        "dll_boundary": "exceed",
+        "dll_rule": "unconfirmed",
+        "drawdown_room": "1000.00",
+        "ok": true
+      },
+      "id": "DL-27",
+      "input": {
+        "daily_loss_limit": "1000",
+        "day_pnl": "-1000",
+        "dll_boundary": "exceed",
+        "drawdown_room": "1000"
       },
       "kind": "risk_room"
     },

@@ -34,6 +34,7 @@
         "basis": "net P&L incl. unrealized for the trading day",
         "reset": "17:00 America/Chicago (session 5:00 PM-3:10 PM CT)",
         "enforcement": "soft",
+        "boundary": "reach",
         "optional": true
       },
       "max_contracts": {
@@ -73,6 +74,7 @@
         "basis": "net P&L incl. unrealized for the trading day",
         "reset": "17:00 America/Chicago (session 5:00 PM-3:10 PM CT)",
         "enforcement": "soft",
+        "boundary": "reach",
         "optional": true
       },
       "max_contracts": {
@@ -112,6 +114,7 @@
         "basis": "net P&L incl. unrealized for the trading day",
         "reset": "17:00 America/Chicago (session 5:00 PM-3:10 PM CT)",
         "enforcement": "soft",
+        "boundary": "reach",
         "optional": true
       },
       "max_contracts": {
@@ -151,6 +154,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -190,6 +194,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -229,6 +234,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -268,6 +274,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -307,6 +314,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -346,6 +354,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -385,6 +394,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -424,6 +434,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -463,6 +474,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -502,6 +514,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -541,6 +554,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -580,6 +594,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -619,6 +634,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -658,6 +674,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -697,6 +714,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -736,6 +754,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -775,6 +794,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -814,6 +834,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -853,6 +874,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -892,6 +914,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -931,6 +954,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -970,6 +994,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -1009,6 +1034,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -1048,6 +1074,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -1087,6 +1114,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -1126,6 +1154,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -1165,6 +1194,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {
@@ -1207,6 +1237,7 @@
         "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
         "reset": "20:00 America/New_York",
         "enforcement": "hard",
+        "boundary": "exceed",
         "optional": true
       },
       "max_contracts": {
@@ -1249,6 +1280,7 @@
         "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
         "reset": "20:00 America/New_York",
         "enforcement": "hard",
+        "boundary": "exceed",
         "optional": true
       },
       "max_contracts": {
@@ -1291,6 +1323,7 @@
         "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
         "reset": "20:00 America/New_York",
         "enforcement": "hard",
+        "boundary": "exceed",
         "optional": true
       },
       "max_contracts": {
@@ -1330,6 +1363,7 @@
         "basis": "balance excl. open positions at reset; checked vs equity incl. open positions",
         "reset": "00:30 UTC",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -1369,6 +1403,7 @@
         "basis": "balance excl. open positions at reset; checked vs equity incl. open positions",
         "reset": "00:30 UTC",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -1408,6 +1443,7 @@
         "basis": "balance excl. open positions at reset; checked vs equity incl. open positions",
         "reset": "00:30 UTC",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -1447,6 +1483,7 @@
         "basis": "balance excl. open positions at reset; checked vs equity incl. open positions",
         "reset": "00:30 UTC",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -1486,6 +1523,7 @@
         "basis": "balance excl. open positions at reset; checked vs equity incl. open positions",
         "reset": "00:30 UTC",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -1525,6 +1563,7 @@
         "basis": "balance excl. open positions at reset; checked vs equity incl. open positions",
         "reset": "00:30 UTC",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -1564,6 +1603,7 @@
         "basis": "balance excl. open positions at reset; checked vs equity incl. open positions",
         "reset": "00:30 UTC",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -1603,6 +1643,7 @@
         "basis": "balance excl. open positions at reset; checked vs equity incl. open positions",
         "reset": "00:30 UTC",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -1642,6 +1683,7 @@
         "basis": "balance excl. open positions at reset; checked vs equity incl. open positions",
         "reset": "00:30 UTC",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -1681,6 +1723,7 @@
         "basis": "balance excl. open positions at reset; checked vs equity incl. open positions",
         "reset": "00:30 UTC",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -1720,6 +1763,7 @@
         "basis": "balance excl. open positions at reset; checked vs equity incl. open positions",
         "reset": "00:30 UTC",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -1759,6 +1803,7 @@
         "basis": "balance excl. open positions at reset; checked vs equity incl. open positions",
         "reset": "00:30 UTC",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -1798,6 +1843,7 @@
         "basis": "balance excl. open positions at reset; checked vs equity incl. open positions",
         "reset": "00:30 UTC",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -1837,6 +1883,7 @@
         "basis": "balance excl. open positions at reset; checked vs equity incl. open positions",
         "reset": "00:30 UTC",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -1876,6 +1923,7 @@
         "basis": "balance excl. open positions at reset; checked vs equity incl. open positions",
         "reset": "00:30 UTC",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -1915,6 +1963,7 @@
         "basis": "balance excl. open positions at reset; checked vs equity incl. open positions",
         "reset": "00:30 UTC",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -1954,6 +2003,7 @@
         "basis": "balance excl. open positions at reset; checked vs equity incl. open positions",
         "reset": "00:30 UTC",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -1993,6 +2043,7 @@
         "basis": "start-of-day equity incl. open P&L; allowance = pct x starting balance; inclusive (touch breaches)",
         "reset": "00:00 America/New_York",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -2032,6 +2083,7 @@
         "basis": "start-of-day equity incl. open P&L; allowance = pct x starting balance; inclusive (touch breaches)",
         "reset": "00:00 America/New_York",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -2071,6 +2123,7 @@
         "basis": "start-of-day equity incl. open P&L; allowance = pct x starting balance; inclusive (touch breaches)",
         "reset": "00:00 America/New_York",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": false
       },
       "max_contracts": {
@@ -2110,6 +2163,7 @@
         "basis": "start-of-day equity incl. open P&L; allowance = pct x starting balance; inclusive (touch breaches)",
         "reset": "00:00 America/New_York",
         "enforcement": "hard",
+        "boundary": "reach",
         "optional": true
       },
       "max_contracts": {
@@ -2149,6 +2203,7 @@
         "basis": null,
         "reset": null,
         "enforcement": null,
+        "boundary": null,
         "optional": null
       },
       "max_contracts": {

@@ -162,6 +162,11 @@
     var e = dl && dl.enforcement;
     return e === "hard" || e === "soft" ? e : null;
   }
+  function dllBoundary() {
+    var p = state.preset, dl = p && !state.custom ? p.daily_loss : null;
+    var b = dl && dl.boundary;
+    return b === "reach" || b === "exceed" ? b : null;
+  }
   function dllAmount() {
     var p = state.preset, dl = p && !state.custom ? p.daily_loss : null;
     if (dl && (dl.kind === "pct" || dl.kind === "pct_of_start" || dl.kind === "pct_choice")) {
@@ -240,6 +245,7 @@
       if (dllS) {
         rr.daily_loss_limit = dllS; rr.day_pnl = v("pnl") || "0";
         var enf = dllEnforcement(); if (enf) rr.dll_enforcement = enf;
+        var boundary = dllBoundary(); if (boundary) rr.dll_boundary = boundary;
       }
       r2 = Oracle.evaluate("risk_room", rr); if (!r2.ok) err = r2;
     }
@@ -298,6 +304,7 @@
       return word === "OK" ? null : word;
     })() : null);
     var dllUnc = !!(dllS && !dllEnforcement());
+    var bdUnc = !!(dllS && !dllBoundary());
     if (r2 && r2.ok) {
       $("ddRoom").textContent = money(r2.drawdown_room);
       $("dRoom").textContent = r2.daily_room == null ? (field("dll").classList.contains("flag") ? "not entered" : "no DLL") : money(r2.daily_room);
@@ -317,10 +324,10 @@
       $("contracts").classList.add("statusWord");
       $("sizeDetail").textContent = "max contracts 0";
       if (r1 && r1.breached) flags.push(["BREACHED", "drawdown floor hit"]);
-      else if (block === "BREACHED") flags.push(["BREACHED", "daily loss limit exceeded; this confirmed rule counts that as a breach"]);
-      else if (block === "DAILY LIMIT REACHED") flags.push(["DAILY LIMIT REACHED", "no daily loss room left"]);
+      else if (block === "BREACHED") flags.push(["BREACHED", "this confirmed hard rule counts the daily limit as a breach"]);
+      else if (block === "DAILY LIMIT REACHED") flags.push(["DAILY LIMIT REACHED", "no daily loss room left. Confirmed soft does not breach at exact zero. Confirmed hard breaches at exact zero only when the boundary is reach."]);
       else if (block === "DAILY LIMIT EXCEEDED") flags.push(["DAILY LIMIT EXCEEDED", "over the daily loss limit; this confirmed soft rule does not call it a breach"]);
-      else if (block === "RULE CONFIRMATION REQUIRED") flags.push(["RULE CONFIRMATION REQUIRED", "daily room is below zero and hard/soft is not confirmed. Max contracts 0. Not a safe clearance and not classified as soft."]);
+      else if (block === "RULE CONFIRMATION REQUIRED") flags.push(["RULE CONFIRMATION REQUIRED", "daily room is exactly zero or below zero, and enforcement or the reach/exceed boundary is not confirmed. Max contracts 0. Not a safe clearance."]);
       else flags.push([block, "trading blocked"]);
     } else if (r3 && r3.ok) {
       if (crypto) {
@@ -337,8 +344,9 @@
       $("sizeDetail").textContent = r3 && !r3.ok ? r3.message : "";
     }
     if (dllUnc) flags.push(["DLL RULE UNCONFIRMED", "A daily loss limit is on, but hard or soft is not from a verified preset or a typed confirmation. Do not read a blank rule as soft. Sizing is unchanged while daily room is above zero."]);
+    if (bdUnc) flags.push(["DLL BOUNDARY UNCONFIRMED", "A daily loss limit is on, but reach or exceed is not from a verified preset. Exact zero is not a safe clearance. Sizing is unchanged while daily room is above zero."]);
     $("flags").innerHTML = flags.map(function (f) { return '<span class="flagchip"><b>' + f[0] + "</b> " + esc(f[1]) + "</span>"; }).join("");
-    markUnconfirmed(dllUnc);
+    markUnconfirmed(dllUnc, bdUnc);
 
     var tb = $("quick").querySelector("tbody");
     $("quick").hidden = crypto || !quick.length;
@@ -352,17 +360,16 @@
     gauge(r1, r2, level);
   }
 
-  function markUnconfirmed(on) {
+  function markUnconfirmed(ruleOn, boundaryOn) {
     var meta = $("presetMeta");
     if (!meta) return;
-    var note = meta.querySelector(".dll-unconfirmed");
-    if (note) note.remove();
+    Array.prototype.forEach.call(meta.querySelectorAll(".dll-unconfirmed"), function (note) { note.remove(); });
     var b = meta.querySelector(".badge");
     if (b && b.getAttribute("data-base")) {
       b.className = b.getAttribute("data-base-class");
       b.textContent = b.getAttribute("data-base");
     }
-    if (!on || !b) return;
+    if ((!ruleOn && !boundaryOn) || !b) return;
     if (!b.getAttribute("data-base")) {
       b.setAttribute("data-base", b.textContent);
       b.setAttribute("data-base-class", b.className);
@@ -371,10 +378,14 @@
       b.className = "badge partial";
       b.textContent = "not fully verified";
     }
-    var span = document.createElement("span");
-    span.className = "badge partial dll-unconfirmed";
-    span.textContent = "DLL RULE UNCONFIRMED";
-    meta.appendChild(span);
+    function chip(text) {
+      var span = document.createElement("span");
+      span.className = "badge partial dll-unconfirmed";
+      span.textContent = text;
+      meta.appendChild(span);
+    }
+    if (ruleOn) chip("DLL RULE UNCONFIRMED");
+    if (boundaryOn) chip("DLL BOUNDARY UNCONFIRMED");
   }
 
   function gauge(r1, r2, level) {

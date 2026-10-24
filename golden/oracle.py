@@ -112,20 +112,46 @@ def _dll_enforcement(inp):
     return s
 
 
+def _dll_boundary(inp):
+    """reach = the daily limit is inclusive (room exactly 0 is the firm's trigger).
+    exceed = only a room below 0 triggers it. Omitted or null = unconfirmed.
+    Independent of hard/soft."""
+    if "dll_boundary" not in inp or inp.get("dll_boundary") is None:
+        return None
+    v = inp["dll_boundary"]
+    if not isinstance(v, str):
+        bad("dll_boundary must be reach or exceed")
+    s = v.strip().lower()
+    if s not in ("reach", "exceed"):
+        bad("dll_boundary must be reach or exceed")
+    return s
+
+
 def _dll_rule(enf):
     return enf if enf in ("hard", "soft") else "unconfirmed"
 
 
-def _daily_status(capacity, enf):
+def _boundary_rule(boundary):
+    return boundary if boundary in ("reach", "exceed") else "unconfirmed"
+
+
+def _daily_status(capacity, enf, boundary):
+    """Room below 0 ignores boundary and matches the hard/soft/unconfirmed rule.
+    Room exactly 0 uses both classifications. Soft never produces BREACHED.
+    Either classification omitted at exactly 0 is RULE CONFIRMATION REQUIRED."""
     if capacity > 0:
         return "OK"
-    if capacity == 0:
-        return "DAILY LIMIT REACHED"
-    if enf == "hard":
+    if capacity < 0:
+        if enf == "hard":
+            return "BREACHED"
+        if enf == "soft":
+            return "DAILY LIMIT EXCEEDED"
+        return "RULE CONFIRMATION REQUIRED"
+    if enf not in ("hard", "soft") or boundary not in ("reach", "exceed"):
+        return "RULE CONFIRMATION REQUIRED"
+    if enf == "hard" and boundary == "reach":
         return "BREACHED"
-    if enf == "soft":
-        return "DAILY LIMIT EXCEEDED"
-    return "RULE CONFIRMATION REQUIRED"
+    return "DAILY LIMIT REACHED"
 
 
 def account_status(floor_breached, daily_status):
@@ -141,11 +167,12 @@ def account_status(floor_breached, daily_status):
 def risk_room(inp):
     """Signed daily capacity, then a status. Floor breach is not decided here (see drawdown()).
 
-    capacity > 0 → OK, and binding_room can size. dll_rule may still be unconfirmed.
-    capacity == 0 → DAILY LIMIT REACHED. binding_room is 0. Hard, soft, and unconfirmed agree.
-    capacity < 0 and dll_enforcement hard → BREACHED.
-    capacity < 0 and dll_enforcement soft → DAILY LIMIT EXCEEDED.
-    capacity < 0 and enforcement omitted → RULE CONFIRMATION REQUIRED. Not soft, not a breach.
+    capacity > 0 → OK, and binding_room can size. dll_rule or dll_boundary may still be unconfirmed.
+    capacity == 0 and hard + reach → BREACHED. Soft never breaches, including soft + reach.
+    capacity == 0 and exceed, with hard or soft both confirmed → DAILY LIMIT REACHED.
+    capacity == 0 with enforcement or boundary omitted → RULE CONFIRMATION REQUIRED.
+    capacity < 0 ignores boundary: hard → BREACHED, soft → DAILY LIMIT EXCEEDED,
+    omitted enforcement → RULE CONFIRMATION REQUIRED.
     binding_room is never negative: max(0, capacity).
     capacity is ROUND_FLOOR to the cent so a fraction below zero stays negative.
     Non-negative cent values match ROUND_DOWN, so existing positive rooms are unchanged.
@@ -155,10 +182,11 @@ def risk_room(inp):
     if dl is None:
         return {"drawdown_room": r_down(dd_room), "daily_room": None,
                 "binding_room": r_down(dd_room), "binding": "drawdown",
-                "daily_status": None, "dll_rule": None}
+                "daily_status": None, "dll_rule": None, "dll_boundary": None}
     dl = dec(dl, "daily_loss_limit", positive=True)
     day_pnl = dec(need(inp, "day_pnl"), "day_pnl")
     enf = _dll_enforcement(inp)
+    boundary = _dll_boundary(inp)
     raw = dl - max(D(0), -day_pnl)
     d_q = raw.quantize(CENT, rounding=ROUND_FLOOR)
     if d_q.is_zero():
@@ -167,8 +195,9 @@ def risk_room(inp):
     return {"drawdown_room": r_down(dd_room), "daily_room": format(d_q, "f"),
             "binding_room": r_down(min(dd_room, sized)),
             "binding": "daily_loss" if d_q < dd_room else "drawdown",
-            "daily_status": _daily_status(d_q, enf),
-            "dll_rule": _dll_rule(enf)}
+            "daily_status": _daily_status(d_q, enf, boundary),
+            "dll_rule": _dll_rule(enf),
+            "dll_boundary": _boundary_rule(boundary)}
 
 
 def eff_risk(inp):
@@ -347,7 +376,7 @@ DEFS = [
  ("IA-13", "NEW: MES uses the micro cap even when the mini cap is tighter.", "futures", {"instrument": "mes", "risk": "200", "binding_room": "10000", "stop_ticks": "12", "max_minis": "1", "max_micros": "50"}),
  ("IA-14", "NEW: ES uses the mini cap even when the micro cap is tighter.", "futures", {"instrument": "ES", "risk": "200", "binding_room": "10000", "stop_ticks": "12", "max_minis": "5", "max_micros": "1"}),
  ("DL-01", "daily capacity $0.01 left sizes normally. Status OK. Enforcement omitted stays unconfirmed and does not change the count.", "risk_room", {"drawdown_room": "1000.01", "daily_loss_limit": "1000", "day_pnl": "-999.99"}),
- ("DL-02", "daily capacity exactly 0 is DAILY LIMIT REACHED. binding_room 0. Not a breach. Unconfirmed does not change that word.", "risk_room", {"drawdown_room": "1000", "daily_loss_limit": "1000", "day_pnl": "-1000"}),
+ ("DL-02", "daily capacity exactly 0 with enforcement and boundary omitted is RULE CONFIRMATION REQUIRED. Not a safe clearance.", "risk_room", {"drawdown_room": "1000", "daily_loss_limit": "1000", "day_pnl": "-1000"}),
  ("DL-03", "daily capacity -50 with enforcement unconfirmed is RULE CONFIRMATION REQUIRED. Not soft and not a breach.", "risk_room", {"drawdown_room": "950", "daily_loss_limit": "1000", "day_pnl": "-1050"}),
  ("DL-04", "daily capacity -50 with hard enforcement is BREACHED.", "risk_room", {"drawdown_room": "950", "daily_loss_limit": "1000", "day_pnl": "-1050", "dll_enforcement": "hard"}),
  ("DL-05", "one cent past the daily limit, enforcement unconfirmed, is RULE CONFIRMATION REQUIRED. Floor-to-cent does not collapse this to zero.", "risk_room", {"drawdown_room": "999.99", "daily_loss_limit": "1000", "day_pnl": "-1000.01"}),
@@ -360,9 +389,18 @@ DEFS = [
  ("DL-12", "enforcement token HARD is case-insensitive and means hard.", "risk_room", {"drawdown_room": "950", "daily_loss_limit": "1000", "day_pnl": "-1050", "dll_enforcement": "HARD"}),
  ("DL-14", "daily capacity $0.01 with hard enforcement stays OK. The hard token does not change a positive room.", "risk_room", {"drawdown_room": "1000.01", "daily_loss_limit": "1000", "day_pnl": "-999.99", "dll_enforcement": "hard"}),
  ("DL-15", "daily capacity $0.01 with soft enforcement stays OK.", "risk_room", {"drawdown_room": "1000.01", "daily_loss_limit": "1000", "day_pnl": "-999.99", "dll_enforcement": "soft"}),
- ("DL-16", "daily capacity exactly 0 with hard enforcement is DAILY LIMIT REACHED, not BREACHED.", "risk_room", {"drawdown_room": "1000", "daily_loss_limit": "1000", "day_pnl": "-1000", "dll_enforcement": "hard"}),
- ("DL-17", "daily capacity exactly 0 with soft enforcement is DAILY LIMIT REACHED.", "risk_room", {"drawdown_room": "1000", "daily_loss_limit": "1000", "day_pnl": "-1000", "dll_enforcement": "soft"}),
- ("DL-18", "one cent past the daily limit with soft enforcement is DAILY LIMIT EXCEEDED.", "risk_room", {"drawdown_room": "999.99", "daily_loss_limit": "1000", "day_pnl": "-1000.01", "dll_enforcement": "soft"}),
+ ("DL-16", "daily capacity exactly 0 with hard enforcement and boundary omitted is RULE CONFIRMATION REQUIRED, not BREACHED.", "risk_room", {"drawdown_room": "1000", "daily_loss_limit": "1000", "day_pnl": "-1000", "dll_enforcement": "hard"}),
+ ("DL-17", "daily capacity exactly 0 with soft enforcement and boundary omitted is RULE CONFIRMATION REQUIRED.", "risk_room", {"drawdown_room": "1000", "daily_loss_limit": "1000", "day_pnl": "-1000", "dll_enforcement": "soft"}),
+ ("DL-18", "one cent past the daily limit with soft enforcement is DAILY LIMIT EXCEEDED. Boundary is ignored below zero.", "risk_room", {"drawdown_room": "999.99", "daily_loss_limit": "1000", "day_pnl": "-1000.01", "dll_enforcement": "soft"}),
+ ("DL-19", "exactly 0 with hard and reach is BREACHED.", "risk_room", {"drawdown_room": "1000", "daily_loss_limit": "1000", "day_pnl": "-1000", "dll_enforcement": "hard", "dll_boundary": "reach"}),
+ ("DL-20", "exactly 0 with hard and exceed is DAILY LIMIT REACHED, not BREACHED.", "risk_room", {"drawdown_room": "1000", "daily_loss_limit": "1000", "day_pnl": "-1000", "dll_enforcement": "hard", "dll_boundary": "exceed"}),
+ ("DL-21", "exactly 0 with soft and reach is DAILY LIMIT REACHED. Soft never breaches.", "risk_room", {"drawdown_room": "1000", "daily_loss_limit": "1000", "day_pnl": "-1000", "dll_enforcement": "soft", "dll_boundary": "reach"}),
+ ("DL-22", "exactly 0 with soft and exceed is DAILY LIMIT REACHED.", "risk_room", {"drawdown_room": "1000", "daily_loss_limit": "1000", "day_pnl": "-1000", "dll_enforcement": "soft", "dll_boundary": "exceed"}),
+ ("DL-23", "dll_boundary other than reach or exceed is INVALID_INPUT.", "risk_room", {"drawdown_room": "1000", "daily_loss_limit": "1000", "day_pnl": "-1000", "dll_boundary": "touch"}),
+ ("DL-24", "boundary token REACH is case-insensitive. With hard, exactly 0 is BREACHED.", "risk_room", {"drawdown_room": "1000", "daily_loss_limit": "1000", "day_pnl": "-1000", "dll_enforcement": "HARD", "dll_boundary": "REACH"}),
+ ("DL-25", "one cent below zero with hard and exceed stays BREACHED. Boundary does not change a negative room.", "risk_room", {"drawdown_room": "999.99", "daily_loss_limit": "1000", "day_pnl": "-1000.01", "dll_enforcement": "hard", "dll_boundary": "exceed"}),
+ ("DL-26", "one cent below zero with soft and reach stays DAILY LIMIT EXCEEDED.", "risk_room", {"drawdown_room": "999.99", "daily_loss_limit": "1000", "day_pnl": "-1000.01", "dll_enforcement": "soft", "dll_boundary": "reach"}),
+ ("DL-27", "exactly 0 with boundary exceed and enforcement omitted is RULE CONFIRMATION REQUIRED.", "risk_room", {"drawdown_room": "1000", "daily_loss_limit": "1000", "day_pnl": "-1000", "dll_boundary": "exceed"}),
  ("IV-48", "L-2: breach_on_touch as string", "drawdown", DDI("static", "50000", "2000", [], breach_on_touch="false")),
  ("IV-49", "L-3: invalid event after breach still rejected", "drawdown", DDI("static", "50000", "2000", [ev("47000"), {"kind": "bogus"}])),
 ]
@@ -375,39 +413,58 @@ def build():
 
 
 def matrix_check():
-    """Blank, hard, and soft at room 0.01, 0, -0.01, and -50, plus a floor hit.
-    Expected words are written here, not copied from _daily_status's return."""
+    """Enforcement x boundary at room +0.01, 0, -0.01, and -50, plus a floor hit.
+    Expected words are written here, not copied from _daily_status's return.
+    Below zero, boundary does not change the word. At zero, either blank is unconfirmed.
+    Soft + reach at zero is DAILY LIMIT REACHED: soft never breaches."""
     rooms = (("0.01", "-999.99", "0.01", "0.01"), ("0.00", "-1000", "0.00", "0.00"),
              ("-0.01", "-1000.01", "-0.01", "0.00"), ("-50.00", "-1050", "-50.00", "0.00"))
-    words = {
-        ("unconfirmed", "0.01"): "OK", ("hard", "0.01"): "OK", ("soft", "0.01"): "OK",
-        ("unconfirmed", "0.00"): "DAILY LIMIT REACHED", ("hard", "0.00"): "DAILY LIMIT REACHED", ("soft", "0.00"): "DAILY LIMIT REACHED",
-        ("unconfirmed", "-0.01"): "RULE CONFIRMATION REQUIRED", ("hard", "-0.01"): "BREACHED", ("soft", "-0.01"): "DAILY LIMIT EXCEEDED",
-        ("unconfirmed", "-50.00"): "RULE CONFIRMATION REQUIRED", ("hard", "-50.00"): "BREACHED", ("soft", "-50.00"): "DAILY LIMIT EXCEEDED",
+    at_zero = {
+        ("unconfirmed", "unconfirmed"): "RULE CONFIRMATION REQUIRED",
+        ("unconfirmed", "reach"): "RULE CONFIRMATION REQUIRED",
+        ("unconfirmed", "exceed"): "RULE CONFIRMATION REQUIRED",
+        ("hard", "unconfirmed"): "RULE CONFIRMATION REQUIRED",
+        ("hard", "reach"): "BREACHED",
+        ("hard", "exceed"): "DAILY LIMIT REACHED",
+        ("soft", "unconfirmed"): "RULE CONFIRMATION REQUIRED",
+        ("soft", "reach"): "DAILY LIMIT REACHED",
+        ("soft", "exceed"): "DAILY LIMIT REACHED",
     }
+    below = {"unconfirmed": "RULE CONFIRMATION REQUIRED", "hard": "BREACHED", "soft": "DAILY LIMIT EXCEEDED"}
+    rules = (("unconfirmed", None), ("hard", "hard"), ("soft", "soft"))
+    edges = (("unconfirmed", None), ("reach", "reach"), ("exceed", "exceed"))
     bad = 0
+    n = 0
     for room, pnl, daily, binding in rooms:
-        for rule, token in (("unconfirmed", None), ("hard", "hard"), ("soft", "soft")):
-            inp = {"drawdown_room": "10000", "daily_loss_limit": "1000", "day_pnl": pnl}
-            if token: inp["dll_enforcement"] = token
-            got = evaluate("risk_room", inp)
-            exp_status, exp_rule = words[(rule, room)], rule
-            if got.get("daily_status") != exp_status or got.get("dll_rule") != exp_rule or got.get("daily_room") != daily or got.get("binding_room") != binding:
-                bad += 1
-                print("MATRIX FAIL", rule, room, got)
-            if account_status(True, exp_status) != "BREACHED":
-                bad += 1
-                print("MATRIX FLOOR FAIL", rule, room)
-            if account_status(False, exp_status) != exp_status and exp_status != "OK":
-                bad += 1
-                print("MATRIX COMPOSE FAIL", rule, room)
-            elif exp_status == "OK" and account_status(False, exp_status) != "OK":
-                bad += 1
-                print("MATRIX COMPOSE FAIL", rule, room)
+        for rule, token in rules:
+            for edge, btok in edges:
+                inp = {"drawdown_room": "10000", "daily_loss_limit": "1000", "day_pnl": pnl}
+                if token: inp["dll_enforcement"] = token
+                if btok: inp["dll_boundary"] = btok
+                got = evaluate("risk_room", inp)
+                if room == "0.00":
+                    exp_status = at_zero[(rule, edge)]
+                elif room == "0.01":
+                    exp_status = "OK"
+                else:
+                    exp_status = below[rule]
+                n += 1
+                if (got.get("daily_status") != exp_status or got.get("dll_rule") != rule
+                        or got.get("dll_boundary") != edge or got.get("daily_room") != daily
+                        or got.get("binding_room") != binding):
+                    bad += 1
+                    print("MATRIX FAIL", rule, edge, room, got, exp_status)
+                if account_status(True, exp_status) != "BREACHED":
+                    bad += 1
+                    print("MATRIX FLOOR FAIL", rule, edge, room)
+                composed = "OK" if exp_status == "OK" else exp_status
+                if account_status(False, exp_status) != composed:
+                    bad += 1
+                    print("MATRIX COMPOSE FAIL", rule, edge, room)
     if account_status(False, None) != "OK":
         bad += 1
         print("MATRIX COMPOSE FAIL no dll")
-    print("MATRIX", "FAIL" if bad else "PASS", "12 rooms x rule, floor outranks each")
+    print("MATRIX", "FAIL" if bad else "PASS", f"{n} enforcement x boundary x room, floor outranks each")
     return bad
 
 

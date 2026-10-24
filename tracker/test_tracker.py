@@ -51,6 +51,7 @@ def acc_row(cid, si):
     if "day_ref" in si: a["N"] = si["day_ref"]
     if "risk" in si: a.update(O=si["risk"], P=si["ticks"])
     if si.get("dll_enforcement"): a["AS"] = si["dll_enforcement"]
+    if si.get("dll_boundary"): a["AV"] = si["dll_boundary"]
     return a
 
 def log_rows(cid, si):
@@ -156,32 +157,36 @@ STATUS += [
  # $0.01 left cannot buy one MES tick ($1.25), so the contract count is numeric 0 and the status stays OK.
  ("DL-01 $0.01 room left", S("DL01", equity=49000.01, dll=1000, day_ref=50000, risk=200, ticks=12), [],
      {"AA": "OK", "AE": False, "AG": 0.01, "AF": 1000.01, "AH": 0.01, "AI": "daily_loss", "AK": 0, "AJ": 0.01, "AU": None,
-      "AR": "contains:DLL RULE UNCONFIRMED", "AP": 0}),
+      "AR": "DLL RULE UNCONFIRMED; DLL BOUNDARY UNCONFIRMED; MANUAL: all params user-entered", "AP": 0}),
  ("DL-02 exact zero", S("DL02", equity=49000, dll=1000, day_ref=50000, risk=200, ticks=12), [],
-     {"AA": "OK", "AE": False, "AG": 0, "AF": 1000, "AH": 0, "AI": "daily_loss", "AK": "DAILY LIMIT REACHED",
-      "AU": "DAILY LIMIT REACHED", "AJ": "DAILY LIMIT REACHED", "AQ": "DAILY LIMIT REACHED", "AP": 0,
-      "AR": "contains:DLL RULE UNCONFIRMED"}),
+     {"AA": "OK", "AE": "UNCONFIRMED", "AG": 0, "AF": 1000, "AH": 0, "AI": "daily_loss", "AK": "RULE CONFIRMATION REQUIRED",
+      "AU": "RULE CONFIRMATION REQUIRED", "AJ": "RULE CONFIRMATION REQUIRED", "AQ": "RULE CONFIRMATION REQUIRED", "AP": 0,
+      "AR": "DLL RULE UNCONFIRMED; DLL BOUNDARY UNCONFIRMED; MANUAL: all params user-entered"}),
  ("DL-03 beyond unstated", S("DL03", equity=48950, dll=1000, day_ref=50000, risk=200, ticks=12), [],
      {"AA": "OK", "AE": "UNCONFIRMED", "AG": -50, "AF": 950, "AH": 0, "AI": "daily_loss", "AK": "RULE CONFIRMATION REQUIRED",
-      "AU": "RULE CONFIRMATION REQUIRED", "AJ": "RULE CONFIRMATION REQUIRED", "AP": 0, "AR": "contains:DLL RULE UNCONFIRMED"}),
+      "AU": "RULE CONFIRMATION REQUIRED", "AJ": "RULE CONFIRMATION REQUIRED", "AP": 0,
+      "AR": "DLL RULE UNCONFIRMED; DLL BOUNDARY UNCONFIRMED; MANUAL: all params user-entered"}),
  ("DL-04 beyond hard", S("DL04", equity=48950, dll=1000, day_ref=50000, risk=200, ticks=12, dll_enforcement="hard"), [],
      {"AA": "OK", "AE": True, "AG": -50, "AF": 950, "AH": 0, "AI": "daily_loss", "AK": "BREACHED", "AU": "BREACHED", "AP": 0,
-      "AR": "lacks:DLL RULE UNCONFIRMED"}),
+      "AR": "DLL BOUNDARY UNCONFIRMED; MANUAL: all params user-entered; OVERRIDES PRESET"}),
  ("DL-05 one cent beyond", S("DL05", equity=48999.99, dll=1000, day_ref=50000, risk=200, ticks=12), [],
      {"AA": "OK", "AE": "UNCONFIRMED", "AG": -0.01, "AF": 999.99, "AK": "RULE CONFIRMATION REQUIRED", "AU": "RULE CONFIRMATION REQUIRED", "AP": 0}),
  ("DL-06 one cent beyond hard", S("DL06", equity=48999.99, dll=1000, day_ref=50000, risk=200, ticks=12, dll_enforcement="hard"), [],
      {"AA": "OK", "AE": True, "AG": -0.01, "AF": 999.99, "AK": "BREACHED", "AU": "BREACHED"}),
  ("DL-07 explicit soft", S("DL07", equity=48950, dll=1000, day_ref=50000, risk=200, ticks=12, dll_enforcement="soft"), [],
      {"AA": "OK", "AE": False, "AG": -50, "AK": "DAILY LIMIT EXCEEDED", "AU": "DAILY LIMIT EXCEEDED", "AP": 0,
-      "AR": "lacks:DLL RULE UNCONFIRMED"}),
+      "AR": "DLL BOUNDARY UNCONFIRMED; MANUAL: all params user-entered; OVERRIDES PRESET"}),
  ("DL-08 hard still open", S("DL08", equity=49000, dll=1000, day_ref=49800, risk=10000, ticks=12, max_minis="NONE", max_micros="NONE", dll_enforcement="hard"), [],
-     {"AA": "OK", "AE": False, "AG": 200, "AI": "daily_loss", "AH": 200, "AK": 13, "AU": None, "AR": "lacks:DLL RULE UNCONFIRMED"}),
+     {"AA": "OK", "AE": False, "AG": 200, "AI": "daily_loss", "AH": 200, "AK": 13, "AU": None,
+      "AR": "DLL BOUNDARY UNCONFIRMED; MANUAL: all params user-entered; OVERRIDES PRESET"}),
  ("DL-09 floor outranks daily", S("DL09", equity=48000, dll=1000, day_ref=50000, risk=200, ticks=12, dll_enforcement="soft"), [],
-     {"AA": "OK", "AE": True, "AF": "BREACHED", "AG": "BREACHED", "AK": "BREACHED", "AU": "BREACHED", "AI": "BREACHED"}),
+     {"AA": "OK", "AE": True, "AF": "BREACHED", "AG": "BREACHED", "AK": "BREACHED", "AU": "BREACHED", "AI": "BREACHED",
+      "AR": "contains:DLL BOUNDARY UNCONFIRMED"}),
  ("DL-09b floor outranks unconfirmed", S("DL09b", equity=48000, dll=1000, day_ref=50000, risk=200, ticks=12), [],
-     {"AA": "OK", "AE": True, "AF": "BREACHED", "AG": "BREACHED", "AK": "BREACHED", "AU": "BREACHED", "AR": "contains:DLL RULE UNCONFIRMED"}),
+     {"AA": "OK", "AE": True, "AF": "BREACHED", "AG": "BREACHED", "AK": "BREACHED", "AU": "BREACHED",
+      "AR": "DLL RULE UNCONFIRMED; DLL BOUNDARY UNCONFIRMED; MANUAL: all params user-entered"}),
  ("DL-10 preset soft", {"A": "DL10", "B": "Topstep | Trading Combine | 50000 [P001]", "I": 1000, "L": "MES", "M": 48950, "N": 50000, "O": 200, "P": 12}, [],
-     {"AA": "OK", "AE": False, "AG": -50, "AK": "DAILY LIMIT EXCEEDED", "AU": "DAILY LIMIT EXCEEDED", "AR": "lacks:DLL RULE UNCONFIRMED"}),
+     {"AA": "OK", "AE": False, "AG": -50, "AK": "DAILY LIMIT EXCEEDED", "AU": "DAILY LIMIT EXCEEDED", "AR": "lacks:UNCONFIRMED"}),
  ("DL-11 hard overrides soft preset", {"A": "DL11", "B": "Topstep | Trading Combine | 50000 [P001]", "I": 1000, "AS": "hard", "L": "MES", "M": 48950, "N": 50000, "O": 200, "P": 12}, [],
      {"AA": "OK", "AE": True, "AG": -50, "AF": 950, "AK": "BREACHED", "AU": "BREACHED", "AR": "contains:OVERRIDES PRESET"}),
  ("DL-12 HARD token", S("DL12", equity=48950, dll=1000, day_ref=50000, risk=200, ticks=12, dll_enforcement="HARD"), [],
@@ -189,21 +194,90 @@ STATUS += [
  ("DL-13 bad enforcement", S("DL13", dll_enforcement="nope", dll=1000, day_ref=50000), [],
      {"AA": "INVALID", "AK": "INVALID"}),
  ("DL-14 $0.01 hard", S("DL14", equity=49000.01, dll=1000, day_ref=50000, risk=200, ticks=12, dll_enforcement="hard"), [],
-     {"AA": "OK", "AE": False, "AG": 0.01, "AK": 0, "AU": None, "AP": 0, "AR": "lacks:DLL RULE UNCONFIRMED"}),
+     {"AA": "OK", "AE": False, "AG": 0.01, "AK": 0, "AU": None, "AP": 0,
+      "AR": "DLL BOUNDARY UNCONFIRMED; MANUAL: all params user-entered; OVERRIDES PRESET"}),
  ("DL-15 $0.01 soft", S("DL15", equity=49000.01, dll=1000, day_ref=50000, risk=200, ticks=12, dll_enforcement="soft"), [],
-     {"AA": "OK", "AE": False, "AG": 0.01, "AK": 0, "AU": None, "AP": 0, "AR": "lacks:DLL RULE UNCONFIRMED"}),
+     {"AA": "OK", "AE": False, "AG": 0.01, "AK": 0, "AU": None, "AP": 0,
+      "AR": "DLL BOUNDARY UNCONFIRMED; MANUAL: all params user-entered; OVERRIDES PRESET"}),
  ("DL-16 zero hard", S("DL16", equity=49000, dll=1000, day_ref=50000, risk=200, ticks=12, dll_enforcement="hard"), [],
-     {"AA": "OK", "AE": False, "AG": 0, "AK": "DAILY LIMIT REACHED", "AU": "DAILY LIMIT REACHED", "AP": 0, "AR": "lacks:DLL RULE UNCONFIRMED"}),
+     {"AA": "OK", "AE": "UNCONFIRMED", "AG": 0, "AK": "RULE CONFIRMATION REQUIRED", "AU": "RULE CONFIRMATION REQUIRED", "AP": 0,
+      "AR": "DLL BOUNDARY UNCONFIRMED; MANUAL: all params user-entered; OVERRIDES PRESET"}),
  ("DL-17 zero soft", S("DL17", equity=49000, dll=1000, day_ref=50000, risk=200, ticks=12, dll_enforcement="soft"), [],
-     {"AA": "OK", "AE": False, "AG": 0, "AK": "DAILY LIMIT REACHED", "AU": "DAILY LIMIT REACHED", "AP": 0, "AR": "lacks:DLL RULE UNCONFIRMED"}),
+     {"AA": "OK", "AE": "UNCONFIRMED", "AG": 0, "AK": "RULE CONFIRMATION REQUIRED", "AU": "RULE CONFIRMATION REQUIRED", "AP": 0,
+      "AR": "DLL BOUNDARY UNCONFIRMED; MANUAL: all params user-entered; OVERRIDES PRESET"}),
  ("DL-18 one cent soft", S("DL18", equity=48999.99, dll=1000, day_ref=50000, risk=200, ticks=12, dll_enforcement="soft"), [],
-     {"AA": "OK", "AE": False, "AG": -0.01, "AK": "DAILY LIMIT EXCEEDED", "AU": "DAILY LIMIT EXCEEDED", "AP": 0, "AR": "lacks:DLL RULE UNCONFIRMED"}),
+     {"AA": "OK", "AE": False, "AG": -0.01, "AK": "DAILY LIMIT EXCEEDED", "AU": "DAILY LIMIT EXCEEDED", "AP": 0,
+      "AR": "DLL BOUNDARY UNCONFIRMED; MANUAL: all params user-entered; OVERRIDES PRESET"}),
+ ("DL-23 bad boundary", S("DL23", dll_boundary="touch", dll=1000, day_ref=50000), [],
+     {"AA": "INVALID", "AK": "INVALID"}),
  ("MX open blank sizes", S("MXB", equity=49800, dll=1000, day_ref=50450, risk=200, ticks=12, max_minis="NONE", max_micros=50), [],
-     {"AA": "OK", "AE": False, "AG": 350, "AK": 13, "AU": None, "AR": "contains:DLL RULE UNCONFIRMED"}),
+     {"AA": "OK", "AE": False, "AG": 350, "AK": 13, "AU": None,
+      "AR": "DLL RULE UNCONFIRMED; DLL BOUNDARY UNCONFIRMED; MANUAL: all params user-entered"}),
  ("MX open hard sizes", S("MXH", equity=49800, dll=1000, day_ref=50450, risk=200, ticks=12, max_minis="NONE", max_micros=50, dll_enforcement="hard"), [],
-     {"AA": "OK", "AE": False, "AG": 350, "AK": 13, "AU": None, "AR": "lacks:DLL RULE UNCONFIRMED"}),
+     {"AA": "OK", "AE": False, "AG": 350, "AK": 13, "AU": None,
+      "AR": "DLL BOUNDARY UNCONFIRMED; MANUAL: all params user-entered; OVERRIDES PRESET"}),
  ("MX open soft sizes", S("MXS", equity=49800, dll=1000, day_ref=50450, risk=200, ticks=12, max_minis="NONE", max_micros=50, dll_enforcement="soft"), [],
-     {"AA": "OK", "AE": False, "AG": 350, "AK": 13, "AU": None, "AR": "lacks:DLL RULE UNCONFIRMED"}),
+     {"AA": "OK", "AE": False, "AG": 350, "AK": 13, "AU": None,
+      "AR": "DLL BOUNDARY UNCONFIRMED; MANUAL: all params user-entered; OVERRIDES PRESET"}),
+]
+
+def _bd_word(enf, bd, room):
+    """Sheet expectation. Not read from the formula. Soft never breaches. Either blank at zero is unconfirmed."""
+    if room > 0:
+        return "OK", False, 0, None
+    if room < 0:
+        if enf == "hard":
+            return "BREACHED", True, "BREACHED", "BREACHED"
+        if enf == "soft":
+            return "DAILY LIMIT EXCEEDED", False, "DAILY LIMIT EXCEEDED", "DAILY LIMIT EXCEEDED"
+        return "RULE CONFIRMATION REQUIRED", "UNCONFIRMED", "RULE CONFIRMATION REQUIRED", "RULE CONFIRMATION REQUIRED"
+    if enf not in ("hard", "soft") or bd not in ("reach", "exceed"):
+        return "RULE CONFIRMATION REQUIRED", "UNCONFIRMED", "RULE CONFIRMATION REQUIRED", "RULE CONFIRMATION REQUIRED"
+    if enf == "hard" and bd == "reach":
+        return "BREACHED", True, "BREACHED", "BREACHED"
+    return "DAILY LIMIT REACHED", False, "DAILY LIMIT REACHED", "DAILY LIMIT REACHED"
+
+def _bd_flags(enf, bd):
+    parts = []
+    if enf not in ("hard", "soft"):
+        parts.append("DLL RULE UNCONFIRMED")
+    if bd not in ("reach", "exceed"):
+        parts.append("DLL BOUNDARY UNCONFIRMED")
+    parts.append("MANUAL: all params user-entered")
+    if enf or bd:
+        parts.append("OVERRIDES PRESET")
+    return "; ".join(parts)
+
+_bd_n = 0
+for enf in (None, "hard", "soft"):
+    for bd in (None, "reach", "exceed"):
+        for equity, room in ((49000.01, 0.01), (49000, 0.0), (48999.99, -0.01)):
+            _bd_n += 1
+            word, flag, ak, au = _bd_word(enf, bd, room)
+            tag = f"BD {enf or 'blank'} {bd or 'blank'} {equity}"
+            STATUS.append((tag, S(f"BD{_bd_n:02d}", equity=equity, dll=1000, day_ref=50000, risk=200, ticks=12,
+                                   dll_enforcement=enf or "", dll_boundary=bd or ""), [],
+                           {"AA": "OK", "AE": flag, "AG": room, "AK": ak, "AU": au, "AP": 0, "AR": _bd_flags(enf, bd)}))
+
+def _preset_row(aid, preset, equity):
+    return {"A": aid, "B": preset, "D": "static", "E": 50000, "F": 2000, "G": "NONE", "H": True,
+            "I": 1000, "J": "NONE", "K": 50, "L": "MES", "M": equity, "N": 50000, "O": 200, "P": 12}
+
+STATUS += [
+ ("DL-24 REACH token", S("DL24", equity=49000, dll=1000, day_ref=50000, risk=200, ticks=12, dll_enforcement="HARD", dll_boundary="REACH"), [],
+     {"AA": "OK", "AE": True, "AG": 0, "AK": "BREACHED", "AU": "BREACHED", "AP": 0, "AR": "lacks:UNCONFIRMED"}),
+ ("BD Topstep 0", _preset_row("BDT", "Topstep | Trading Combine | 50000 [P001]", 49000), [],
+     {"AA": "OK", "C": "verified", "AE": False, "AG": 0, "AK": "DAILY LIMIT REACHED", "AU": "DAILY LIMIT REACHED", "AP": 0, "AR": "lacks:UNCONFIRMED"}),
+ ("BD Vest 0", _preset_row("BDV", "Vest (Vest Capital) | Evaluation | 5000 [P031]", 49000), [],
+     {"AA": "OK", "C": "verified", "AE": False, "AG": 0, "AK": "DAILY LIMIT REACHED", "AU": "DAILY LIMIT REACHED", "AP": 0, "AR": "lacks:UNCONFIRMED"}),
+ ("BD Breakout 0", _preset_row("BDB", "Breakout | Evaluation 1-Step Classic | 5000 [P034]", 49000), [],
+     {"AA": "OK", "C": "verified", "AE": True, "AG": 0, "AK": "BREACHED", "AU": "BREACHED", "AP": 0, "AR": "lacks:UNCONFIRMED"}),
+ ("BD MFP 0", _preset_row("BDM", "MyFundedPerps | Evaluation 1-Step Select | size? [P051]", 49000), [],
+     {"AA": "OK", "C": "verified", "AE": True, "AG": 0, "AK": "BREACHED", "AU": "BREACHED", "AP": 0, "AR": "lacks:UNCONFIRMED"}),
+ ("BD Topstep +0.01", _preset_row("BDTP", "Topstep | Trading Combine | 50000 [P001]", 49000.01), [],
+     {"AA": "OK", "AE": False, "AG": 0.01, "AK": 0, "AU": None, "AR": "lacks:UNCONFIRMED"}),
+ ("BD Vest -0.01", _preset_row("BDVN", "Vest (Vest Capital) | Evaluation | 5000 [P031]", 48999.99), [],
+     {"AA": "OK", "AE": True, "AG": -0.01, "AK": "BREACHED", "AU": "BREACHED", "AR": "lacks:UNCONFIRMED"}),
 ]
 
 def sha256_file(path):

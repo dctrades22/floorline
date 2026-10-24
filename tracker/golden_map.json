@@ -2,8 +2,8 @@
   "spec": "tracker v0.2.0 instrument caps / oracle 0.2.0",
   "generated_by": "tracker/sheet_logic.py",
   "counts": {
-    "yes": 48,
-    "partial": 21,
+    "yes": 56,
+    "partial": 22,
     "no": 11
   },
   "cases": [
@@ -687,7 +687,7 @@
     {
       "id": "DL-02",
       "reproducible": "yes",
-      "how": "equity 49000, day ref 50000, DLL 1000 \u2192 capacity 0, DAILY LIMIT REACHED",
+      "how": "equity 49000, day ref 50000, DLL 1000 \u2192 capacity 0, both classifications omitted, RULE CONFIRMATION REQUIRED",
       "reason": "signed daily capacity; binding_room is max(0, capacity)",
       "checked_fields": [
         "drawdown_room",
@@ -843,7 +843,7 @@
     {
       "id": "DL-16",
       "reproducible": "yes",
-      "how": "capacity 0 with hard is DAILY LIMIT REACHED",
+      "how": "capacity 0 with hard and boundary omitted is RULE CONFIRMATION REQUIRED",
       "reason": "signed daily capacity; binding_room is max(0, capacity)",
       "checked_fields": [
         "drawdown_room",
@@ -856,7 +856,7 @@
     {
       "id": "DL-17",
       "reproducible": "yes",
-      "how": "capacity 0 with soft is DAILY LIMIT REACHED",
+      "how": "capacity 0 with soft and boundary omitted is RULE CONFIRMATION REQUIRED",
       "reason": "signed daily capacity; binding_room is max(0, capacity)",
       "checked_fields": [
         "drawdown_room",
@@ -870,6 +870,116 @@
       "id": "DL-18",
       "reproducible": "yes",
       "how": "capacity -0.01 with soft is DAILY LIMIT EXCEEDED",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-19",
+      "reproducible": "yes",
+      "how": "capacity 0 with hard and reach is BREACHED",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-20",
+      "reproducible": "yes",
+      "how": "capacity 0 with hard and exceed is DAILY LIMIT REACHED",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-21",
+      "reproducible": "yes",
+      "how": "capacity 0 with soft and reach is DAILY LIMIT REACHED",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-22",
+      "reproducible": "yes",
+      "how": "capacity 0 with soft and exceed is DAILY LIMIT REACHED",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-23",
+      "reproducible": "partial",
+      "how": "dll_boundary other than reach or exceed \u2192 INVALID on Accounts!AV and INVALID_INPUT in the oracle.",
+      "reason": "categorical: bad boundary token is invalid"
+    },
+    {
+      "id": "DL-24",
+      "reproducible": "yes",
+      "how": "REACH token with hard at capacity 0 is BREACHED",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-25",
+      "reproducible": "yes",
+      "how": "capacity -0.01 with hard and exceed stays BREACHED",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-26",
+      "reproducible": "yes",
+      "how": "capacity -0.01 with soft and reach stays DAILY LIMIT EXCEEDED",
+      "reason": "signed daily capacity; binding_room is max(0, capacity)",
+      "checked_fields": [
+        "drawdown_room",
+        "daily_room",
+        "binding_room",
+        "binding"
+      ],
+      "sheet_logic_match": true
+    },
+    {
+      "id": "DL-27",
+      "reproducible": "yes",
+      "how": "capacity 0 with exceed and enforcement omitted is RULE CONFIRMATION REQUIRED",
       "reason": "signed daily capacity; binding_room is max(0, capacity)",
       "checked_fields": [
         "drawdown_room",
