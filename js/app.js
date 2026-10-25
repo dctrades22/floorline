@@ -2,6 +2,7 @@
 (function () {
   "use strict";
   var DATA = window.PDC_DATA, P = DATA.presets.presets, C = DATA.contracts.contracts;
+  var SEL = window.FLOORLINE_SELECTOR;
   var $ = function (id) { return document.getElementById(id); };
   var RM = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var MICRO = { MES: 1, MNQ: 1, MGC: 1, MCL: 1, M6E: 1 };
@@ -66,13 +67,12 @@
   if (CFG.TRACKER_URL) { $("trackerLink").href = CFG.TRACKER_URL; $("trackerCta").hidden = false; }
 
   function fillPlans() {
-    var f = v("firm"), plans = [];
-    P.forEach(function (p) { if (p.firm === f && plans.indexOf(p.plan) < 0) plans.push(p.plan); });
+    var f = v("firm"), plans = SEL.publicPlans(P, f);
     opt($("plan"), plans.map(function (x) { return [x, x]; }));
     $("plan").disabled = f === CUSTOM; fillSizes();
   }
   function fillSizes() {
-    var rows = P.filter(function (p) { return p.firm === v("firm") && p.plan === v("plan"); });
+    var rows = SEL.publicSizes(P, v("firm"), v("plan"));
     opt($("size"), rows.map(function (p) { return [p.id, p.account_size ? money(p.account_size).replace(".00", "") : "Any size"]; }));
     $("size").disabled = !rows.length; applyPreset();
   }
@@ -120,7 +120,17 @@
       } else if (dl.kind === "pct" || dl.kind === "pct_of_start") {
         opt($("dllPct"), [[dl.pct, dl.pct + "%"]]); field("dllpct").hidden = false;
       }
-      if (dl.kind === "pct" || dl.kind === "pct_choice") { field("dllbasis").hidden = false; if (!v("dllBasis")) $("dllBasis").value = start; }
+      if (dl.kind === "pct" || dl.kind === "pct_choice") {
+        field("dllbasis").hidden = false;
+        // Replace only an empty field or the start balance this page itself filled in.
+        // A reset balance the user typed is left alone. Size changes were keeping the
+        // previous size's prefill, so a 3% limit followed the wrong account.
+        var nb = SEL.nextDllBasis(v("dllBasis"), state.autoBasis, start);
+        if (nb.replaced) {
+          $("dllBasis").value = nb.basis;
+          state.autoBasis = nb.autoBasis;
+        }
+      }
       $("cap").value = "";
       var lockUn = p.lock.kind === "unstated", dllUn = dl.kind === "unstated", touchUn = p.breach_on_touch === null;
       FIELDS.forEach(function (f) { setEditable(f, false, false); });
@@ -422,6 +432,7 @@
   $("bal").value = "51240.50"; $("peak").value = "51800"; $("pnl").value = "-310"; $("risk").value = "300"; $("ticks").value = "12";
   $("entry").value = "65000"; $("stopPx").value = "64350"; $("step").value = "0.001"; $("inst").value = "MES";
   var h = /^#(P\d{3})$/.exec(location.hash), hp = h && P.filter(function (x) { return x.id === h[1]; })[0];
+  if (hp && SEL.isHidden(hp.id)) hp = null;
   if (hp) { $("firm").value = hp.firm; fillPlans(); $("plan").value = hp.plan; fillSizes(); $("size").value = hp.id; applyPreset(); }
   else if (location.hash === "#custom") { $("firm").value = CUSTOM; fillPlans(); }
   else fillPlans();
