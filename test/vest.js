@@ -129,6 +129,43 @@ function run(presets, Oracle) {
   const newIds = presets.presets.map(p => p.id).filter(id => Number(id.slice(1)) >= 56);
   check("new id set", JSON.stringify(newIds) === JSON.stringify(Array.from({ length: 21 }, (_, i) => "P" + String(56 + i).padStart(3, "0"))));
 
+  const Sel = require("../js/selector.js");
+  const shown = Sel.selectablePresets(presets.presets);
+  const shownIds = shown.map(p => p.id);
+  ["P031", "P032", "P033"].forEach(id => {
+    check(id + " not publicly selectable", shownIds.indexOf(id) < 0 && Sel.isHidden(id));
+  });
+  const vestPlans = Sel.publicPlans(presets.presets, "Vest (Vest Capital)");
+  check("legacy Evaluation plan absent from selector", vestPlans.indexOf("Evaluation") < 0);
+  check("Evaluation size list is empty", Sel.publicSizes(presets.presets, "Vest (Vest Capital)", "Evaluation").length === 0);
+  check("hidden list is only the combined eval", JSON.stringify(Sel.HIDDEN_FROM_SELECTOR) === JSON.stringify(["P031", "P032", "P033"]));
+  const newPublic = Array.from({ length: 21 }, (_, i) => "P" + String(56 + i).padStart(3, "0"));
+  check("P056-P076 remain selectable", newPublic.every(id => shownIds.indexOf(id) >= 0));
+  const nonVest = presets.presets.filter(p => p.firm !== "Vest (Vest Capital)");
+  check("every non-Vest preset remains selectable", nonVest.length > 0 && nonVest.every(p => shownIds.indexOf(p.id) >= 0));
+  check("existing Instant rows remain selectable", ["P027", "P028", "P029", "P030"].every(id => shownIds.indexOf(id) >= 0));
+  check("hidden records still stored", !!byId.P031 && !!byId.P032 && byId.P032.plan === "Evaluation" && byId.P032.account_size === "10000" && byId.P032.drawdown.amount_usd === "600" && byId.P032.breach_on_touch === false);
+
+  const filled = Sel.nextDllBasis("", undefined, "5000");
+  check("empty reset balance fills from the new size", filled.replaced === true && filled.basis === "5000" && filled.autoBasis === "5000");
+  const resized = Sel.nextDllBasis(filled.basis, filled.autoBasis, "50000");
+  check("size change updates an automatic reset balance", resized.replaced === true && resized.basis === "50000" && resized.autoBasis === "50000");
+  const typed = Sel.nextDllBasis("12345", resized.autoBasis, "10000");
+  check("size change keeps a reset balance the user typed", typed.replaced === false && typed.basis === "12345" && typed.autoBasis === "50000");
+  const cleared = Sel.nextDllBasis("", resized.autoBasis, "25000");
+  check("a cleared reset balance fills from the new size", cleared.replaced === true && cleared.basis === "25000" && cleared.autoBasis === "25000");
+
+  newPublic.forEach(id => {
+    const p = byId[id];
+    const note = (p && p.note) || "";
+    check(id + " drawdown-touch warning kept", note.includes("Drawdown touch is not preset.") && note.includes("equality alone does not breach") && note.includes("touching the max-drawdown floor closes the account"));
+    if (p && p.daily_loss.kind !== "none") {
+      check(id + " daily-loss reset warning kept", note.includes("DLL basis text is the Loss Limits page") && note.includes("20:00 ET"));
+    } else {
+      check(id + " no daily-loss row still keeps the touch warning", p && p.daily_loss.kind === "none" && note.includes("No daily loss limit.") && note.includes("Drawdown touch is not preset."));
+    }
+  });
+
   console.log(`VEST ${fail ? "FAIL" : "PASS"} ${n - fail}/${n}`);
   return fail;
 }
