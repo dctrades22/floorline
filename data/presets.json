@@ -2216,6 +2216,870 @@
       "checked_date": "2026-10-14",
       "source_page_date": null,
       "note": "Percent of starting balance; account sizes not tabulated on this page. Before lock touch=breach, after lock equality allowed; DLL floor always inclusive. Exposure caps on separate page -> null."
+    },
+    {
+      "id": "P056",
+      "firm": "Vest (Vest Capital)",
+      "plan": "1-Step Evaluation",
+      "account_size": "5000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "300",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct_choice",
+        "amount_usd": null,
+        "pct": [
+          "3",
+          "4"
+        ],
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": true
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "1-Step evaluation, Silver $5,000. Profit target is 10% or 20% of capital, chosen at purchase, and is not a loss rule. Daily loss limit is 3%, 4%, or none, chosen at purchase. Max drawdown $300 is the docs floor table for Silver (6% of $5,000). Static floor: it does not trail and it does not lock. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P057",
+      "firm": "Vest (Vest Capital)",
+      "plan": "1-Step Evaluation",
+      "account_size": "10000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "600",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct_choice",
+        "amount_usd": null,
+        "pct": [
+          "3",
+          "4"
+        ],
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": true
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "1-Step evaluation, Gold $10,000. Profit target is 10% or 20% of capital, chosen at purchase, and is not a loss rule. Daily loss limit is 3%, 4%, or none, chosen at purchase. Max drawdown $600 is the docs floor table for Gold (6% of $10,000). Static floor: it does not trail and it does not lock. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P058",
+      "firm": "Vest (Vest Capital)",
+      "plan": "1-Step Evaluation",
+      "account_size": "25000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "1500",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct_choice",
+        "amount_usd": null,
+        "pct": [
+          "3",
+          "4"
+        ],
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": true
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "1-Step evaluation, Platinum $25,000. Profit target is 10% or 20% of capital, chosen at purchase, and is not a loss rule. Daily loss limit is 3%, 4%, or none, chosen at purchase. Max drawdown $1,500 is the docs floor table for Platinum (6% of $25,000). Static floor: it does not trail and it does not lock. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P059",
+      "firm": "Vest (Vest Capital)",
+      "plan": "1-Step Evaluation",
+      "account_size": "50000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "3000",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct_choice",
+        "amount_usd": null,
+        "pct": [
+          "3",
+          "4"
+        ],
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": true
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "1-Step evaluation, Emerald $50,000. Profit target is 10% or 20% of capital, chosen at purchase, and is not a loss rule. Daily loss limit is 3%, 4%, or none, chosen at purchase. Docs floor table does not list $50,000 Emerald. $3,000 is 6% of the purchase-catalog starting capital $50,000 (maxDrawdownPct 0.060000 on every Emerald evaluation stage). Static floor: it does not trail and it does not lock. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P060",
+      "firm": "Vest (Vest Capital)",
+      "plan": "2-Step Phase 1",
+      "account_size": "5000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "300",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct",
+        "amount_usd": null,
+        "pct": "3",
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": false
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "2-Step Phase 1 only, Silver $5,000. Purchase-catalog stage 1 profit target $500 (10% of this stage's initial capital $5,000). Daily loss limit is fixed at 3%, not 4% and not none. Max drawdown $300 is the docs floor table for Silver (6% of $5,000). The catalog prints 6% drawdown and 3% DLL on this stage. Static: no trail and no lock. Phase 2 and funded are separate rows. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P061",
+      "firm": "Vest (Vest Capital)",
+      "plan": "2-Step Phase 1",
+      "account_size": "10000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "600",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct",
+        "amount_usd": null,
+        "pct": "3",
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": false
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "2-Step Phase 1 only, Gold $10,000. Purchase-catalog stage 1 profit target $1,000 (10% of this stage's initial capital $10,000). Daily loss limit is fixed at 3%, not 4% and not none. Max drawdown $600 is the docs floor table for Gold (6% of $10,000). The catalog prints 6% drawdown and 3% DLL on this stage. Static: no trail and no lock. Phase 2 and funded are separate rows. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P062",
+      "firm": "Vest (Vest Capital)",
+      "plan": "2-Step Phase 1",
+      "account_size": "25000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "1500",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct",
+        "amount_usd": null,
+        "pct": "3",
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": false
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "2-Step Phase 1 only, Platinum $25,000. Purchase-catalog stage 1 profit target $2,500 (10% of this stage's initial capital $25,000). Daily loss limit is fixed at 3%, not 4% and not none. Max drawdown $1,500 is the docs floor table for Platinum (6% of $25,000). The catalog prints 6% drawdown and 3% DLL on this stage. Static: no trail and no lock. Phase 2 and funded are separate rows. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P063",
+      "firm": "Vest (Vest Capital)",
+      "plan": "2-Step Phase 1",
+      "account_size": "50000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "3000",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct",
+        "amount_usd": null,
+        "pct": "3",
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": false
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "2-Step Phase 1 only, Emerald $50,000. Purchase-catalog stage 1 profit target $5,000 (10% of this stage's initial capital $50,000). Daily loss limit is fixed at 3%, not 4% and not none. Docs floor table does not list $50,000 Emerald. $3,000 is 6% of the purchase-catalog starting capital $50,000 (maxDrawdownPct 0.060000 on every Emerald evaluation stage). The catalog prints 6% drawdown and 3% DLL on this stage. Static: no trail and no lock. Phase 2 and funded are separate rows. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P064",
+      "firm": "Vest (Vest Capital)",
+      "plan": "2-Step Phase 2",
+      "account_size": "5000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "300",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct",
+        "amount_usd": null,
+        "pct": "3",
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": false
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "2-Step Phase 2 only, Silver $5,000. Purchase-catalog stage 2 initial capital is $5,000, the original size, not a raised Phase 1 balance. Stage 2 profit target $250 (5% of that capital). This stage's own max drawdown is 6% and its own daily loss limit is 3%. Max drawdown $300 is the docs floor table for Silver (6% of $5,000). Static: no trail and no lock. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P065",
+      "firm": "Vest (Vest Capital)",
+      "plan": "2-Step Phase 2",
+      "account_size": "10000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "600",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct",
+        "amount_usd": null,
+        "pct": "3",
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": false
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "2-Step Phase 2 only, Gold $10,000. Purchase-catalog stage 2 initial capital is $10,000, the original size, not a raised Phase 1 balance. Stage 2 profit target $500 (5% of that capital). This stage's own max drawdown is 6% and its own daily loss limit is 3%. Max drawdown $600 is the docs floor table for Gold (6% of $10,000). Static: no trail and no lock. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P066",
+      "firm": "Vest (Vest Capital)",
+      "plan": "2-Step Phase 2",
+      "account_size": "25000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "1500",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct",
+        "amount_usd": null,
+        "pct": "3",
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": false
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "2-Step Phase 2 only, Platinum $25,000. Purchase-catalog stage 2 initial capital is $25,000, the original size, not a raised Phase 1 balance. Stage 2 profit target $1,250 (5% of that capital). This stage's own max drawdown is 6% and its own daily loss limit is 3%. Max drawdown $1,500 is the docs floor table for Platinum (6% of $25,000). Static: no trail and no lock. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P067",
+      "firm": "Vest (Vest Capital)",
+      "plan": "2-Step Phase 2",
+      "account_size": "50000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "3000",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct",
+        "amount_usd": null,
+        "pct": "3",
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": false
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "2-Step Phase 2 only, Emerald $50,000. Purchase-catalog stage 2 initial capital is $50,000, the original size, not a raised Phase 1 balance. Stage 2 profit target $2,500 (5% of that capital). This stage's own max drawdown is 6% and its own daily loss limit is 3%. Docs floor table does not list $50,000 Emerald. $3,000 is 6% of the purchase-catalog starting capital $50,000 (maxDrawdownPct 0.060000 on every Emerald evaluation stage). Static: no trail and no lock. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P068",
+      "firm": "Vest (Vest Capital)",
+      "plan": "Funded after 1-Step",
+      "account_size": "5000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "300",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct_choice",
+        "amount_usd": null,
+        "pct": [
+          "3",
+          "4"
+        ],
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": true
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "Live funded account after a passed 1-Step, Silver $5,000. Purchase-catalog funded stage: initial capital $5,000, max drawdown 6%, daily loss limit copied from the option bought (3%, 4%, or none), profit target empty. In-app FAQ: passing opens a live account of the same size, with no profit goal, and the fixed floor carries across. Max drawdown $300 is the docs floor table for Silver (6% of $5,000). Static: no trail and no lock. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P069",
+      "firm": "Vest (Vest Capital)",
+      "plan": "Funded after 1-Step",
+      "account_size": "10000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "600",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct_choice",
+        "amount_usd": null,
+        "pct": [
+          "3",
+          "4"
+        ],
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": true
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "Live funded account after a passed 1-Step, Gold $10,000. Purchase-catalog funded stage: initial capital $10,000, max drawdown 6%, daily loss limit copied from the option bought (3%, 4%, or none), profit target empty. In-app FAQ: passing opens a live account of the same size, with no profit goal, and the fixed floor carries across. Max drawdown $600 is the docs floor table for Gold (6% of $10,000). Static: no trail and no lock. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P070",
+      "firm": "Vest (Vest Capital)",
+      "plan": "Funded after 1-Step",
+      "account_size": "25000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "1500",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct_choice",
+        "amount_usd": null,
+        "pct": [
+          "3",
+          "4"
+        ],
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": true
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "Live funded account after a passed 1-Step, Platinum $25,000. Purchase-catalog funded stage: initial capital $25,000, max drawdown 6%, daily loss limit copied from the option bought (3%, 4%, or none), profit target empty. In-app FAQ: passing opens a live account of the same size, with no profit goal, and the fixed floor carries across. Max drawdown $1,500 is the docs floor table for Platinum (6% of $25,000). Static: no trail and no lock. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P071",
+      "firm": "Vest (Vest Capital)",
+      "plan": "Funded after 1-Step",
+      "account_size": "50000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "3000",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct_choice",
+        "amount_usd": null,
+        "pct": [
+          "3",
+          "4"
+        ],
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": true
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "Live funded account after a passed 1-Step, Emerald $50,000. Purchase-catalog funded stage: initial capital $50,000, max drawdown 6%, daily loss limit copied from the option bought (3%, 4%, or none), profit target empty. In-app FAQ: passing opens a live account of the same size, with no profit goal, and the fixed floor carries across. Docs floor table does not list $50,000 Emerald. $3,000 is 6% of the purchase-catalog starting capital $50,000 (maxDrawdownPct 0.060000 on every Emerald evaluation stage). Static: no trail and no lock. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P072",
+      "firm": "Vest (Vest Capital)",
+      "plan": "Funded after 2-Step",
+      "account_size": "5000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "300",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct",
+        "amount_usd": null,
+        "pct": "3",
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": false
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "Live funded account after a passed 2-Step, Silver $5,000. Purchase-catalog funded stage: initial capital $5,000, max drawdown 6%, daily loss limit 3%, profit target empty. This is not the 1-Step daily-loss menu. Max drawdown $300 is the docs floor table for Silver (6% of $5,000). Static: no trail and no lock. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P073",
+      "firm": "Vest (Vest Capital)",
+      "plan": "Funded after 2-Step",
+      "account_size": "10000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "600",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct",
+        "amount_usd": null,
+        "pct": "3",
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": false
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "Live funded account after a passed 2-Step, Gold $10,000. Purchase-catalog funded stage: initial capital $10,000, max drawdown 6%, daily loss limit 3%, profit target empty. This is not the 1-Step daily-loss menu. Max drawdown $600 is the docs floor table for Gold (6% of $10,000). Static: no trail and no lock. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P074",
+      "firm": "Vest (Vest Capital)",
+      "plan": "Funded after 2-Step",
+      "account_size": "25000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "1500",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct",
+        "amount_usd": null,
+        "pct": "3",
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": false
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "Live funded account after a passed 2-Step, Platinum $25,000. Purchase-catalog funded stage: initial capital $25,000, max drawdown 6%, daily loss limit 3%, profit target empty. This is not the 1-Step daily-loss menu. Max drawdown $1,500 is the docs floor table for Platinum (6% of $25,000). Static: no trail and no lock. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P075",
+      "firm": "Vest (Vest Capital)",
+      "plan": "Funded after 2-Step",
+      "account_size": "50000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "3000",
+        "pct_of_start": "6"
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "pct",
+        "amount_usd": null,
+        "pct": "3",
+        "basis": "reset balance = balance + reserved collateral excl. unrealized; floor = reset*(1-rate) + net non-trading transfers; checked vs equity incl. unrealized",
+        "reset": "20:00 America/New_York",
+        "enforcement": "hard",
+        "boundary": "exceed",
+        "optional": false
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "Live funded account after a passed 2-Step, Emerald $50,000. Purchase-catalog funded stage: initial capital $50,000, max drawdown 6%, daily loss limit 3%, profit target empty. This is not the 1-Step daily-loss menu. Docs floor table does not list $50,000 Emerald. $3,000 is 6% of the purchase-catalog starting capital $50,000 (maxDrawdownPct 0.060000 on every Emerald evaluation stage). Static: no trail and no lock. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. DLL basis text is the Loss Limits page (reset balance excludes unrealized PnL and includes reserved collateral; transfers move the floor). The in-app FAQ example uses equity at 20:00 ET, which that FAQ says includes unrealized PnL. Enter the reset balance from the dashboard. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
+    },
+    {
+      "id": "P076",
+      "firm": "Vest (Vest Capital)",
+      "plan": "Instant",
+      "account_size": "50000",
+      "status": "partial",
+      "drawdown": {
+        "type": "static",
+        "amount_usd": "2000",
+        "pct_of_start": null
+      },
+      "lock": {
+        "kind": "none",
+        "offset_usd": null,
+        "trail_trigger_balance_usd": null,
+        "text": null
+      },
+      "breach_on_touch": null,
+      "breach_on_touch_after_lock": null,
+      "daily_loss": {
+        "kind": "none",
+        "amount_usd": null,
+        "pct": null,
+        "basis": null,
+        "reset": null,
+        "enforcement": null,
+        "boundary": null,
+        "optional": null
+      },
+      "max_contracts": {
+        "minis": null,
+        "micros": null,
+        "contracts": null,
+        "micro_ratio_stated": null
+      },
+      "source_url": "https://api-gateway.hz.vestmarkets.com/v3/payments/catalog",
+      "checked_date": "2026-10-25",
+      "source_page_date": null,
+      "note": "Instant funded, $50,000. The docs instant table does not list this size. Purchase catalog 'Vest Capital Instant Funded | 50K': starting capital 50000, maxDrawdownPct 0.040000, price 2000.00, daily loss limit 0, profit target empty. Docs say an Instant payment equals max drawdown, so the $2,000 price is the $2,000 allowance. Static: no trail and no lock. No daily loss limit. Drawdown touch is not preset. Loss Limits (https://docs.vestmarkets.com/vest-capital/loss-limits) says equality alone does not breach. The Vest Markets in-app FAQ says touching the max-drawdown floor closes the account. Confirm the checkbox. No mini or micro contract count is published. The in-app FAQ says there is no per-trade position-size limit beyond the loss rules. Leverage figures conflict (purchase-catalog maxLeverage 5.0000, in-app FAQ up to 50x, docs overview up to 75x) and are not filled in. Type NONE or your own cap."
     }
   ]
 }

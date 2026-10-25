@@ -120,7 +120,16 @@
       } else if (dl.kind === "pct" || dl.kind === "pct_of_start") {
         opt($("dllPct"), [[dl.pct, dl.pct + "%"]]); field("dllpct").hidden = false;
       }
-      if (dl.kind === "pct" || dl.kind === "pct_choice") { field("dllbasis").hidden = false; if (!v("dllBasis")) $("dllBasis").value = start; }
+      if (dl.kind === "pct" || dl.kind === "pct_choice") {
+        field("dllbasis").hidden = false;
+        // Replace only an empty field or the start balance this page itself filled in.
+        // A reset balance the user typed is left alone. Size changes were keeping the
+        // previous size's prefill, so a 3% limit followed the wrong account.
+        if (!v("dllBasis") || v("dllBasis") === state.autoBasis) {
+          $("dllBasis").value = start;
+          state.autoBasis = start;
+        }
+      }
       $("cap").value = "";
       var lockUn = p.lock.kind === "unstated", dllUn = dl.kind === "unstated", touchUn = p.breach_on_touch === null;
       FIELDS.forEach(function (f) { setEditable(f, false, false); });

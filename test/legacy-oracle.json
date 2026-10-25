@@ -1,0 +1,104 @@
+[
+  {
+    "name": "P001 Topstep eod lock at start",
+    "kind": "drawdown",
+    "input": {"type": "eod_trailing", "start_balance": "50000", "drawdown_amount": "2000", "breach_on_touch": true, "lock_offset": "0", "events": [{"kind": "eod", "balance": "52000"}, {"kind": "mark", "equity": "51000"}]},
+    "expected": {"ok": true, "floor": "50000.00", "peak": "52000.00", "locked": true, "breached": false, "equity": "51000.00", "drawdown_room": "1000.00"}
+  },
+  {
+    "name": "P005 Apex intraday trail, no lock",
+    "kind": "drawdown",
+    "input": {"type": "intraday_trailing", "start_balance": "25000", "drawdown_amount": "1000", "breach_on_touch": true, "events": [{"kind": "mark", "equity": "27000"}, {"kind": "mark", "equity": "26500"}]},
+    "expected": {"ok": true, "floor": "26000.00", "peak": "27000.00", "locked": false, "breached": false, "equity": "26500.00", "drawdown_room": "500.00"}
+  },
+  {
+    "name": "P010 Tradeify eod trail, no lock",
+    "kind": "drawdown",
+    "input": {"type": "eod_trailing", "start_balance": "25000", "drawdown_amount": "1000", "breach_on_touch": true, "events": [{"kind": "eod", "balance": "26000"}, {"kind": "mark", "equity": "25500"}]},
+    "expected": {"ok": true, "floor": "25000.00", "peak": "26000.00", "locked": false, "breached": false, "equity": "25500.00", "drawdown_room": "500.00"}
+  },
+  {
+    "name": "P015 MyFundedFutures eod trail",
+    "kind": "drawdown",
+    "input": {"type": "eod_trailing", "start_balance": "50000", "drawdown_amount": "2000", "breach_on_touch": true, "events": [{"kind": "eod", "balance": "51000"}, {"kind": "mark", "equity": "50500"}]},
+    "expected": {"ok": true, "floor": "49000.00", "peak": "51000.00", "locked": false, "breached": false, "equity": "50500.00", "drawdown_room": "1500.00"}
+  },
+  {
+    "name": "P018 Lucid lock offset 100",
+    "kind": "drawdown",
+    "input": {"type": "eod_trailing", "start_balance": "25000", "drawdown_amount": "1000", "breach_on_touch": true, "lock_offset": "100", "events": [{"kind": "eod", "balance": "26200"}, {"kind": "mark", "equity": "25200"}]},
+    "expected": {"ok": true, "floor": "25100.00", "peak": "26200.00", "locked": true, "breached": false, "equity": "25200.00", "drawdown_room": "100.00"}
+  },
+  {
+    "name": "P022 Take Profit Trader lock at start",
+    "kind": "drawdown",
+    "input": {"type": "eod_trailing", "start_balance": "25000", "drawdown_amount": "1500", "breach_on_touch": true, "lock_offset": "0", "events": [{"kind": "eod", "balance": "27000"}, {"kind": "mark", "equity": "25500"}]},
+    "expected": {"ok": true, "floor": "25000.00", "peak": "27000.00", "locked": true, "breached": false, "equity": "25500.00", "drawdown_room": "500.00"}
+  },
+  {
+    "name": "P027 Vest Instant equality is not a breach",
+    "kind": "drawdown",
+    "input": {"type": "static", "start_balance": "500", "drawdown_amount": "10", "breach_on_touch": false, "events": [{"kind": "mark", "equity": "490"}]},
+    "expected": {"ok": true, "floor": "490.00", "peak": "500.00", "locked": false, "breached": false, "equity": "490.00", "drawdown_room": "0.00"}
+  },
+  {
+    "name": "P027 Vest Instant one cent through the floor",
+    "kind": "drawdown",
+    "input": {"type": "static", "start_balance": "500", "drawdown_amount": "10", "breach_on_touch": false, "events": [{"kind": "mark", "equity": "489.99"}]},
+    "expected": {"ok": true, "floor": "490.00", "peak": "500.00", "locked": false, "breached": true, "equity": "489.99", "drawdown_room": "0.00"}
+  },
+  {
+    "name": "P031 Vest Evaluation static ignores a higher balance",
+    "kind": "drawdown",
+    "input": {"type": "static", "start_balance": "5000", "drawdown_amount": "300", "breach_on_touch": false, "events": [{"kind": "mark", "equity": "8000"}]},
+    "expected": {"ok": true, "floor": "4700.00", "peak": "5000.00", "locked": false, "breached": false, "equity": "8000.00", "drawdown_room": "3300.00"}
+  },
+  {
+    "name": "P031 Vest Evaluation equality is not a breach",
+    "kind": "drawdown",
+    "input": {"type": "static", "start_balance": "5000", "drawdown_amount": "300", "breach_on_touch": false, "events": [{"kind": "mark", "equity": "4700"}]},
+    "expected": {"ok": true, "floor": "4700.00", "peak": "5000.00", "locked": false, "breached": false, "equity": "4700.00", "drawdown_room": "0.00"}
+  },
+  {
+    "name": "P034 Breakout equality is a breach",
+    "kind": "drawdown",
+    "input": {"type": "static", "start_balance": "5000", "drawdown_amount": "300", "breach_on_touch": true, "events": [{"kind": "mark", "equity": "4700"}]},
+    "expected": {"ok": true, "floor": "4700.00", "peak": "5000.00", "locked": false, "breached": true, "equity": "4700.00", "drawdown_room": "0.00"}
+  },
+  {
+    "name": "MyFundedPerps 3 percent of a frozen 100000 start",
+    "kind": "drawdown",
+    "input": {"type": "static", "start_balance": "100000", "drawdown_amount": "3000", "breach_on_touch": true, "events": [{"kind": "mark", "equity": "98000"}]},
+    "expected": {"ok": true, "floor": "97000.00", "peak": "100000.00", "locked": false, "breached": false, "equity": "98000.00", "drawdown_room": "1000.00"}
+  },
+  {
+    "name": "P001 DLL soft reach at exact zero",
+    "kind": "risk_room",
+    "input": {"drawdown_room": "1500.00", "daily_loss_limit": "1000", "day_pnl": "-1000", "dll_enforcement": "soft", "dll_boundary": "reach"},
+    "expected": {"ok": true, "drawdown_room": "1500.00", "daily_room": "0.00", "binding_room": "0.00", "binding": "daily_loss", "daily_status": "DAILY LIMIT REACHED", "dll_rule": "soft", "dll_boundary": "reach"}
+  },
+  {
+    "name": "P031 DLL hard exceed at exact zero",
+    "kind": "risk_room",
+    "input": {"drawdown_room": "400.00", "daily_loss_limit": "150", "day_pnl": "-150", "dll_enforcement": "hard", "dll_boundary": "exceed"},
+    "expected": {"ok": true, "drawdown_room": "400.00", "daily_room": "0.00", "binding_room": "0.00", "binding": "daily_loss", "daily_status": "DAILY LIMIT REACHED", "dll_rule": "hard", "dll_boundary": "exceed"}
+  },
+  {
+    "name": "P031 DLL hard exceed one cent through",
+    "kind": "risk_room",
+    "input": {"drawdown_room": "400.00", "daily_loss_limit": "150", "day_pnl": "-150.01", "dll_enforcement": "hard", "dll_boundary": "exceed"},
+    "expected": {"ok": true, "drawdown_room": "400.00", "daily_room": "-0.01", "binding_room": "0.00", "binding": "daily_loss", "daily_status": "BREACHED", "dll_rule": "hard", "dll_boundary": "exceed"}
+  },
+  {
+    "name": "P034 DLL hard reach at exact zero",
+    "kind": "risk_room",
+    "input": {"drawdown_room": "200.00", "daily_loss_limit": "150", "day_pnl": "-150", "dll_enforcement": "hard", "dll_boundary": "reach"},
+    "expected": {"ok": true, "drawdown_room": "200.00", "daily_room": "0.00", "binding_room": "0.00", "binding": "daily_loss", "daily_status": "BREACHED", "dll_rule": "hard", "dll_boundary": "reach"}
+  },
+  {
+    "name": "P015 no daily loss limit",
+    "kind": "risk_room",
+    "input": {"drawdown_room": "1500.00"},
+    "expected": {"ok": true, "drawdown_room": "1500.00", "daily_room": null, "binding_room": "1500.00", "binding": "drawdown", "daily_status": null, "dll_rule": null, "dll_boundary": null}
+  }
+]

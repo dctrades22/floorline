@@ -95,6 +95,8 @@ const drift = contracts.filter(c => Oracle.TICKS[c.symbol] !== c.tick_value_usd)
 drift.forEach(c => console.log("TICK DRIFT", c.symbol, Oracle.TICKS[c.symbol], c.tick_value_usd));
 console.log(`CONTRACTS ${badC.length || drift.length ? "FAIL" : "PASS"} ${contracts.length}`); fail += badC.length + drift.length;
 
+fail += require("./vest.js")(presets, Oracle);
+
 const { render } = require("../tools/build-data.js");
 const fresh = render() === fs.readFileSync(path.join(ROOT, "js/data.js"), "utf8");
 console.log(`DATA BUNDLE ${fresh ? "PASS in sync" : "FAIL stale: run node tools/build-data.js"}`); if (!fresh) fail++;

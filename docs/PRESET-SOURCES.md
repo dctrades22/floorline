@@ -118,9 +118,37 @@ These presets have no stated daily-loss amount, or the cited page does not state
 - MyFundedFutures: daily loss none or unstated.
 - Lucid Trading: daily loss unstated.
 - Take Profit Trader: daily loss unstated.
-- Vest Instant (P027–P030) and the Vest no-DLL option: the loss-limits page says they have no DLL.
+- Vest Instant (P027–P030 and P076) and the Vest no-DLL option: the loss-limits page says Instant accounts have no DLL. P076 is the $50,000 Instant row added on 2026-10-25. Its drawdown touch flag is null because the sources below disagree. Enforcement and boundary stay null.
 - Topstep Express: `custom_only`, not on the preset tab. Enforcement and boundary blank.
 - MyFundedPerps Elite No DLL (P055): the challenges page says there is no daily loss limit.
 - Manual and Custom: no preset enforcement and no preset boundary. Those rows are the manual-confirmation path. Accounts columns AS and AV are that confirmation.
 
 Drawdown touch language on those pages was not used as a daily-loss boundary.
+
+## Vest rows added 2026-10-25 — DLL hard and exceed, drawdown touch not preset
+
+Presets: P056–P059 (1-Step Evaluation 5k, 10k, 25k, 50k), P060–P063 (2-Step Phase 1), P064–P067 (2-Step Phase 2), P068–P071 (Funded after 1-Step), P072–P075 (Funded after 2-Step). P076 is Instant 50k and has no DLL, so its enforcement and boundary stay blank. P027–P033 were not edited. The full matrix, the $50,000 finding, and the conflict quotes are in `docs/vest-rules.md`.
+
+Fetched 2026-10-25.
+
+DLL enforcement (hard), from https://docs.vestmarkets.com/vest-capital/loss-limits :
+
+> If your account equity drops through that day's threshold at any point before the next reset, the account closes immediately and permanently.
+
+> Breaching either rule results in immediate, permanent account closure.
+
+DLL boundary (exceed). The same page says equality is not a breach, and the in-app FAQ on next.vestmarkets.com uses "drops through" for the daily floor:
+
+> Equity falling below either applicable loss floor closes the account; equality alone does not breach a limit.
+
+> If your account equity drops through that daily floor at any point during the day, the account closes immediately and permanently.
+
+That pair is why the new rows that have a DLL use `hard` and `exceed`. Exact zero on those rows is `DAILY LIMIT REACHED`. One cent through is `BREACHED`.
+
+Drawdown touch is not given the same value. The loss-limits equality sentence covers both floors, but the in-app FAQ's drawdown answer says the opposite:
+
+> If your total account value, including unrealized PnL, touches or drops below that fixed floor at any point, the account closes immediately and permanently.
+
+> For example, an evaluation-path Platinum $25,000 account always has a Max. Drawdown of $1,500 (6%), closing if total account value ever reaches $23,500 or lower.
+
+`breach_on_touch` on P056–P076 is null. The checkbox is not a confirmed Vest rule. P027–P033 keep the 2026-10-24 value, `false`, from the loss-limits equality sentence alone. This pass did not reopen those rows.
